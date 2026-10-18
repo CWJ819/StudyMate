@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>StudyMate Test Console</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Local test console</p>
+          <h1>StudyMate Backend Probe</h1>
+          <p class="lede">A disposable frontend for exercising the Stage 8 backend flow: upload, parse, build knowledge, generate quizzes, grade, review, and plan.</p>
+        </div>
+        <div class="status-card">
+          <span id="health-pill" class="pill neutral">Not checked</span>
+          <button id="health-check" type="button">Check API</button>
+          <small>Proxy path: <code>/api</code></small>
+        </div>
+      </header>
+
+      <section class="workflow" aria-label="Workflow status">
+        <div class="step" id="step-api"><span>1</span><strong>API</strong><small>Check backend</small></div>
+        <div class="step" id="step-course"><span>2</span><strong>Course</strong><small>Create or select</small></div>
+        <div class="step" id="step-material"><span>3</span><strong>Material</strong><small>Upload and parse</small></div>
+        <div class="step" id="step-knowledge"><span>4</span><strong>Knowledge</strong><small>Build framework</small></div>
+        <div class="step" id="step-quiz"><span>5</span><strong>Quiz</strong><small>Generate and submit</small></div>
+        <div class="step" id="step-plan"><span>6</span><strong>Plan</strong><small>Review schedule</small></div>
+      </section>
+
+      <section class="grid two">
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Settings</h2>
+            <button id="load-settings" type="button">Load</button>
+          </div>
+          <div class="form-grid">
+            <label>LLM Base URL <input id="setting-llm-base" placeholder="mock://local"></label>
+            <label>LLM Model <input id="setting-llm-model" placeholder="mock-stage8"></label>
+          </div>
+          <div class="actions">
+            <button id="save-mock-settings" type="button">Save Mock LLM</button>
+          </div>
+          <pre id="settings-output" class="output"></pre>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Courses</h2>
+            <button id="refresh-courses" type="button">Refresh</button>
+          </div>
+          <form id="course-form" class="stack">
+            <input id="course-name" required placeholder="Course name">
+            <textarea id="course-description" rows="2" placeholder="Description"></textarea>
+            <button type="submit">Create Course</button>
+          </form>
+          <label class="select-label">Active course <select id="course-select"></select></label>
+          <pre id="courses-output" class="output"></pre>
+        </article>
+      </section>
+
+      <section class="grid two">
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Materials</h2>
+            <button id="refresh-materials" type="button">Refresh</button>
+          </div>
+          <form id="upload-form" class="stack">
+            <input id="material-file" type="file" accept=".pdf,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation">
+            <button type="submit">Upload Material</button>
+          </form>
+          <form id="search-form" class="inline">
+            <input id="search-query" placeholder="Search uploaded text">
+            <button type="submit">Search</button>
+          </form>
+          <div id="search-results" class="cards"></div>
+          <div id="materials-list" class="cards"></div>
+          <pre id="materials-output" class="output"></pre>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Jobs</h2>
+            <button id="poll-last-job" type="button">Poll Last Job</button>
+          </div>
+          <form id="job-form" class="inline">
+            <input id="job-id" placeholder="Job ID">
+            <button type="submit">Get Job</button>
+          </form>
+          <pre id="jobs-output" class="output"></pre>
+        </article>
+      </section>
+
+      <section class="grid two">
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Knowledge</h2>
+            <button id="load-knowledge" type="button">Load Active</button>
+          </div>
+          <textarea id="reference-outline" rows="3" placeholder="Optional reference outline"></textarea>
+          <div class="actions">
+            <button id="build-knowledge" type="button">Build Framework</button>
+            <button id="load-versions" type="button">Versions</button>
+          </div>
+          <div id="knowledge-summary" class="summary-strip"></div>
+          <div id="knowledge-tree" class="tree"></div>
+          <pre id="knowledge-output" class="output"></pre>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Quiz</h2>
+            <button id="load-quiz" type="button">Load Quiz</button>
+          </div>
+          <div class="form-grid">
+            <label>Question count <input id="question-count" type="number" min="1" max="20" value="3"></label>
+            <label>Difficulty <input id="quiz-difficulty" value="low"></label>
+          </div>
+          <fieldset class="checks">
+            <legend>Question types</legend>
+            <label><input type="checkbox" name="question-type" value="single_choice" checked> Single choice</label>
+            <label><input type="checkbox" name="question-type" value="multiple_choice" checked> Multiple choice</label>
+            <label><input type="checkbox" name="question-type" value="short_answer"> Short answer</label>
+          </fieldset>
+          <div class="actions">
+            <button id="generate-quiz" type="button">Generate Quiz</button>
+            <input id="quiz-id" placeholder="Quiz ID">
+          </div>
+          <form id="quiz-form" class="quiz"></form>
+          <div id="quiz-result" class="cards"></div>
+          <pre id="quiz-output" class="output"></pre>
+        </article>
+      </section>
+
+      <section class="grid two">
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Mastery & Review</h2>
+            <button id="load-mastery" type="button">Load Mastery</button>
+          </div>
+          <div class="actions">
+            <button id="load-wrongbook" type="button">Wrongbook</button>
+            <button id="select-review" type="button">Review Targets</button>
+          </div>
+          <div id="mastery-list" class="cards"></div>
+          <pre id="mastery-output" class="output"></pre>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Study Plan</h2>
+            <button id="load-plans" type="button">List Plans</button>
+          </div>
+          <div class="form-grid">
+            <label>Exam date <input id="exam-date" type="date"></label>
+            <label>Daily minutes <input id="daily-minutes" type="number" min="15" max="720" value="30"></label>
+            <label>Target score <input id="target-score" type="number" min="0" max="100" value="90"></label>
+          </div>
+          <div class="actions">
+            <button id="generate-plan" type="button">Generate Plan</button>
+          </div>
+          <div id="plan-list" class="cards"></div>
+          <div id="plan-detail" class="tasks"></div>
+          <pre id="plans-output" class="output"></pre>
+        </article>
+      </section>
+    </main>
+
+    <div id="toast" class="toast" hidden></div>
+    <script src="./app.js"></script>
+  </body>
+</html>
