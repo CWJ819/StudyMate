@@ -27,6 +27,16 @@ def _create_pdf(path: Path, page_texts: list[str]) -> None:
     document.close()
 
 
+def _collect_leaves(nodes: list[dict]) -> list[dict]:
+    leaves: list[dict] = []
+    for node in nodes:
+        if node["is_leaf"]:
+            leaves.append(node)
+        else:
+            leaves.extend(_collect_leaves(node.get("children", [])))
+    return leaves
+
+
 async def _wait_for_job(client: AsyncClient, job_id: str) -> dict:
     last_body: dict | None = None
     for _ in range(80):
@@ -133,11 +143,18 @@ async def test_knowledge_build_and_query_flow(
         assert framework["version_number"] == 1
         assert framework["tree"]
         assert framework["nodes"]
-        assert framework["tree"][0]["sources"]
-        assert "section_label" in framework["tree"][0]
-        assert "content" in framework["tree"][0]
 
-        leaf_node = framework["tree"][0]
+        # 合并层现在保留「文档 → 知识点」：顶层是文档父节点，来源挂在叶子。
+        document_node = framework["tree"][0]
+        assert document_node["title"] == "lesson.pdf"
+        assert document_node["is_leaf"] is False
+        assert document_node["sources"] == []
+        assert document_node["children"]
+        assert "section_label" in document_node
+        assert "content" in document_node
+
+        leaf_node = _collect_leaves(framework["tree"])[0]
+        assert leaf_node["sources"]
         detail_response = await client.get(f"/api/knowledge/{leaf_node['knowledge_node_id']}")
         assert detail_response.status_code == 200
         detail = detail_response.json()
@@ -229,7 +246,7 @@ async def test_knowledge_build_processes_materials_in_batches(
         framework_response = await client.get(f"/api/courses/{course_id}/knowledge")
         assert framework_response.status_code == 200
         framework = framework_response.json()
-        leaves = [node for node in framework["tree"] if node["is_leaf"]]
+        leaves = _collect_leaves(framework["tree"])
 
     assert len(adapter.payloads) == 2
     assert all(

@@ -609,8 +609,18 @@ class KnowledgeService:
         candidates: list[KnowledgeFrameworkCandidate],
         batch_count: int,
     ) -> KnowledgeFrameworkCandidate:
-        merged_topics: list[KnowledgeNodeCandidate] = []
-        seen_titles: set[str] = set()
+        """跨批次合并：按来源文档分桶保留「文档 → 知识点」层级。
+
+        此前实现把所有 topic 展平进一个列表（真实模型验收 2026-10-20 D3：
+        大材料多批次合并后 98 个叶子全部直接挂根节点）。现在：
+        - 去重按文档内标题（跨文档同名保留）；
+        - 文档内按最小来源页码排序；
+        - section_label 缺失时用标题+内容推断（如 4.2.1），失败留空；
+        - relations 只连文档内相邻知识点。
+        """
+        merged_by_doc: dict[str, list[KnowledgeNodeCandidate]] = {}
+        seen_titles_by_doc: dict[str, set[str]] = {}
+        topic_counter = 0
 
         for candidate in candidates:
             for node in candidate.nodes:
@@ -620,17 +630,23 @@ class KnowledgeService:
                     document_id = topic.sources[0].document_id
                     if not any(document.id == document_id for document in documents):
                         continue
-                    title_key = self._normalize_title_key(topic.title)
-                    if title_key in seen_titles:
-                        continue
                     if not self._is_quality_knowledge_topic(topic):
                         continue
-                    seen_titles.add(title_key)
-                    topic_index = len(merged_topics) + 1
-                    merged_topics.append(
+                    title_key = self._normalize_title_key(topic.title)
+                    seen = seen_titles_by_doc.setdefault(document_id, set())
+                    if title_key in seen:
+                        continue
+                    seen.add(title_key)
+                    section_label = self._clean_section_label(topic.section_label)
+                    if not section_label:
+                        section_label = self._infer_section_label(
+                            f"{topic.title or ''} {topic.content or ''}"
+                        )
+                    topic_counter += 1
+                    merged_by_doc.setdefault(document_id, []).append(
                         KnowledgeNodeCandidate(
-                            ref=f"topic_{topic_index}",
-                            section_label=self._clean_section_label(topic.section_label),
+                            ref=f"topic_{topic_counter}",
+                            section_label=section_label,
                             title=topic.title,
                             content=topic.content,
                             sources=topic.sources[:3],
@@ -638,28 +654,49 @@ class KnowledgeService:
                         )
                     )
 
-        if not merged_topics:
+        if not merged_by_doc:
             raise AppError(
                 code="LLM_OUTPUT_INVALID",
                 message="Knowledge framework generation produced no source-backed knowledge points.",
                 status_code=502,
             )
 
-        relations = [
-            KnowledgeRelationCandidate(
-                source_ref=left.ref,
-                target_ref=right.ref,
-                relation_type="related",
-                confidence=0.4,
-                evidence="Adjacent knowledge points from the same source material batch.",
+        document_by_id = {document.id: document for document in documents}
+        doc_nodes: list[KnowledgeNodeCandidate] = []
+        relations: list[KnowledgeRelationCandidate] = []
+        for document_id, topics in merged_by_doc.items():
+            topics.sort(
+                key=lambda t: min(
+                    (source.page_number for source in t.sources if source.page_number),
+                    default=10**9,
+                )
             )
-            for left, right in zip(merged_topics, merged_topics[1:])
-        ]
+            document = document_by_id.get(document_id)
+            doc_nodes.append(
+                KnowledgeNodeCandidate(
+                    ref=f"doc_{document_id}",
+                    section_label=None,
+                    title=getattr(document, "filename", None) or f"Document {document_id[:8]}",
+                    content=None,
+                    sources=[],
+                    children=topics,
+                )
+            )
+            relations.extend(
+                KnowledgeRelationCandidate(
+                    source_ref=left.ref,
+                    target_ref=right.ref,
+                    relation_type="related",
+                    confidence=0.4,
+                    evidence="Adjacent knowledge points from the same source document.",
+                )
+                for left, right in zip(topics, topics[1:])
+            )
 
         return KnowledgeFrameworkCandidate(
             root_title=course_name,
             root_description=f"Generated from {len(documents)} parsed material(s) across {batch_count} batch(es).",
-            nodes=merged_topics,
+            nodes=doc_nodes,
             relations=relations,
         )
 
@@ -697,6 +734,9 @@ class KnowledgeService:
         normalized = " ".join(text.split())
         match = re.search(r"\b(?:chapter\s+)?(\d+(?:\.\d+){0,3})\b", normalized, flags=re.IGNORECASE)
         if match:
+            # 排除标准号/年份（如 802.3、2014）：章节号首位数字不会太大
+            if int(match.group(1).split(".")[0]) > 50:
+                return None
             if "chapter" in match.group(0).lower():
                 return match.group(0).title()
             return match.group(1)
