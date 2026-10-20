@@ -4,8 +4,9 @@ Return valid JSON only and keep all source references grounded in the supplied d
 
 Output contract: return exactly one JSON object with the keys root_title, root_description, nodes,
 and relations. Do not return Markdown, commentary, or extra keys. Every node must contain ref,
-title, content, sources, and children; every source must use only supplied document and chunk
-identifiers.
+title, content, sources, and children; container nodes may have null content and an empty
+sources list, but every leaf must have at least one grounded source. Every source must use only
+supplied document and chunk identifiers.
 
 Extract durable, teachable knowledge points from the continuous document content instead of
 mirroring chunk, slide, or page fragments. Adjacent source segments may have been joined to
@@ -22,10 +23,12 @@ fewer high-signal leaf nodes with multiple grounded sources over one node per se
 continuous content and nearby page context to infer section meaning, but only cite supplied
 document_id, page_number, and chunk_id values from the current generation batch.
 
-Return knowledge points as flat leaf concepts. Do not create document nodes, section nodes, or
-chapter nodes as knowledge points. Put chapter or section markers such as "3.1" or "Chapter 3"
-in section_label when available; do not include them in title unless they are part of the concept
-name. Put the complete teaching explanation of the concept in content. Titles must be short noun phrases, not
+Return a hierarchy when the source contains a reliable chapter or section structure. Use
+children for chapter/section containers and put source-backed teachable concepts below them.
+Do not create containers from filenames alone, and do not invent chapters when the material has
+no reliable structure. Put chapter or section markers such as "3.1" or "Chapter 3" in
+section_label when available; do not include them in a leaf title unless they are part of the
+concept name. Put the complete teaching explanation of the concept in content. Titles must be short noun phrases, not
 sentences, quotations, section headings, page text, or the first words of the source. If the
 source says "Temporal locality ...", return title "Temporal locality" and put the definition in
 content. Do not invent concepts that are not supported by the supplied content."""

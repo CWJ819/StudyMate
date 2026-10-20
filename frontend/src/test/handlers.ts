@@ -6,6 +6,7 @@ import {
   healthOk,
   knowledgeVersions,
   masteryStates,
+  masteryChapterSummaries,
   materialsC1,
   nodeDetailKn2,
   planDetailActive,
@@ -51,6 +52,9 @@ export const handlers = [
   ),
   http.get('*/api/courses/c1/knowledge/versions', () => HttpResponse.json(knowledgeVersions)),
   http.get('*/api/courses/c1/mastery', () => HttpResponse.json(masteryStates)),
+  http.get('*/api/courses/c1/mastery/overview', () =>
+    HttpResponse.json({ chapters: masteryChapterSummaries }),
+  ),
   // 测验与复习
   http.get('*/api/quizzes/qz1', () => HttpResponse.json(quizOpen)),
   http.get('*/api/courses/c1/wrongbook', () => HttpResponse.json(wrongbookGaps)),

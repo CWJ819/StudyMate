@@ -1,7 +1,9 @@
 from app.db.models.course import Course
 from app.db.models.document import Document, DocumentChunk, DocumentPage
 from app.db.models.job import Job
+from app.db.models.llm import LLMCallLog
 from app.db.models.knowledge import (
+    KnowledgeBuildBatch,
     KnowledgeFrameworkVersion,
     KnowledgeNode,
     KnowledgeNodeRelation,
@@ -35,6 +37,7 @@ __all__ = [
     "DocumentChunk",
     "DocumentPage",
     "Job",
+    "LLMCallLog",
     "KnowledgeFrameworkVersion",
     "KnowledgeGap",
     "KnowledgeNode",

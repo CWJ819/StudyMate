@@ -1,6 +1,7 @@
 import hashlib
 import re
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 
 import fitz
@@ -30,6 +31,7 @@ DOCUMENT_STATUS_PROCESSING = "processing"
 DOCUMENT_STATUS_COMPLETED = "completed"
 DOCUMENT_STATUS_COMPLETED_WITH_WARNINGS = "completed_with_warnings"
 DOCUMENT_STATUS_FAILED = "failed"
+DOCUMENT_STATUS_ARCHIVED = "archived"
 
 PAGE_STATUS_EXTRACTED = "extracted"
 PAGE_STATUS_EMPTY = "empty"
@@ -93,7 +95,14 @@ class MaterialService:
         content_type: str | None,
         data: bytes,
     ) -> MaterialUploadResponse:
-        self._require_course(session, course_id)
+        course = self.course_repository.get_course(session, course_id)
+        if course is None:
+            raise AppError(
+                code="RESOURCE_NOT_FOUND",
+                message="Course not found.",
+                status_code=404,
+                details={"course_id": course_id},
+            )
         suffix = Path(filename).suffix.lower()
         self._validate_upload(filename=filename, suffix=suffix, content_type=content_type, data=data)
 
@@ -107,6 +116,7 @@ class MaterialService:
             size_bytes=stored_file.size_bytes,
             status=DOCUMENT_STATUS_QUEUED,
         )
+        course.material_revision += 1
         job = self.job_repository.create_job(
             session,
             job_type="document.parse",
@@ -158,16 +168,15 @@ class MaterialService:
                 status_code=404,
                 details={"material_id": document_id},
             )
-        if self.knowledge_repository.is_document_referenced_by_knowledge(session, document.id):
-            raise AppError(
-                code="MATERIAL_IN_USE",
-                message="Material cannot be deleted because it is referenced by a knowledge framework.",
-                status_code=409,
-                details={"material_id": document_id},
-            )
-        self.storage.delete(document.storage_key)
+        if document.archived_at is not None:
+            return
+        document.archived_at = datetime.now(UTC)
+        document.status = DOCUMENT_STATUS_ARCHIVED
+        course = self.course_repository.get_course(session, document.course_id)
+        if course is not None:
+            course.material_revision += 1
+        self.knowledge_repository.mark_active_frameworks_stale(session, document.course_id)
         self.job_repository.cancel_document_jobs(session, document_id=document.id)
-        self.material_repository.delete_document(session, document)
         session.commit()
 
     def search_materials(
@@ -427,6 +436,8 @@ class MaterialService:
                 details={"material_id": document_id},
             )
 
+        if document.archived_at is not None or document.status == DOCUMENT_STATUS_ARCHIVED:
+            return
         if document.status in {
             DOCUMENT_STATUS_COMPLETED,
             DOCUMENT_STATUS_COMPLETED_WITH_WARNINGS,
@@ -439,6 +450,9 @@ class MaterialService:
 
         path = self.storage.resolve_path(document.storage_key)
         parse_result = self._parse_file(path=path, suffix=Path(document.filename).suffix.lower())
+        if document.archived_at is not None:
+            document.status = DOCUMENT_STATUS_ARCHIVED
+            return
         pages = [
             DocumentPage(
                 document_id=document.id,
@@ -499,6 +513,7 @@ class MaterialService:
             no_text_pages=no_text_pages,
             created_at=document.created_at,
             updated_at=document.updated_at,
+            archived_at=document.archived_at,
         )
 
     def _preview(self, text: str | None) -> str | None:

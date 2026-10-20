@@ -126,6 +126,10 @@ async def test_quiz_submission_updates_mastery_gaps_and_review_targets(
         assert mastery[0]["beta"] == 3.0
         assert mastery[0]["mastery_estimate"] == 0.5
 
+        overview_response = await client.get(f"/api/courses/{course_id}/mastery/overview")
+        assert overview_response.status_code == 200
+        assert overview_response.json()["chapters"] == []
+
         wrongbook_response = await client.get(f"/api/courses/{course_id}/wrongbook")
         assert wrongbook_response.status_code == 200
         gaps = wrongbook_response.json()
@@ -144,6 +148,7 @@ async def test_quiz_submission_updates_mastery_gaps_and_review_targets(
         assert targets["strategy_version"] == "weakness-exploration-v1"
         assert targets["targets"]
         assert targets["targets"][0]["knowledge_node_id"] == mastery[0]["knowledge_node_id"]
+        assert targets["targets"][0]["section_path"] == []
 
     with session_scope() as session:
         event_count = session.scalar(select(func.count(MasteryEvent.id)))

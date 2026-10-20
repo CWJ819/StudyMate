@@ -11,6 +11,8 @@ class LLMRunSummary(BaseModel):
     model_name: str
     prompt_version: str
     provider: str
+    attempt_count: int = 1
+    duration_ms: int | None = None
 
 
 class LLMStructuredResult(BaseModel, Generic[T]):

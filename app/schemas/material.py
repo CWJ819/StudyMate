@@ -39,6 +39,7 @@ class MaterialSummaryResponse(BaseModel):
     no_text_pages: list[int]
     created_at: datetime
     updated_at: datetime
+    archived_at: datetime | None = None
 
 
 class MaterialDetailResponse(MaterialSummaryResponse):

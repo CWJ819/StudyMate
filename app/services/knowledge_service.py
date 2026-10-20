@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import re
+import hashlib
+import json
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -25,10 +28,13 @@ from app.llm.schemas import (
 )
 from app.repositories.knowledge_repository import KnowledgeRepository
 from app.repositories.job_repository import JobRepository
+from app.repositories.llm_repository import LLMRepository
 from app.schemas.knowledge import (
     KnowledgeBuildRequest,
     KnowledgeBuildResponse,
     KnowledgeFrameworkResponse,
+    KnowledgeIdentityDiagnosticsResponse,
+    KnowledgeIdentityMatchResponse,
     KnowledgeNodeDetailResponse,
     KnowledgeRelationResponse,
     KnowledgeSourceResponse,
@@ -38,6 +44,7 @@ from app.schemas.knowledge import (
 PROMPT_VERSION = "knowledge-framework-v4"
 FRAMEWORK_BATCH_CHUNK_LIMIT = 12
 FRAMEWORK_BATCH_CHAR_LIMIT = 14000
+FRAMEWORK_LLM_CONCURRENCY = 3
 FRAMEWORK_PAGE_PREVIEW_CHARS = 300
 FRAMEWORK_OUTLINE_PREVIEW_CHARS = 180
 FRAMEWORK_CONTEXT_PAGE_WINDOW = 2
@@ -74,9 +81,11 @@ class KnowledgeService:
         self,
         repository: KnowledgeRepository | None = None,
         job_repository: JobRepository | None = None,
+        llm_repository: LLMRepository | None = None,
     ) -> None:
         self.repository = repository or KnowledgeRepository()
         self.job_repository = job_repository or JobRepository()
+        self.llm_repository = llm_repository or LLMRepository()
 
     def start_build(
         self,
@@ -96,6 +105,15 @@ class KnowledgeService:
                 details={"course_id": course_id},
             )
 
+        building_version = self.repository.get_building_framework(session, course_id)
+        if building_version is not None:
+            raise AppError(
+                code="KNOWLEDGE_BUILD_IN_PROGRESS",
+                message="A knowledge framework build is already running for this course.",
+                status_code=409,
+                details={"framework_version_id": building_version.id},
+            )
+
         documents = self.repository.get_documents_for_framework_build(session, course_id)
         if not documents:
             raise AppError(
@@ -109,6 +127,8 @@ class KnowledgeService:
             course_id=course_id,
             version_number=self.repository.next_version_number(session, course_id),
             status="building",
+            input_revision=course.material_revision,
+            input_document_ids=[document.id for document in documents],
         )
         job = self.job_repository.create_job(
             session,
@@ -154,6 +174,15 @@ class KnowledgeService:
         if version.status == "active":
             return
 
+        if version.input_revision != course.material_revision:
+            version.status = "failed"
+            raise AppError(
+                code="KNOWLEDGE_INPUT_STALE",
+                message="The source materials changed while this framework was waiting to build. Start a new build.",
+                status_code=409,
+                details={"framework_version_id": framework_version_id},
+            )
+
         documents = self.repository.get_documents_for_framework_build(session, course_id)
         if not documents:
             version.status = "failed"
@@ -165,13 +194,16 @@ class KnowledgeService:
 
         adapter = get_llm_adapter()
         try:
+            candidate = self._generate_framework_candidate(
+                session=session,
+                framework_version_id=version.id,
+                course_id=course_id,
+                adapter=adapter,
+                course_name=course.name,
+                documents=documents,
+                reference_outline=reference_outline,
+            )
             with session.begin_nested():
-                candidate = self._generate_framework_candidate(
-                    adapter=adapter,
-                    course_name=course.name,
-                    documents=documents,
-                    reference_outline=reference_outline,
-                )
                 ref_to_node_version_id = self._persist_framework_candidate(
                     session,
                     version=version,
@@ -216,9 +248,80 @@ class KnowledgeService:
                 status=version.status,
                 created_at=version.created_at,
                 activated_at=version.activated_at,
+                input_revision=version.input_revision,
             )
             for version in self.repository.list_framework_versions(session, course_id)
         ]
+
+    def identity_diagnostics(
+        self, session: Session, course_id: str
+    ) -> KnowledgeIdentityDiagnosticsResponse:
+        if self.repository.get_course(session, course_id) is None:
+            raise AppError(
+                code="RESOURCE_NOT_FOUND", message="Course not found.", status_code=404,
+                details={"course_id": course_id},
+            )
+        current, previous = self.repository.get_latest_framework_pair(session, course_id)
+        if current is None:
+            raise AppError(
+                code="RESOURCE_NOT_FOUND", message="No active knowledge framework exists for this course.",
+                status_code=404, details={"course_id": course_id},
+            )
+        if previous is None:
+            return KnowledgeIdentityDiagnosticsResponse(
+                current_version_id=current.id, previous_version_id=None, matches=[]
+            )
+        previous_by_node = {node.knowledge_node_id: node for node in previous.node_versions if node.is_leaf}
+        previous_leaves = [node for node in previous.node_versions if node.is_leaf]
+        matches: list[KnowledgeIdentityMatchResponse] = []
+        for node in (candidate for candidate in current.node_versions if candidate.is_leaf):
+            exact = previous_by_node.get(node.knowledge_node_id)
+            if exact is not None:
+                matches.append(self._identity_match(node, exact, 1.0, "stable_identity", True))
+                continue
+            scored = sorted(
+                ((self._identity_score(node, old), old) for old in previous_leaves),
+                key=lambda item: item[0], reverse=True,
+            )
+            best = scored[0] if scored else (0.0, None)
+            second = scored[1][0] if len(scored) > 1 else 0.0
+            confidence, old = best
+            if old is not None and confidence >= 0.85 and confidence - second >= 0.1:
+                matches.append(self._identity_match(node, old, confidence, "high_confidence_content_match", True))
+            elif old is not None and confidence >= 0.6:
+                matches.append(self._identity_match(node, old, confidence, "review_required", False))
+            else:
+                matches.append(self._identity_match(node, None, confidence, "unmatched", False))
+        return KnowledgeIdentityDiagnosticsResponse(
+            current_version_id=current.id,
+            previous_version_id=previous.id,
+            matches=matches,
+        )
+
+    def _identity_match(
+        self, current: KnowledgeNodeVersion, previous: KnowledgeNodeVersion | None,
+        confidence: float, match_type: str, safe_to_migrate: bool,
+    ) -> KnowledgeIdentityMatchResponse:
+        return KnowledgeIdentityMatchResponse(
+            current_node_id=current.knowledge_node_id,
+            current_title=current.title,
+            previous_node_id=previous.knowledge_node_id if previous else None,
+            previous_title=previous.title if previous else None,
+            confidence=round(confidence, 6), match_type=match_type,
+            safe_to_migrate=safe_to_migrate,
+        )
+
+    def _identity_score(self, current: KnowledgeNodeVersion, previous: KnowledgeNodeVersion) -> float:
+        title_a = self._identity_tokens(current.title)
+        title_b = self._identity_tokens(previous.title)
+        title_score = len(title_a & title_b) / max(1, len(title_a | title_b))
+        content_a = self._identity_tokens(current.content or "")
+        content_b = self._identity_tokens(previous.content or "")
+        content_score = len(content_a & content_b) / max(1, len(content_a | content_b))
+        return title_score * 0.75 + content_score * 0.25
+
+    def _identity_tokens(self, value: str) -> set[str]:
+        return {token for token in re.findall(r"[\w\u4e00-\u9fff]+", value.lower()) if len(token) > 1}
 
     def get_active_framework(self, session: Session, course_id: str) -> KnowledgeFrameworkResponse:
         version = self.repository.get_active_framework(session, course_id)
@@ -455,6 +558,9 @@ class KnowledgeService:
     def _generate_framework_candidate(
         self,
         *,
+        session: Session,
+        framework_version_id: str,
+        course_id: str,
         adapter: Any,
         course_name: str,
         documents: list[Any],
@@ -468,8 +574,41 @@ class KnowledgeService:
                 status_code=400,
             )
 
-        batch_candidates: list[KnowledgeFrameworkCandidate] = []
+        checkpoint_rows = self.repository.get_build_batches(session, framework_version_id)
+        checkpoints = {row.batch_index: row for row in checkpoint_rows}
         for batch in batches:
+            input_hash = self._batch_input_hash(batch)
+            checkpoint = checkpoints.get(batch.index)
+            if checkpoint is None:
+                checkpoint = self.repository.create_build_batch(
+                    session,
+                    framework_version_id=framework_version_id,
+                    batch_index=batch.index,
+                    input_hash=input_hash,
+                )
+                checkpoints[batch.index] = checkpoint
+            elif checkpoint.input_hash != input_hash:
+                checkpoint.input_hash = input_hash
+                checkpoint.status = "pending"
+                checkpoint.candidate_json = None
+                checkpoint.error_code = None
+
+            if checkpoint.status != "succeeded":
+                reusable = self.repository.get_reusable_batch_candidate(
+                    session,
+                    course_id=course_id,
+                    framework_version_id=framework_version_id,
+                    batch_index=batch.index,
+                    input_hash=input_hash,
+                )
+                if reusable is not None:
+                    checkpoint.status = "succeeded"
+                    checkpoint.candidate_json = reusable
+                    checkpoint.error_code = None
+
+        session.flush()
+
+        def generate_batch(batch: FrameworkBuildBatch) -> tuple[KnowledgeFrameworkCandidate, Any]:
             payload = self._build_llm_payload(
                 course_name,
                 documents,
@@ -477,18 +616,64 @@ class KnowledgeService:
                 batch=batch,
                 batch_count=len(batches),
             )
-            try:
-                llm_result = adapter.generate_structured_output(
-                    prompt_version=PROMPT_VERSION,
-                    system_prompt=SYSTEM_PROMPT,
-                    user_payload=payload,
-                    response_model=KnowledgeFrameworkCandidate,
-                )
-                candidate = llm_result.data
-            except AppError as exc:
-                raise exc
+            llm_result = adapter.generate_structured_output(
+                prompt_version=PROMPT_VERSION,
+                system_prompt=SYSTEM_PROMPT,
+                user_payload=payload,
+                response_model=KnowledgeFrameworkCandidate,
+            )
+            return self._sanitize_batch_candidate(llm_result.data, batch), llm_result.summary
 
-            batch_candidates.append(self._sanitize_batch_candidate(candidate, batch))
+        pending_batches = [
+            batch
+            for batch in batches
+            if checkpoints[batch.index].status != "succeeded"
+            or not checkpoints[batch.index].candidate_json
+        ]
+        with ThreadPoolExecutor(max_workers=min(FRAMEWORK_LLM_CONCURRENCY, len(pending_batches) or 1)) as executor:
+            futures = {executor.submit(generate_batch, batch): batch for batch in pending_batches}
+            for future, batch in [(future, futures[future]) for future in futures]:
+                try:
+                    candidate, summary = future.result()
+                except Exception as exc:
+                    checkpoints[batch.index].status = "failed"
+                    checkpoints[batch.index].error_code = getattr(exc, "code", type(exc).__name__)
+                    adapter_settings = getattr(adapter, "settings", None)
+                    self.llm_repository.add_call_log(
+                        session,
+                        course_id=course_id,
+                        operation="knowledge_framework.batch",
+                        provider="mock" if getattr(adapter_settings, "llm_base_url", "").startswith("mock://") else "openai-compatible",
+                        model_name=getattr(adapter_settings, "llm_model", None) or "unknown",
+                        prompt_version=PROMPT_VERSION,
+                        status="failed",
+                        error_code=getattr(exc, "code", type(exc).__name__),
+                        input_summary={"batch_index": batch.index, "batch_count": len(batches), "unit_count": len(batch.units)},
+                    )
+                    session.commit()
+                    raise
+                checkpoints[batch.index].status = "succeeded"
+                checkpoints[batch.index].candidate_json = candidate.model_dump()
+                checkpoints[batch.index].error_code = None
+                self.llm_repository.add_call_log(
+                    session,
+                    course_id=course_id,
+                    operation="knowledge_framework.batch",
+                    provider=summary.provider,
+                    model_name=summary.model_name,
+                    prompt_version=summary.prompt_version,
+                    status="succeeded",
+                    attempt_count=summary.attempt_count,
+                    duration_ms=summary.duration_ms,
+                    input_summary={"batch_index": batch.index, "batch_count": len(batches), "unit_count": len(batch.units)},
+                    output_summary={"candidate_node_count": len(candidate.nodes)},
+                )
+                session.commit()
+
+        batch_candidates = [
+            KnowledgeFrameworkCandidate.model_validate(checkpoints[batch.index].candidate_json)
+            for batch in batches
+        ]
 
         return self._merge_batch_candidates(
             course_name=course_name,
@@ -496,6 +681,19 @@ class KnowledgeService:
             candidates=batch_candidates,
             batch_count=len(batches),
         )
+
+    def _batch_input_hash(self, batch: FrameworkBuildBatch) -> str:
+        payload = [
+            {
+                "document_id": unit.document_id,
+                "page_number": unit.page_number,
+                "page_end": unit.page_end,
+                "chunk_id": unit.chunk_id,
+                "text": self._normalize_source_text(unit.text),
+            }
+            for unit in batch.units
+        ]
+        return hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
 
     def _build_framework_batches(self, documents: list[Any]) -> list[FrameworkBuildBatch]:
         units: list[FrameworkSourceUnit] = []
@@ -610,7 +808,8 @@ class KnowledgeService:
         batch_count: int,
     ) -> KnowledgeFrameworkCandidate:
         merged_topics: list[KnowledgeNodeCandidate] = []
-        seen_titles: set[str] = set()
+        grouped_topics: dict[str | None, list[KnowledgeNodeCandidate]] = {}
+        seen_titles: set[tuple[str | None, str]] = set()
 
         for candidate in candidates:
             for node in candidate.nodes:
@@ -620,23 +819,25 @@ class KnowledgeService:
                     document_id = topic.sources[0].document_id
                     if not any(document.id == document_id for document in documents):
                         continue
+                    section_key = self._clean_section_label(topic.section_label)
                     title_key = self._normalize_title_key(topic.title)
-                    if title_key in seen_titles:
+                    dedupe_key = (section_key, title_key)
+                    if dedupe_key in seen_titles:
                         continue
                     if not self._is_quality_knowledge_topic(topic):
                         continue
-                    seen_titles.add(title_key)
+                    seen_titles.add(dedupe_key)
                     topic_index = len(merged_topics) + 1
-                    merged_topics.append(
-                        KnowledgeNodeCandidate(
+                    normalized_topic = KnowledgeNodeCandidate(
                             ref=f"topic_{topic_index}",
-                            section_label=self._clean_section_label(topic.section_label),
+                            section_label=section_key,
                             title=topic.title,
                             content=topic.content,
                             sources=topic.sources[:3],
                             children=[],
                         )
-                    )
+                    merged_topics.append(normalized_topic)
+                    grouped_topics.setdefault(section_key, []).append(normalized_topic)
 
         if not merged_topics:
             raise AppError(
@@ -656,31 +857,102 @@ class KnowledgeService:
             for left, right in zip(merged_topics, merged_topics[1:])
         ]
 
-        return KnowledgeFrameworkCandidate(
+        merged_nodes: list[KnowledgeNodeCandidate] = []
+        for section_key, topics in grouped_topics.items():
+            if section_key is None:
+                merged_nodes.extend(topics)
+                continue
+            merged_nodes.append(
+                KnowledgeNodeCandidate(
+                    ref=f"section_{len(merged_nodes) + 1}",
+                    section_label=section_key,
+                    title=section_key,
+                    content=None,
+                    sources=[],
+                    children=topics,
+                )
+            )
+
+        result = KnowledgeFrameworkCandidate(
             root_title=course_name,
             root_description=f"Generated from {len(documents)} parsed material(s) across {batch_count} batch(es).",
-            nodes=merged_topics,
+            nodes=merged_nodes,
             relations=relations,
         )
+        self._validate_framework_structure(result)
+        return result
 
     def _collect_source_backed_topics(
-        self, node: KnowledgeNodeCandidate
+        self,
+        node: KnowledgeNodeCandidate,
+        inherited_section_label: str | None = None,
     ) -> list[KnowledgeNodeCandidate]:
         topics: list[KnowledgeNodeCandidate] = []
+        section_label = self._clean_section_label(node.section_label) or inherited_section_label
+        if node.children:
+            for child in node.children:
+                topics.extend(self._collect_source_backed_topics(child, section_label))
+            return topics
         if node.sources:
             topics.append(
                 KnowledgeNodeCandidate(
                     ref=node.ref,
-                    section_label=node.section_label,
+                    section_label=section_label,
                     title=node.title,
                     content=node.content,
                     sources=node.sources,
                     children=[],
                 )
             )
-        for child in node.children:
-            topics.extend(self._collect_source_backed_topics(child))
         return topics
+
+    def _validate_framework_structure(self, candidate: KnowledgeFrameworkCandidate) -> None:
+        max_depth = 0
+        leaf_count = 0
+        seen_refs: set[str] = set()
+
+        def visit(node: KnowledgeNodeCandidate, depth: int) -> None:
+            nonlocal max_depth, leaf_count
+            if node.ref in seen_refs:
+                raise AppError(
+                    code="LLM_OUTPUT_INVALID",
+                    message="Knowledge framework contains duplicate node references.",
+                    status_code=502,
+                )
+            seen_refs.add(node.ref)
+            max_depth = max(max_depth, depth)
+            if depth > 4:
+                raise AppError(
+                    code="LLM_OUTPUT_INVALID",
+                    message="Knowledge framework nesting is deeper than the supported limit.",
+                    status_code=502,
+                )
+            if node.children:
+                if node.sources:
+                    raise AppError(
+                        code="LLM_OUTPUT_INVALID",
+                        message=f"Container node '{node.title}' must not carry leaf sources.",
+                        status_code=502,
+                    )
+                for child in node.children:
+                    visit(child, depth + 1)
+                return
+            leaf_count += 1
+            if not node.sources:
+                raise AppError(
+                    code="LLM_OUTPUT_INVALID",
+                    message=f"Leaf node '{node.title}' must include a grounded source.",
+                    status_code=502,
+                )
+
+        for node in candidate.nodes:
+            visit(node, 1)
+        if leaf_count == 0:
+            raise AppError(
+                code="LLM_OUTPUT_INVALID",
+                message="Knowledge framework must contain at least one leaf node.",
+                status_code=502,
+            )
 
     def _normalize_title_key(self, title: str) -> str:
         return " ".join(title.lower().split())
@@ -804,14 +1076,14 @@ class KnowledgeService:
                 "Keep titles to a short noun phrase; never use a full sentence or the first sentence of the source as a title.",
                 "Use the continuous document content as the primary evidence; source_segments are provenance metadata, not concepts.",
                 "Put chapter or section markers in section_label, not in title.",
-                "Do not create document, chapter, or section container nodes.",
+                "Create a chapter or section container only when the source provides a clear section label; otherwise keep the concept at the nearest reliable level.",
                 "Each leaf node must include at least one source from batch_sources.",
             ],
             "output_shape": {
                 "root_title": "Course or unit title.",
                 "nodes": (
-                    "A flat list of high-signal knowledge point nodes. children should usually "
-                    "be empty. Do not include document or section containers."
+                "A hierarchy of optional section containers and source-backed leaf concepts. "
+                "Use children for reliable chapter/section structure; do not use filenames as containers."
                 ),
                 "node_fields": {
                     "section_label": "Optional chapter or section marker, for example '3.1'.",

@@ -4,6 +4,7 @@ from app.db.session import session_scope
 from app.schemas.mastery import (
     KnowledgeGapResponse,
     MasteryStateResponse,
+    MasteryOverviewResponse,
     ReviewTargetsRequest,
     ReviewTargetsResponse,
 )
@@ -19,6 +20,15 @@ router = APIRouter(tags=["mastery"])
 async def list_mastery(course_id: str) -> list[MasteryStateResponse]:
     with session_scope() as session:
         return MasteryService().list_mastery(session, course_id)
+
+
+@router.get(
+    "/courses/{course_id}/mastery/overview",
+    response_model=MasteryOverviewResponse,
+)
+async def mastery_overview(course_id: str) -> MasteryOverviewResponse:
+    with session_scope() as session:
+        return MasteryService().mastery_overview(session, course_id)
 
 
 @router.get(
