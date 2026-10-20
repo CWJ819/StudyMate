@@ -1,11 +1,12 @@
 // 设置：只读展示（plan §5）。不渲染 database_url / storage_root（服务器路径不该出现在浏览器）；
 // llm_base_url 以 mock:// 开头时解释演示模式与退出方法。
 import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { getHealth, getSettings } from '../api/endpoints'
 import { formatBytes } from '../api/status'
 import { AppShell } from '../components/AppShell'
 import { ErrorNotice } from '../components/ErrorNotice'
+import { settingsReturnTo } from '../lib/navigation'
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -28,6 +29,9 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 export function SettingsPage() {
   const settings = useQuery({ queryKey: ['settings'], queryFn: getSettings })
   const health = useQuery({ queryKey: ['health'], queryFn: getHealth })
+  const location = useLocation()
+  const returnTo = settingsReturnTo(location.state)
+  const hasOrigin = returnTo !== '/'
   const demo = settings.data?.llm_base_url?.startsWith('mock://') ?? false
 
   // 不走 CourseLayout：设置页在课程外，自带无课程上下文的 AppShell（顶栏/横幅/健康状态）
@@ -36,8 +40,8 @@ export function SettingsPage() {
     <div className="mx-auto max-w-[760px]">
       <div className="mb-3 flex items-baseline gap-3">
         <h1 className="text-[22px] font-bold">设置</h1>
-        <Link to="/" className="text-[13px] text-accent">
-          ← 返回我的课程
+        <Link to={returnTo} className="text-[13px] text-accent">
+          {hasOrigin ? '← 返回上一页' : '← 返回我的课程'}
         </Link>
       </div>
 

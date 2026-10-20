@@ -11,7 +11,7 @@ Node ≥ 24（本机在 conda 环境 `studymate` 内运行 npm）。所有依赖
 ```bash
 npm install
 npm run dev         # 开发服务器 http://localhost:5173，/api 代理到 127.0.0.1:8000
-npm run test        # vitest（jsdom + msw），49 个用例
+npm run test        # vitest（jsdom + msw），55 个用例
 npm run typecheck   # tsc --noEmit
 npm run build       # typecheck + vite build → dist/
 npm run gen:types   # 由 openapi/openapi.json 重新生成 src/api/schema.d.ts

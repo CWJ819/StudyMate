@@ -1,7 +1,7 @@
 // 应用骨架：演示横幅(38) → 顶栏(58，品牌 + 全文检索 + 状态) → 课程 tab(46) → 内容区
 // 视觉基线方向一（plan §4.5 / docs/design/mockups/dir1-overview.html）
 import { useQuery } from '@tanstack/react-query'
-import { Link, NavLink } from 'react-router'
+import { Link, NavLink, useLocation } from 'react-router'
 import {
   getHealth,
   getSettings,
@@ -11,6 +11,7 @@ import {
   type Course,
 } from '../api/endpoints'
 import { useEffect, useRef, useState, type FormEvent, type PropsWithChildren } from 'react'
+import { settingsLinkState, type SettingsReturnState } from '../lib/navigation'
 import { ErrorNotice } from './ErrorNotice'
 
 export type TabKey = 'overview' | 'materials' | 'knowledge' | 'quiz' | 'review' | 'plan'
@@ -58,7 +59,7 @@ function HealthBadge() {
   )
 }
 
-function DemoBanner() {
+function DemoBanner({ settingsState }: { settingsState?: SettingsReturnState }) {
   const settings = useQuery({ queryKey: ['settings'], queryFn: getSettings, staleTime: 300_000 })
   const demo = settings.data?.llm_base_url?.startsWith('mock://') ?? false
   if (!demo) return null
@@ -70,14 +71,16 @@ function DemoBanner() {
       <span>
         <b className="font-semibold text-warning">演示模式</b> — 示例数据，操作不保存
       </span>
-      <a href="#/settings" className="ml-auto text-xs text-accent no-underline">
+      <Link to="/settings" state={settingsState} className="ml-auto text-xs text-accent no-underline">
         如何退出演示？
-      </a>
+      </Link>
     </div>
   )
 }
 
 export function AppShell({ course, active, children }: AppShellProps) {
+  const location = useLocation()
+  const settingsState = settingsLinkState(location)
   const [q, setQ] = useState('')
   const [submitted, setSubmitted] = useState('')
   const [open, setOpen] = useState(false)
@@ -130,7 +133,7 @@ export function AppShell({ course, active, children }: AppShellProps) {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <DemoBanner />
+      <DemoBanner settingsState={settingsState} />
       <header className="flex h-[58px] items-center gap-5 border-b border-border bg-surface px-7">
         <div className="text-base font-bold tracking-wide">
           智学伴
@@ -205,7 +208,7 @@ export function AppShell({ course, active, children }: AppShellProps) {
         <div className="ml-auto flex items-center gap-4 text-[13px] text-ink2">
           <HealthBadge />
           <span>使用说明</span>
-          <Link to="/settings" className="text-ink2 no-underline hover:text-accent">
+          <Link to="/settings" state={settingsState} className="text-ink2 no-underline hover:text-accent">
             设置
           </Link>
         </div>
