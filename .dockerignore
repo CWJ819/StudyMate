@@ -1,0 +1,28 @@
+# Build context is this repository's root. Keep runtime data, local secrets and
+# host-specific dependency trees out of the image.
+.git
+**/.git
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+.venv
+**/.venv
+*.egg-info
+
+# Local runtime state and secrets (never copy .env into an image).
+.env
+.env.*
+data
+frontend/node_modules
+frontend/dist
+frontend/coverage
+
+# Not needed by either build stage.
+docs
+tests
+scripts
+AGENTS.md
+.agents
+.codex

@@ -43,8 +43,9 @@ const MESSAGES: Record<string, string> = {
   JOB_EXECUTION_FAILED: '后台任务执行失败，请重试',
   JOB_PAYLOAD_INVALID: '后台任务参数异常（程序错误）',
   KNOWLEDGE_BUILD_FAILED: '知识框架构建失败，请重试',
-  // settings 不接受接口写 Key（防 SSRF/泄密），只能经环境变量
-  LLM_API_KEY_ENV_ONLY: '模型 API Key 只能通过环境变量配置，不接受接口设置',
+  // 本机 Key 保存：格式校验失败 / 本地密钥文件写入失败
+  INVALID_LLM_API_KEY: 'API Key 不合法（不能包含换行，长度不超过 4096）',
+  LOCAL_SECRETS_WRITE_FAILED: '无法写入本机密钥文件，请检查数据目录权限',
   DATABASE_SCHEMA_OUTDATED: '数据库结构过期，请执行 alembic upgrade head',
   INTERNAL_SERVER_ERROR: '服务器内部错误，请稍后重试',
   NETWORK_ERROR: '网络错误，请检查连接后重试',

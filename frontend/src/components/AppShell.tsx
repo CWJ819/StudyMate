@@ -69,7 +69,7 @@ function DemoBanner({ settingsState }: { settingsState?: SettingsReturnState }) 
         演
       </span>
       <span>
-        <b className="font-semibold text-warning">演示模式</b> — 示例数据，操作不保存
+        <b className="font-semibold text-warning">演示模式</b> — 内置假模型，数据保存在本机
       </span>
       <Link to="/settings" state={settingsState} className="ml-auto text-xs text-accent no-underline">
         如何退出演示？

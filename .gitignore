@@ -6,6 +6,8 @@
 __pycache__/
 *.pyc
 data/
+local_secrets.json
+.pytest-tmp/
 *.egg-info/
 
 # frontend

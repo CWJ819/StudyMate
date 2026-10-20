@@ -48,6 +48,7 @@ export const settingsMock: Settings = {
   max_document_pages: 200,
   job_max_attempts: 3,
   llm_auth_configured: false,
+  llm_api_key_source: null,
 }
 
 /** 未配置 LLM 的设置（不显示演示横幅） */
@@ -593,4 +594,48 @@ export const planDetailInactive: StudyPlanDetail = {
       scheduled_date: isoDaysFromNow(-2),
     }),
   ],
+}
+
+// 平铺兜底分组 fixture（报告 §5.3.3）：旧框架形态 = 根 + 26 个叶子（2 个文档 + 1 条无来源）
+const flatLeaf = (
+  i: number,
+  title: string,
+  source?: { document_id: string; filename: string; page_number: number },
+) => ({
+  knowledge_node_id: `knf-${i}`,
+  node_version_id: `nvf-${i}`,
+  section_label: null,
+  title,
+  content: null,
+  level: 1,
+  is_leaf: true,
+  sources: source
+    ? [{ ...source, chunk_id: null, evidence_type: 'outline' }]
+    : [],
+  children: [],
+})
+
+const macDoc = { document_id: 'm9', filename: '第4章 MAC子层.pdf', page_number: 1 }
+const transportDoc = { document_id: 'm2', filename: '运输层讲义.pdf', page_number: 3 }
+
+const flatLeaves = [
+  ...Array.from({ length: 22 }, (_, i) =>
+    flatLeaf(i, `MAC 知识点 ${String(i + 1).padStart(2, '0')}`, {
+      ...macDoc,
+      page_number: i + 1,
+    }),
+  ),
+  flatLeaf(22, '运输层知识点 A', transportDoc),
+  flatLeaf(23, '运输层知识点 B', { ...transportDoc, page_number: 18 }),
+  flatLeaf(24, '运输层知识点 C', { ...transportDoc, page_number: 24 }),
+  flatLeaf(25, '未标注来源的知识点'),
+]
+
+export const frameworkFlat: KnowledgeFramework = {
+  framework_version_id: 'fv-flat',
+  version_number: 2,
+  status: 'active',
+  activated_at: '2026-01-03T10:00:00Z',
+  tree: flatLeaves,
+  nodes: flatLeaves.map((leaf) => ({ ...leaf })),
 }

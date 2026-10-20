@@ -4,6 +4,7 @@ import { request } from './client'
 
 export type Health = components['schemas']['HealthResponse']
 export type Settings = components['schemas']['SettingsResponse']
+export type SettingsUpdate = components['schemas']['SettingsUpdateRequest']
 export type Course = components['schemas']['CourseResponse']
 export type CourseCreate = components['schemas']['CourseCreateRequest']
 export type CourseUpdate = components['schemas']['CourseUpdateRequest']
@@ -40,6 +41,11 @@ export function getHealth() {
 
 export function getSettings() {
   return request<Settings>('/api/settings')
+}
+
+/** 保存服务地址/模型名/API Key 等运行时配置（Key 只写本机 local_secrets.json，不回传） */
+export function updateSettings(body: SettingsUpdate) {
+  return request<Settings>('/api/settings', { method: 'PUT', body: JSON.stringify(body) })
 }
 
 // ---- 课程 ----

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from copy import deepcopy
 from typing import Any
 
@@ -25,11 +26,33 @@ from app.llm.schemas import (
     ShortAnswerGradingCandidate,
     ShortAnswerRubricCandidate,
 )
+from app.services.local_secrets import read_local_api_key
+from app.services.settings_service import read_llm_runtime_overrides
+
+logger = logging.getLogger(__name__)
 
 
 class OpenAICompatibleAdapter(LLMAdapter):
     def __init__(self) -> None:
         self.settings = get_settings()
+        # 设置页保存的 base_url/model 覆盖（数据库）优先于环境变量，下一次 LLM 调用即生效；
+        # 数据库不可用时沿用环境变量配置
+        try:
+            overrides = read_llm_runtime_overrides()
+        except Exception:
+            logger.warning("Failed to read LLM runtime overrides; falling back to env settings.")
+            overrides = {}
+        if overrides:
+            self.settings = self.settings.model_copy(update=overrides)
+        # 设置页保存在本机 local_secrets.json 的 Key 优先于环境变量；
+        # 适配器每次调用都会新建，所以保存后下一次 LLM 调用即生效。
+        try:
+            local_api_key = read_local_api_key()
+        except Exception:
+            logger.warning("Failed to read the local LLM API key; falling back to env settings.")
+            local_api_key = None
+        if local_api_key:
+            self.settings = self.settings.model_copy(update={"llm_api_key": local_api_key})
 
     def ensure_available(self) -> None:
         if self.settings.llm_base_url and self.settings.llm_base_url.startswith("mock://"):
@@ -43,7 +66,7 @@ class OpenAICompatibleAdapter(LLMAdapter):
         if not self.settings.llm_api_key:
             raise AppError(
                 code="LLM_NOT_CONFIGURED",
-                message="LLM API key must be configured through environment variables.",
+                message="LLM API key is not configured. Add it in the settings page.",
                 status_code=400,
             )
 

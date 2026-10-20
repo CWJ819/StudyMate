@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -13,6 +15,8 @@ class SettingsResponse(BaseModel):
     max_document_pages: int
     job_max_attempts: int
     llm_auth_configured: bool
+    # 只报告来源，绝不返回密钥本身；local = 设置页保存在本机，environment = 环境变量
+    llm_api_key_source: Literal["local", "environment"] | None = None
 
 
 class SettingsUpdateRequest(BaseModel):
@@ -25,4 +29,6 @@ class SettingsUpdateRequest(BaseModel):
     max_upload_bytes: int | None = Field(default=None, ge=1)
     max_document_pages: int | None = Field(default=None, ge=1)
     job_max_attempts: int | None = Field(default=None, ge=1, le=20)
+    # 本地单机产品允许页面写入；空字符串表示清除本机保存的 Key。
+    # 不设长度/格式 Field 约束，避免校验失败时 422 把密钥原文回显出来。
     llm_api_key: str | None = None

@@ -76,27 +76,205 @@ function SourceItem({ source }: { source: KnowledgeSource }) {
   )
 }
 
-/** 树行：缩进 + 展开/折叠 + 选中高亮 + 掌握度叠加（估计值·依据次数，未测验灰） */
+/** 组内默认显示的行数（报告 §5.3.3：避免 96 条一次性撑开） */
+const BATCH_LIMIT = 20
+
+/** 后代叶子中已有掌握度记录的数量（组头「已测 M」徽标） */
+function countTested(node: KnowledgeTreeNode, mastery: Map<string, MasteryState>): number {
+  let n = 0
+  const walk = (cur: KnowledgeTreeNode) => {
+    for (const c of cur.children ?? []) {
+      if (c.is_leaf && mastery.has(c.knowledge_node_id)) n += 1
+      walk(c)
+    }
+  }
+  walk(node)
+  return n
+}
+
+/** 掌握度叠加（估计值·依据次数，未测验灰）；树行与平铺兜底行共用 */
+function MasteryBadge({ m }: { m?: MasteryState }) {
+  if (!m) return <span className="flex-none text-[11px] text-ink3">未测验</span>
+  return (
+    <span className="flex flex-none items-center gap-1 font-mono text-[11.5px] text-ink2">
+      <span className="inline-block h-1.5 w-10 overflow-hidden rounded-sm bg-untested-bg">
+        <span
+          className="block h-full bg-accent"
+          style={{ width: `${Math.round(m.mastery_estimate * 100)}%` }}
+        />
+      </span>
+      {m.mastery_estimate.toFixed(2)}·{m.evidence_count}
+    </span>
+  )
+}
+
+/** 平铺兜底分组（报告 §5.3.3）：根 + 全叶子的旧框架按 sources[0].document_id 现场分组，只影响展示 */
+interface FlatGroup {
+  key: string
+  filename: string
+  leaves: KnowledgeTreeNode[]
+}
+
+function buildFlatGroups(tree: KnowledgeTreeNode[]): FlatGroup[] | null {
+  // 旧框架形态：顶层直接是叶子（API 不含合成根），没有任何层级 → 按来源文档现场分组
+  if (tree.length === 0 || !tree.every((n) => n.is_leaf)) return null
+  const groups: FlatGroup[] = []
+  const byKey = new Map<string, FlatGroup>()
+  for (const leaf of tree) {
+    const source = leaf.sources[0]
+    const key = source?.document_id ?? '__no_source__'
+    let group = byKey.get(key)
+    if (!group) {
+      group = { key, filename: source?.filename ?? '未标注来源', leaves: [] }
+      byKey.set(key, group)
+      groups.push(group)
+    }
+    group.leaves.push(leaf)
+  }
+  return groups
+}
+
+/** 平铺兜底的叶子行：小字号 + 参考线缩进 + 单行 truncate + 行内 P{page} */
+function FlatLeafRow({
+  node,
+  selectedId,
+  mastery,
+  onSelect,
+}: {
+  node: KnowledgeTreeNode
+  selectedId: string | null
+  mastery: Map<string, MasteryState>
+  onSelect: (id: string) => void
+}) {
+  const m = mastery.get(node.knowledge_node_id)
+  const source = node.sources[0]
+  return (
+    <div
+      className={`flex cursor-pointer items-center gap-1.5 border-l-2 py-[3px] pr-3 text-[12.5px] ${
+        selectedId === node.knowledge_node_id
+          ? 'border-accent bg-accent-bg/60 font-medium'
+          : 'border-transparent hover:bg-bg'
+      }`}
+      style={{ paddingLeft: '26px' }}
+      onClick={() => onSelect(node.knowledge_node_id)}
+      role="treeitem"
+      aria-selected={selectedId === node.knowledge_node_id}
+    >
+      <span className="min-w-0 flex-1 truncate" title={node.title}>
+        {node.section_label && (
+          <span className="mr-1 font-mono text-[11px] text-ink3">{node.section_label}</span>
+        )}
+        <span className="align-baseline">{node.title}</span>
+      </span>
+      {source && (
+        <span className="flex-none font-mono text-[10.5px] text-ink3">P{source.page_number}</span>
+      )}
+      <MasteryBadge m={m} />
+    </div>
+  )
+}
+
+/** 平铺兜底的文档组：组头（文件名 · N 个 · 已测 M，默认收起）+ 组内前 20 条 + 展开其余 */
+function FlatGroupBlock({
+  group,
+  open,
+  showAll,
+  selectedId,
+  mastery,
+  onToggle,
+  onShowAll,
+  onSelect,
+}: {
+  group: FlatGroup
+  open: boolean
+  showAll: boolean
+  selectedId: string | null
+  mastery: Map<string, MasteryState>
+  onToggle: () => void
+  onShowAll: () => void
+  onSelect: (id: string) => void
+}) {
+  const tested = group.leaves.filter((l) => mastery.has(l.knowledge_node_id)).length
+  const visible = showAll ? group.leaves : group.leaves.slice(0, BATCH_LIMIT)
+  const rest = group.leaves.length - BATCH_LIMIT
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="flex w-full items-center gap-1.5 border-l-2 border-transparent px-3 py-1.5 text-left text-[13px] font-semibold text-ink hover:bg-bg"
+      >
+        <span aria-hidden="true" className="w-3.5 flex-none text-xs text-ink3">
+          {open ? '▾' : '▸'}
+        </span>
+        <span className="min-w-0 flex-1 truncate" title={group.filename}>
+          <span aria-hidden="true" className="mr-1">
+            📄
+          </span>
+          {group.filename}
+        </span>
+        <span className="flex-none font-mono text-[11px] text-ink3">
+          {group.leaves.length} 个{tested > 0 ? ` · 已测 ${tested}` : ''}
+        </span>
+      </button>
+      {open && (
+        <div role="group">
+          {visible.map((leaf) => (
+            <FlatLeafRow
+              key={leaf.knowledge_node_id}
+              node={leaf}
+              selectedId={selectedId}
+              mastery={mastery}
+              onSelect={onSelect}
+            />
+          ))}
+          {rest > 0 && !showAll && (
+            <button
+              type="button"
+              onClick={onShowAll}
+              className="block w-full border-l-2 border-transparent py-1 pr-3 text-left text-[11.5px] text-accent hover:bg-bg"
+              style={{ paddingLeft: '42px' }}
+            >
+              展开其余 {rest} 条 ▾
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** 树行：缩进 + 展开/折叠 + 选中高亮 + 掌握度叠加；组头带 N/已测 徽标、组内前 20 条分批、叶子行内 P{page} */
 function TreeRow({
   node,
   depth,
   expanded,
+  fullIds,
   selectedId,
   mastery,
   onToggle,
+  onToggleFull,
   onSelect,
 }: {
   node: KnowledgeTreeNode
   depth: number
   expanded: Set<string>
+  fullIds: Set<string>
   selectedId: string | null
   mastery: Map<string, MasteryState>
   onToggle: (id: string) => void
+  onToggleFull: (id: string) => void
   onSelect: (id: string) => void
 }) {
-  const hasChildren = (node.children ?? []).length > 0
+  const children = node.children ?? []
+  const hasChildren = children.length > 0
   const isOpen = expanded.has(node.knowledge_node_id)
+  const showAll = fullIds.has(node.knowledge_node_id)
   const m = mastery.get(node.knowledge_node_id)
+  const tested = countTested(node, mastery)
+  const visibleChildren = showAll ? children : children.slice(0, BATCH_LIMIT)
+  const rest = children.length - BATCH_LIMIT
   return (
     <div>
       <div
@@ -132,33 +310,44 @@ function TreeRow({
           )}
           <span className="align-baseline">{node.title}</span>
         </span>
-        {node.is_leaf && m && (
-          <span className="flex flex-none items-center gap-1 font-mono text-[11.5px] text-ink2">
-            <span className="inline-block h-1.5 w-10 overflow-hidden rounded-sm bg-untested-bg">
-              <span
-                className="block h-full bg-accent"
-                style={{ width: `${Math.round(m.mastery_estimate * 100)}%` }}
-              />
-            </span>
-            {m.mastery_estimate.toFixed(2)}·{m.evidence_count}
+        {node.is_leaf && node.sources[0] && (
+          <span className="flex-none font-mono text-[10.5px] text-ink3">
+            P{node.sources[0].page_number}
           </span>
         )}
-        {node.is_leaf && !m && <span className="flex-none text-[11px] text-ink3">未测验</span>}
+        {node.is_leaf && <MasteryBadge m={m} />}
+        {hasChildren && (
+          <span className="flex-none font-mono text-[11px] text-ink3">
+            {children.length} 个{tested > 0 ? ` · 已测 ${tested}` : ''}
+          </span>
+        )}
       </div>
       {hasChildren && isOpen && (
         <div role="group">
-          {(node.children ?? []).map((child) => (
+          {visibleChildren.map((child) => (
             <TreeRow
               key={child.knowledge_node_id}
               node={child}
               depth={depth + 1}
               expanded={expanded}
+              fullIds={fullIds}
               selectedId={selectedId}
               mastery={mastery}
               onToggle={onToggle}
+              onToggleFull={onToggleFull}
               onSelect={onSelect}
             />
           ))}
+          {rest > 0 && !showAll && (
+            <button
+              type="button"
+              onClick={() => onToggleFull(node.knowledge_node_id)}
+              className="block border-l-2 border-transparent py-1 pr-3 text-left text-[11.5px] text-accent hover:bg-bg"
+              style={{ paddingLeft: `${depth * 18 + 26}px` }}
+            >
+              展开其余 {rest} 条 ▾
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -217,6 +406,11 @@ export function KnowledgePage() {
   const queryClient = useQueryClient()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  // 层级树：超过 BATCH_LIMIT 的组点过「展开其余」的节点
+  const [expandedFull, setExpandedFull] = useState<Set<string>>(new Set())
+  // 平铺兜底分组：展开的组 / 解除 20 条截断的组
+  const [groupOpen, setGroupOpen] = useState<Set<string>>(new Set())
+  const [groupShowAll, setGroupShowAll] = useState<Set<string>>(new Set())
   const [showVersions, setShowVersions] = useState(false)
   const [buildJobId, setBuildJobId] = useState<string | null>(null)
   const [buildError, setBuildError] = useState<unknown>(null)
@@ -279,22 +473,65 @@ export function KnowledgePage() {
 
   const tree = framework.data?.tree ?? []
   const meta = framework.data ? frameworkStatus(framework.data.status) : null
+  // 旧框架（根 + 全叶子）→ 按来源文档分组的平铺兜底；新框架（有层级）→ 走 TreeRow
+  const flatGroups = useMemo(() => buildFlatGroups(tree), [tree])
 
-  // 默认选中根节点，展开前两层
+  // 层级树：默认选中根、只展开根（文档组默认收起，报告 §5.3.3）；平铺兜底不预选，等用户点叶子
   useEffect(() => {
     if (tree.length > 0 && selectedId == null) {
-      setSelectedId(tree[0]!.knowledge_node_id)
-      const ids = new Set<string>()
-      const walk = (nodes: KnowledgeTreeNode[], depth: number) => {
-        for (const n of nodes) {
-          if (depth <= 1) ids.add(n.knowledge_node_id)
-          if (depth < 1) walk(n.children ?? [], depth + 1)
+      if (flatGroups == null) {
+        setSelectedId(tree[0]!.knowledge_node_id)
+        setExpanded(new Set([tree[0]!.knowledge_node_id]))
+      }
+    }
+  }, [tree, selectedId, flatGroups])
+
+  const expandAll = () => {
+    if (flatGroups != null) {
+      setGroupOpen(new Set(flatGroups.map((g) => g.key)))
+      setGroupShowAll(new Set(flatGroups.map((g) => g.key)))
+      return
+    }
+    const ids = new Set<string>()
+    const walk = (nodes: KnowledgeTreeNode[]) => {
+      for (const n of nodes) {
+        if ((n.children ?? []).length > 0) {
+          ids.add(n.knowledge_node_id)
+          walk(n.children ?? [])
         }
       }
-      walk(tree, 0)
-      setExpanded(ids)
     }
-  }, [tree, selectedId])
+    walk(tree)
+    setExpanded(ids)
+    setExpandedFull(new Set(ids))
+  }
+
+  const collapseAll = () => {
+    setGroupOpen(new Set())
+    setGroupShowAll(new Set())
+    setExpandedFull(new Set())
+    if (flatGroups == null && tree.length > 0) {
+      setExpanded(new Set([tree[0]!.knowledge_node_id]))
+    } else {
+      setExpanded(new Set())
+    }
+  }
+
+  const toggleGroup = (key: string) =>
+    setGroupOpen((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+
+  const toggleFull = (id: string) =>
+    setExpandedFull((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
 
   if (notBuilt) {
     return (
@@ -412,26 +649,63 @@ export function KnowledgePage() {
 
       {tree.length > 0 && (
         <div className="grid grid-cols-[340px_1fr] gap-6">
-          <section className="h-fit rounded-lg border border-border bg-surface py-2" role="tree" aria-label="知识框架树">
-            {tree.map((node) => (
-              <TreeRow
-                key={node.knowledge_node_id}
-                node={node}
-                depth={0}
-                expanded={expanded}
-                selectedId={selectedId}
-                mastery={masteryMap}
-                onToggle={(id) =>
-                  setExpanded((prev) => {
-                    const next = new Set(prev)
-                    if (next.has(id)) next.delete(id)
-                    else next.add(id)
-                    return next
-                  })
-                }
-                onSelect={setSelectedId}
-              />
-            ))}
+          <section className="h-fit rounded-lg border border-border bg-surface" role="tree" aria-label="知识框架树">
+            <div className="flex items-center gap-2 border-b border-border px-3 py-1.5">
+              <span className="mr-auto text-[11.5px] text-ink3">
+                {flatGroups != null ? `按资料分组 · ${flatGroups.length} 组` : '层级结构'}
+              </span>
+              <button
+                type="button"
+                onClick={expandAll}
+                className="rounded border border-border2 px-2 py-0.5 text-[11.5px] text-ink2 hover:text-ink"
+              >
+                全部展开
+              </button>
+              <button
+                type="button"
+                onClick={collapseAll}
+                className="rounded border border-border2 px-2 py-0.5 text-[11.5px] text-ink2 hover:text-ink"
+              >
+                全部收起
+              </button>
+            </div>
+            {flatGroups != null ? (
+              flatGroups.map((group) => (
+                <FlatGroupBlock
+                  key={group.key}
+                  group={group}
+                  open={groupOpen.has(group.key)}
+                  showAll={groupShowAll.has(group.key)}
+                  selectedId={selectedId}
+                  mastery={masteryMap}
+                  onToggle={() => toggleGroup(group.key)}
+                  onShowAll={() => setGroupShowAll((prev) => new Set(prev).add(group.key))}
+                  onSelect={setSelectedId}
+                />
+              ))
+            ) : (
+              tree.map((node) => (
+                <TreeRow
+                  key={node.knowledge_node_id}
+                  node={node}
+                  depth={0}
+                  expanded={expanded}
+                  fullIds={expandedFull}
+                  selectedId={selectedId}
+                  mastery={masteryMap}
+                  onToggle={(id) =>
+                    setExpanded((prev) => {
+                      const next = new Set(prev)
+                      if (next.has(id)) next.delete(id)
+                      else next.add(id)
+                      return next
+                    })
+                  }
+                  onToggleFull={toggleFull}
+                  onSelect={setSelectedId}
+                />
+              ))
+            )}
             <p className="mt-2 border-t border-dashed border-border px-3 pt-2 text-[11.5px] leading-relaxed text-ink3">
               估计值 = 作答记录的统计推断；未测验 ≠ 薄弱。
             </p>

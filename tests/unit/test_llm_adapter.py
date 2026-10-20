@@ -73,6 +73,59 @@ def test_http_structured_output_retries_invalid_json(
     assert "structured-output retry" in Client.calls[1]["messages"][0]["content"]
 
 
+def test_http_request_uses_locally_saved_api_key(tmp_path, monkeypatch) -> None:
+    """设置页保存的 Key（local_secrets.json）必须压过环境变量，并进入 Authorization 头。"""
+    secrets_file = tmp_path / "local_secrets.json"
+    secrets_file.write_text(json.dumps({"llm_api_key": "local-key"}), encoding="utf-8")
+    monkeypatch.setenv("LOCAL_SECRETS_PATH", str(secrets_file))
+    monkeypatch.setenv("LLM_BASE_URL", "https://llm.test/v1")
+    monkeypatch.setenv("LLM_MODEL", "test-model")
+    monkeypatch.setenv("LLM_API_KEY", "env-key")
+    monkeypatch.setenv("LLM_MAX_RETRIES", "0")
+    reset_settings_cache()
+
+    class Result(BaseModel):
+        ok: bool
+
+    captured: dict = {}
+
+    class Response:
+        status_code = 200
+
+        def json(self) -> dict:
+            return {"choices": [{"message": {"content": json.dumps({"ok": True})}}]}
+
+    class Client:
+        def __init__(self, **_) -> None:
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+        def post(self, *args, **kwargs):
+            captured["url"] = args[0] if args else kwargs.get("url")
+            captured["headers"] = kwargs["headers"]
+            return Response()
+
+    monkeypatch.setattr("app.llm.openai_compatible.httpx.Client", Client)
+    try:
+        result = OpenAICompatibleAdapter().generate_structured_output(
+            prompt_version="test",
+            system_prompt="Return JSON.",
+            user_payload={"input": "value"},
+            response_model=Result,
+        )
+    finally:
+        reset_settings_cache()
+
+    assert result.data.ok is True
+    assert captured["url"] == "https://llm.test/v1/chat/completions"
+    assert captured["headers"]["Authorization"] == "Bearer local-key"
+
+
 def test_normalize_quiz_aliases_without_inventing_answer_mapping() -> None:
     adapter = OpenAICompatibleAdapter()
 

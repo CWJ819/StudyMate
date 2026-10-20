@@ -1,0 +1,33 @@
+# Runtime dependency pins for the container image.
+# Versions match the environment verified on 2026-10-20 (Python 3.13, Windows
+# development host). Keep this file in sync with StudyMate/pyproject.toml when
+# the backend changes; rebuild and smoke-test the image after any bump.
+alembic==1.20.0
+annotated-doc==0.0.5
+annotated-types==0.8.0
+anyio==4.15.1
+certifi==2026.10.18
+click==8.5.0
+fastapi==0.146.0
+h11==0.16.0
+httpcore==1.0.9
+httpx==0.28.1
+idna==3.20
+lxml==6.1.3
+Mako==1.4.3
+MarkupSafe==3.0.4
+opentelemetry-api==1.45.1
+pillow==13.0.0
+pydantic==2.14.1
+pydantic-settings==2.16.0
+pydantic_core==2.50.1
+pymupdf==1.28.2
+python-dotenv==1.2.4
+python-multipart==0.0.32
+python-pptx==1.0.2
+SQLAlchemy==2.1.5
+starlette==1.9.0
+typing-inspection==0.4.4
+typing_extensions==4.16.0
+uvicorn==0.54.0
+xlsxwriter==3.2.9

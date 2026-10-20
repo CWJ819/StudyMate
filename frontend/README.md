@@ -11,7 +11,7 @@ Node ≥ 24（本机在 conda 环境 `studymate` 内运行 npm）。所有依赖
 ```bash
 npm install
 npm run dev         # 开发服务器 http://localhost:5173，/api 代理到 127.0.0.1:8000
-npm run test        # vitest（jsdom + msw），55 个用例
+npm run test        # vitest（jsdom + msw），58 个用例
 npm run typecheck   # tsc --noEmit
 npm run build       # typecheck + vite build → dist/
 npm run gen:types   # 由 openapi/openapi.json 重新生成 src/api/schema.d.ts
@@ -26,7 +26,7 @@ npm run gen:types   # 由 openapi/openapi.json 重新生成 src/api/schema.d.ts
 LLM_BASE_URL=mock://local python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-`LLM_BASE_URL=mock://local` 是内置假模型：解析/出题/批改即时生成、不消耗 API 配额，页面顶部显示演示横幅，设置页（`#/settings`）解释退出方法。不配置 `LLM_BASE_URL` 时，涉及模型的功能会提示“尚未配置模型”。
+`LLM_BASE_URL=mock://local` 是内置假模型：解析/出题/批改即时生成、不消耗 API 配额，页面顶部显示演示横幅。设置页（`#/settings`）可修改服务地址、模型名和 API Key 并保存（下一次 LLM 调用生效；Key 存在数据库同目录的 `local_secrets.json`，只在本机，不回传页面）。不配置 `LLM_BASE_URL` 时，涉及模型的功能会提示“尚未配置模型”。
 
 ## 目录结构
 

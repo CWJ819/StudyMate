@@ -965,6 +965,8 @@ export interface components {
             job_max_attempts: number;
             /** Llm Auth Configured */
             llm_auth_configured: boolean;
+            /** Llm Api Key Source */
+            llm_api_key_source?: ("local" | "environment") | null;
         };
         /** SettingsUpdateRequest */
         SettingsUpdateRequest: {
