@@ -38,6 +38,13 @@ const MESSAGES: Record<string, string> = {
   PLAN_CAPACITY_EXCEEDED: '计划容量不足：请增加每日分钟数或推迟考试日期',
   INVALID_TASK_STATUS: '任务状态不合法',
   INVALID_TASK_STATUS_TRANSITION: '任务已完成或已跳过，不能再修改',
+  INVALID_STORAGE_PATH: '文件存储路径不合法',
+  // job.error_code 会直接展示在知识框架失败横幅里
+  JOB_EXECUTION_FAILED: '后台任务执行失败，请重试',
+  JOB_PAYLOAD_INVALID: '后台任务参数异常（程序错误）',
+  KNOWLEDGE_BUILD_FAILED: '知识框架构建失败，请重试',
+  // settings 不接受接口写 Key（防 SSRF/泄密），只能经环境变量
+  LLM_API_KEY_ENV_ONLY: '模型 API Key 只能通过环境变量配置，不接受接口设置',
   DATABASE_SCHEMA_OUTDATED: '数据库结构过期，请执行 alembic upgrade head',
   INTERNAL_SERVER_ERROR: '服务器内部错误，请稍后重试',
   NETWORK_ERROR: '网络错误，请检查连接后重试',

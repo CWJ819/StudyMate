@@ -1,4 +1,6 @@
 // 复习：掌握度估计列表（升序 + 未测验灰）+ 错题本（知识缺口）+ 复习目标 → 一键出题
+// 掌握度行默认显示条数（长列表渐进展开，与资料搜索同款模式）
+const MASTERY_LIMIT = 20
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useState } from 'react'
@@ -94,6 +96,9 @@ export function ReviewPage() {
   const [limit, setLimit] = useState(10)
   const [ratio, setRatio] = useState(0.3)
   const [targetError, setTargetError] = useState<unknown>(null)
+  // 掌握度长列表收敛（与资料搜索同款渐进展开）
+  const [showAllTested, setShowAllTested] = useState(false)
+  const [showUntested, setShowUntested] = useState(false)
 
   // 复习目标 → 直接以这些节点出题 → 跳测验页（变式题接口缺失时的闭环替代，plan §5）
   const startReviewQuiz = useMutation({
@@ -143,6 +148,9 @@ export function ReviewPage() {
     .slice()
     .sort((a, b) => a.mastery_estimate - b.mastery_estimate)
   const untestedLeaves = leaves.filter((l) => !masteryByNode.has(l.knowledge_node_id))
+  // 长列表收敛：已测验默认前 20 条（与资料搜索同款渐进展开），未测验折叠成计数行
+  const testedVisible = showAllTested ? testedRows : testedRows.slice(0, MASTERY_LIMIT)
+  const hiddenTested = testedRows.length - testedVisible.length
 
   const gaps = wrongbook.data ?? []
 
@@ -162,7 +170,7 @@ export function ReviewPage() {
               <ErrorNotice error={mastery.error} />
             </div>
           )}
-          {testedRows.map((m) => (
+          {testedVisible.map((m) => (
             <MasteryRow
               key={m.knowledge_node_id}
               title={m.title}
@@ -170,9 +178,31 @@ export function ReviewPage() {
               evidence={m.evidence_count}
             />
           ))}
-          {untestedLeaves.map((l) => (
-            <MasteryRow key={l.knowledge_node_id} title={l.title} estimate={null} evidence={0} />
-          ))}
+          {hiddenTested > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowAllTested((v) => !v)}
+              className="w-full border-t border-border px-5 py-2 text-left text-[12.5px] text-accent hover:bg-bg"
+            >
+              {showAllTested ? '收起 ▴' : `展开其余 ${hiddenTested} 条已测验 ▾`}
+            </button>
+          )}
+          {untestedLeaves.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowUntested((v) => !v)}
+              aria-expanded={showUntested}
+              className="w-full border-t border-border px-5 py-2 text-left text-[12.5px] text-ink3 hover:bg-bg"
+            >
+              {showUntested
+                ? '收起未测验 ▴'
+                : `未测验 ${untestedLeaves.length} 个（不代表薄弱）· 展开 ▾`}
+            </button>
+          )}
+          {showUntested &&
+            untestedLeaves.map((l) => (
+              <MasteryRow key={l.knowledge_node_id} title={l.title} estimate={null} evidence={0} />
+            ))}
           <p className="border-t border-dashed border-border px-5 py-2 text-[11.5px] leading-relaxed text-ink3">
             估计值 = 作答记录的统计推断，不是精确测量。
           </p>

@@ -32,7 +32,7 @@ function expectDisabled(el: HTMLElement, disabled: boolean) {
   expect((el as HTMLInputElement).disabled).toBe(disabled)
 }
 
-test('生成表单：默认值全选叶子，提交体带 exam_date/daily_minutes/target_score/knowledge_node_ids', async () => {
+test('生成表单：全选叶子时省略 knowledge_node_ids（后端缺省=全部，避开 100 个上限）', async () => {
   let body: Record<string, unknown> | null = null
   const created = { ...planDetailActive, id: 'pl2', version_number: 3, tasks: [] }
   server.use(
@@ -48,7 +48,7 @@ test('生成表单：默认值全选叶子，提交体带 exam_date/daily_minute
   expect(await screen.findByText('v2 计划')).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: '生成新计划' }))
 
-  // 改一下考试日期，其余用默认（60 分钟 / 85 分 / 全选 kn2、kn3）
+  // 改一下考试日期，其余用默认（60 分钟 / 85 分 / 全选）
   fireEvent.change(screen.getByLabelText(/考试日期/), {
     target: { value: addDaysISO(todayISO(), 21) },
   })
@@ -59,7 +59,6 @@ test('生成表单：默认值全选叶子，提交体带 exam_date/daily_minute
     exam_date: addDaysISO(todayISO(), 21),
     daily_minutes: 60,
     target_score: 85,
-    knowledge_node_ids: ['kn2', 'kn3'],
   })
 })
 

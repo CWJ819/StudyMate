@@ -22,7 +22,7 @@ function renderReview() {
   )
 }
 
-test('掌握度列表：已测验按估计升序，未测验叶子显示灰色未测验', async () => {
+test('掌握度列表：已测验按估计升序，未测验默认折叠成计数行、展开后显示灰条', async () => {
   server.use(
     http.get('*/api/courses/c1/mastery', () =>
       HttpResponse.json([
@@ -40,13 +40,19 @@ test('掌握度列表：已测验按估计升序，未测验叶子显示灰色�
     ),
   )
   renderReview()
-  // 0.42 在 0.80 前；kn3（叶子、无记录）为未测验
+  // 0.42 在 0.80 前；kn3（叶子、无记录）默认折叠
   expect(await screen.findByText(/0\.42 · 依据 3 次作答/)).toBeTruthy()
   expect(screen.getByText(/0\.80 · 依据 5 次作答/)).toBeTruthy()
-  expect(screen.getByText('未测验')).toBeTruthy()
+  expect(screen.getByText(/未测验 1 个（不代表薄弱）· 展开/)).toBeTruthy()
+  expect(screen.queryByText('未测验', { exact: true })).toBeNull()
   // 顺序：0.42 行出现在 0.80 行之前
   const all = document.body.textContent ?? ''
   expect(all.indexOf('0.42')).toBeLessThan(all.indexOf('0.80'))
+
+  // 展开后出现未测验灰条
+  fireEvent.click(screen.getByRole('button', { name: /未测验 1 个/ }))
+  expect(await screen.findByText('未测验', { exact: true })).toBeTruthy()
+  expect(screen.getByText('收起未测验 ▴')).toBeTruthy()
 })
 
 test('错题本：已知 gap_type 显示中文，未知值回退原文；空列表有空态', async () => {

@@ -111,3 +111,22 @@ test('薄弱点点击联动掌握度行高亮（aria-pressed）', async () => {
   expect(pressed.length).toBe(1)
   expect((pressed[0] as HTMLElement).textContent).toContain('0.42')
 })
+
+test('薄弱点联动到未测验节点：自动展开灰条区并高亮对应行', async () => {
+  renderDashboard()
+  // kn3 未测验，默认折叠成计数行
+  await waitFor(() => expect(document.body.textContent).toContain('未测验 1 个（不代表薄弱）'))
+
+  // gap2（未知 gap_type 回退原文 some_future_type）指向 kn3
+  const weakGap = Array.from(document.querySelectorAll('button')).find((b) =>
+    b.textContent?.includes('some_future_type'),
+  )
+  expect(weakGap).toBeTruthy()
+  fireEvent.click(weakGap as HTMLElement)
+
+  // 联动触发自动展开，目标行（而非折叠行）被高亮
+  await waitFor(() => expect(document.body.textContent).toContain('收起未测验'))
+  const pressed = document.querySelectorAll('[aria-pressed="true"]')
+  expect(pressed.length).toBe(1)
+  expect((pressed[0] as HTMLElement).textContent).toContain('可靠传输')
+})

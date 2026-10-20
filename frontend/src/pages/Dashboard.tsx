@@ -303,6 +303,9 @@ function WeakPointsCard({
 
 // ---- 掌握度估计（右栏；可被左栏薄弱点联动高亮）----
 
+/** 已测验行默认显示条数（长列表渐进展开，与资料搜索同款模式） */
+const TESTED_LIMIT = 10
+
 function MasteryCard({
   courseId,
   frameworkNotBuilt,
@@ -324,13 +327,9 @@ function MasteryCard({
     retry: false,
   })
   const rowRefs = useRef(new Map<string, HTMLButtonElement>())
-
-  useEffect(() => {
-    if (focusNodeId) {
-      // jsdom 未实现 scrollIntoView，用可选调用兜底
-      rowRefs.current.get(focusNodeId)?.scrollIntoView?.({ block: 'nearest' })
-    }
-  }, [focusNodeId])
+  // 长列表收敛（与资料搜索同款渐进展开）：已测验默认前 10 条，未测验默认折叠成计数行
+  const [showAllTested, setShowAllTested] = useState(false)
+  const [showUntested, setShowUntested] = useState(false)
 
   const leaves = collectLeaves(knowledge.data?.tree ?? [])
   const masteryByNode = new Map((mastery.data ?? []).map((m) => [m.knowledge_node_id, m]))
@@ -338,6 +337,26 @@ function MasteryCard({
     .slice()
     .sort((a, b) => a.mastery_estimate - b.mastery_estimate)
   const untestedLeaves = leaves.filter((l) => !masteryByNode.has(l.knowledge_node_id))
+  const testedVisible = showAllTested ? testedRows : testedRows.slice(0, TESTED_LIMIT)
+  const hiddenTested = testedRows.length - testedVisible.length
+
+  // 联动目标行若在折叠区，先展开——展开触发的重渲染之后，滚动 effect 才能定位到行
+  useEffect(() => {
+    if (!focusNodeId) return
+    if (untestedLeaves.some((l) => l.knowledge_node_id === focusNodeId)) setShowUntested(true)
+    if (testedRows.findIndex((m) => m.knowledge_node_id === focusNodeId) >= TESTED_LIMIT) {
+      setShowAllTested(true)
+    }
+    // 只在切换焦点时判断；列表数据由查询缓存驱动，无需作为依赖
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusNodeId])
+
+  useEffect(() => {
+    if (focusNodeId) {
+      // jsdom 未实现 scrollIntoView，用可选调用兜底
+      rowRefs.current.get(focusNodeId)?.scrollIntoView?.({ block: 'nearest' })
+    }
+  }, [focusNodeId, showAllTested, showUntested])
 
   return (
     <section className="min-w-0 overflow-hidden rounded-lg border border-border bg-surface">
@@ -357,7 +376,7 @@ function MasteryCard({
 
       {(mastery.data != null || knowledge.data != null) && (
         <div className="px-5 pb-3 pt-1.5">
-          {testedRows.map((m) => {
+          {testedVisible.map((m) => {
             const focused = focusNodeId === m.knowledge_node_id
             return (
               <button
@@ -386,7 +405,29 @@ function MasteryCard({
               </button>
             )
           })}
-          {untestedLeaves.map((leaf) => {
+          {hiddenTested > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowAllTested((v) => !v)}
+              className="w-full rounded px-1 py-1.5 text-left text-[12.5px] text-accent hover:bg-bg"
+            >
+              {showAllTested ? '收起 ▴' : `展开其余 ${hiddenTested} 条已测验 ▾`}
+            </button>
+          )}
+          {untestedLeaves.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowUntested((v) => !v)}
+              aria-expanded={showUntested}
+              className="w-full rounded px-1 py-1.5 text-left text-[12.5px] text-ink3 hover:bg-bg"
+            >
+              {showUntested
+                ? '收起未测验 ▴'
+                : `未测验 ${untestedLeaves.length} 个（不代表薄弱）· 展开 ▾`}
+            </button>
+          )}
+          {showUntested &&
+            untestedLeaves.map((leaf) => {
             const focused = focusNodeId === leaf.knowledge_node_id
             return (
               <button

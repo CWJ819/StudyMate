@@ -55,7 +55,9 @@ function GenerateForm({
         exam_date: examDate,
         daily_minutes: dailyMinutes,
         target_score: targetScore,
-        knowledge_node_ids: Array.from(selected),
+        // 全选时省略字段（后端缺省=全部叶子）：契约上限 100 个 id
+        knowledge_node_ids:
+          selected.size === leaves.length ? undefined : Array.from(selected),
       }),
     onSuccess: (plan) => onCreated(plan.id),
     onError: (err) => setFormError(err instanceof ApiError ? err.displayMessage : String(err)),
@@ -82,6 +84,10 @@ function GenerateForm({
     }
     if (selected.size === 0) {
       setFormError('请至少选择一个知识点')
+      return
+    }
+    if (selected.size < leaves.length && selected.size > 100) {
+      setFormError(`复习范围最多选 100 个知识点（当前 ${selected.size} 个），请缩小范围`)
       return
     }
     generate.mutate()

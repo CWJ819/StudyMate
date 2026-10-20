@@ -12,6 +12,7 @@ import { KnowledgePage } from './pages/Knowledge'
 import { QuizPage } from './pages/Quiz'
 import { ReviewPage } from './pages/Review'
 import { PlanPage } from './pages/Plan'
+import { SettingsPage } from './pages/Settings'
 
 function tabFromPath(pathname: string): TabKey {
   if (pathname.includes('/knowledge')) return 'knowledge'
@@ -55,6 +56,7 @@ export function AppRoutes() {
     <HashRouter>
       <Routes>
         <Route path="/" element={<CoursesPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="/courses/:courseId" element={<CourseLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="materials" element={<MaterialsPage />} />

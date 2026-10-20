@@ -119,7 +119,7 @@ test('刷新后结果仍在：草稿含 submission 时直接渲染结果页（�
   expect(screen.queryByRole('button', { name: '提交答卷' })).toBeNull()
 })
 
-test('出题：默认勾选全部叶子节点，generate 请求只带叶子 id', async () => {
+test('出题：默认全选叶子时省略 ids（后端缺省=全部，避开 50 个上限），部分选择才携带', async () => {
   let generated: { knowledge_node_ids?: string[]; question_count?: number; question_types?: string[] } | null =
     null
   server.use(
@@ -150,8 +150,34 @@ test('出题：默认勾选全部叶子节点，generate 请求只带叶子 id',
 
   fireEvent.click(screen.getByRole('button', { name: '生成测验' }))
   expect(await screen.findByText('正在根据所选知识点出题，完成后自动刷新…')).toBeTruthy()
-  expect(generated!.knowledge_node_ids).toEqual(['kn2', 'kn3'])
+  expect(generated!.knowledge_node_ids).toBeUndefined()
   expect(generated!.question_types).toHaveLength(3)
   expect(generated!.question_count).toBe(10)
   expect(localStorage.getItem(RECENT_KEY)).toBe('qz2')
+})
+
+test('出题：取消勾选一个叶子后，请求只带剩余叶子 id', async () => {
+  let generated: { knowledge_node_ids?: string[] } | null = null
+  server.use(
+    http.post('*/api/courses/c1/quiz/generate', async ({ request }) => {
+      generated = (await request.json()) as NonNullable<typeof generated>
+      return HttpResponse.json(
+        { quiz_id: 'qz3', job_id: 'job-ok', status: 'building' },
+        { status: 202 },
+      )
+    }),
+  )
+  server.use(
+    http.get('*/api/quizzes/qz3', () =>
+      HttpResponse.json({ ...quizOpen, quiz_id: 'qz3', status: 'building' }),
+    ),
+  )
+
+  renderQuiz()
+  await screen.findByText('还没有测验')
+  fireEvent.click(screen.getByRole('button', { name: '+ 新出题' }))
+  fireEvent.click(screen.getByLabelText('慢启动与拥塞避免')) // 取消 kn2
+  fireEvent.click(screen.getByRole('button', { name: '生成测验' }))
+  expect(await screen.findByText('正在根据所选知识点出题，完成后自动刷新…')).toBeTruthy()
+  expect(generated!.knowledge_node_ids).toEqual(['kn3'])
 })

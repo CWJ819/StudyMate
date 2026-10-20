@@ -1,6 +1,6 @@
 // 课程页：空态 + 创建（POST 体形状）+ 删除确认链路
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { MemoryRouter } from 'react-router'
 import { server } from '../test/server'
@@ -22,6 +22,16 @@ test('课程列表为空：显示空态', async () => {
   server.use(http.get('*/api/courses', () => HttpResponse.json([])))
   renderCourses()
   expect(await screen.findByText('还没有课程')).toBeTruthy()
+})
+
+test('课程列表页：标题为「课程列表」，导航只保留可点击的「我的课程」', async () => {
+  renderCourses()
+  expect(await screen.findByRole('heading', { name: '课程列表' })).toBeTruthy()
+
+  const nav = screen.getByRole('navigation')
+  expect(within(nav).queryByText('课程列表')).toBeNull()
+  const navLink = within(nav).getByRole('link', { name: '我的课程' })
+  expect(navLink.getAttribute('href')).toBe('/')
 })
 
 test('新建课程：提交 POST，成功后出现在列表', async () => {

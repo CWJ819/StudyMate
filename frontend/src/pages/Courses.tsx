@@ -136,7 +136,7 @@ export function CoursesPage() {
   return (
     <AppShell>
       <div className="mb-3 flex items-center justify-between">
-        <h1 className="text-[22px] font-bold">我的课程</h1>
+        <h1 className="text-[22px] font-bold">课程列表</h1>
         {!creating && !editing && (
           <button
             type="button"

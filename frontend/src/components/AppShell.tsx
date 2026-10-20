@@ -1,7 +1,7 @@
 // 应用骨架：演示横幅(38) → 顶栏(58，品牌 + 全文检索 + 状态) → 课程 tab(46) → 内容区
 // 视觉基线方向一（plan §4.5 / docs/design/mockups/dir1-overview.html）
 import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router'
+import { Link, NavLink } from 'react-router'
 import {
   getHealth,
   getSettings,
@@ -28,7 +28,7 @@ const TABS: Array<{ key: TabKey; label: string; suffix: string }> = [
 ]
 
 interface AppShellProps extends PropsWithChildren {
-  /** 有课程上下文时 crumb 与 tab 变成真实路由；无则静态展示（我的课程列表页） */
+  /** 有课程上下文时 crumb 与 tab 变成真实路由；无则只显示「我的课程」入口 */
   course?: Course | null
   active?: TabKey
 }
@@ -205,7 +205,9 @@ export function AppShell({ course, active, children }: AppShellProps) {
         <div className="ml-auto flex items-center gap-4 text-[13px] text-ink2">
           <HealthBadge />
           <span>使用说明</span>
-          <span>设置</span>
+          <Link to="/settings" className="text-ink2 no-underline hover:text-accent">
+            设置
+          </Link>
         </div>
       </header>
       <nav className="flex h-[46px] items-stretch gap-1 border-b border-border bg-surface px-7">
@@ -235,12 +237,19 @@ export function AppShell({ course, active, children }: AppShellProps) {
             ))}
           </>
         ) : (
-          <>
-            <span className="mr-4 flex items-center text-[13px] text-ink3">我的课程</span>
-            <span className="-mb-px flex items-center border-b-2 border-accent px-3.5 text-sm font-semibold text-ink">
-              课程列表
-            </span>
-          </>
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) =>
+              `-mb-px flex items-center border-b-2 px-3.5 text-sm no-underline ${
+                isActive
+                  ? 'border-accent font-semibold text-ink'
+                  : 'border-transparent text-ink2 hover:text-ink'
+              }`
+            }
+          >
+            我的课程
+          </NavLink>
         )}
       </nav>
       <main className="flex-1 px-8 py-4">{children}</main>
