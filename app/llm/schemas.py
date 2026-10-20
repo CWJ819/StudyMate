@@ -19,7 +19,7 @@ class LLMStructuredResult(BaseModel, Generic[T]):
 
 
 class KnowledgeSourceCandidate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     document_id: str
     page_number: int = Field(ge=1)
@@ -28,7 +28,7 @@ class KnowledgeSourceCandidate(BaseModel):
 
 
 class KnowledgeNodeCandidate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     ref: str
     section_label: str | None = Field(default=None, max_length=100)
@@ -39,7 +39,7 @@ class KnowledgeNodeCandidate(BaseModel):
 
 
 class KnowledgeRelationCandidate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     source_ref: str
     target_ref: str
@@ -49,7 +49,7 @@ class KnowledgeRelationCandidate(BaseModel):
 
 
 class KnowledgeFrameworkCandidate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     root_title: str = Field(min_length=1, max_length=255)
     root_description: str | None = None
@@ -58,14 +58,14 @@ class KnowledgeFrameworkCandidate(BaseModel):
 
 
 class QuestionOptionCandidate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     id: str = Field(min_length=1, max_length=50)
     text: str = Field(min_length=1, max_length=500)
 
 
 class QuestionKnowledgeMappingCandidate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     knowledge_node_id: str
     relation_role: str = Field(min_length=1, max_length=50)
@@ -73,7 +73,7 @@ class QuestionKnowledgeMappingCandidate(BaseModel):
 
 
 class RubricCriterionCandidate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     criterion_id: str = Field(min_length=1, max_length=50)
     description: str = Field(min_length=1, max_length=500)
@@ -82,14 +82,14 @@ class RubricCriterionCandidate(BaseModel):
 
 
 class ShortAnswerRubricCandidate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     max_points: float = Field(gt=0, le=100)
     criteria: list[RubricCriterionCandidate] = Field(min_length=1)
 
 
 class QuizQuestionCandidate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     question_type: str
     stem: str = Field(min_length=1, max_length=2000)
@@ -105,13 +105,13 @@ class QuizQuestionCandidate(BaseModel):
 
 
 class QuizGenerationCandidate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     questions: list[QuizQuestionCandidate] = Field(min_length=1)
 
 
 class ShortAnswerCriterionScoreCandidate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     criterion_id: str = Field(min_length=1, max_length=50)
     awarded_points: float = Field(ge=0, le=100)
@@ -119,7 +119,7 @@ class ShortAnswerCriterionScoreCandidate(BaseModel):
 
 
 class ShortAnswerGradingCandidate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     score: float = Field(ge=0, le=100)
     criterion_scores: list[ShortAnswerCriterionScoreCandidate] = Field(default_factory=list)

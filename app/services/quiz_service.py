@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import math
 import random
 from dataclasses import dataclass
@@ -50,6 +51,8 @@ from app.schemas.quiz import (
     QuizSubmitResponse,
 )
 from app.services.mastery_service import MasteryService
+
+logger = logging.getLogger(__name__)
 
 QUIZ_GENERATION_PROMPT_VERSION = "quiz-generation-v3"
 QUIZ_CONTEXT_NODE_LIMIT = 36
@@ -528,11 +531,19 @@ class QuizService:
                     "source_page_numbers",
                 ],
                 "choice_option_shape": {"id": "A", "text": "option text"},
+                "rubric_rules": {
+                    "single_choice/multiple_choice": "rubric must be null",
+                    "short_answer": (
+                        "rubric must be an object with max_points and criteria; each criterion "
+                        "has criterion_id, description, max_points, acceptable_phrases"
+                    ),
+                },
                 "mapping_shape": {
                     "knowledge_node_id": "must exactly match one supplied knowledge_node_id",
                     "relation_role": "primary",
                     "weight": 1.0,
                 },
+                "difficulty": "copy the requested difficulty value verbatim",
             },
             "generation_rules": [
                 "Ask about the meaning, implication, application, contrast, or consequence of the supplied knowledge point content.",
@@ -1089,25 +1100,32 @@ class QuizService:
                     message="Short-answer grading referenced an unknown rubric criterion.",
                     status_code=502,
                 )
-            if criterion_score.awarded_points > criterion.max_points:
-                raise AppError(
-                    code="LLM_OUTPUT_INVALID",
-                    message="Short-answer grading exceeded the rubric criterion max points.",
-                    status_code=502,
+            # 分项超上限按上限截断（模型常见偏差），不再整卷 502
+            awarded = min(float(criterion_score.awarded_points), float(criterion.max_points))
+            awarded = max(awarded, 0.0)
+            if abs(awarded - float(criterion_score.awarded_points)) > 1e-6:
+                logger.warning(
+                    "short-answer grading clamped criterion %s from %s to %s",
+                    criterion_score.criterion_id,
+                    criterion_score.awarded_points,
+                    awarded,
                 )
-            awarded_total += float(criterion_score.awarded_points)
+                criterion_score.awarded_points = awarded
+            awarded_total += awarded
             criterion_scores.append(criterion_score.model_dump())
-        if awarded_total > snapshot.max_score + 1e-6:
-            raise AppError(
-                code="LLM_OUTPUT_INVALID",
-                message="Short-answer grading exceeded the question max score.",
-                status_code=502,
+        # 总分以分项和为准（真实模型验收 2026-10-20：整体分与分项和不一致曾导致 502）
+        final_score = min(awarded_total, float(snapshot.max_score))
+        if abs(final_score - awarded_total) > 1e-6:
+            logger.warning(
+                "short-answer grading total clamped from %s to max_score %s",
+                awarded_total,
+                snapshot.max_score,
             )
-        if abs(awarded_total - llm_result.data.score) > 1e-6:
-            raise AppError(
-                code="LLM_OUTPUT_INVALID",
-                message="Short-answer grading score did not match the rubric breakdown.",
-                status_code=502,
+        if abs(final_score - float(llm_result.data.score)) > 1e-6:
+            logger.warning(
+                "short-answer grading model score %s differs from criterion sum %s; using the sum",
+                llm_result.data.score,
+                final_score,
             )
 
         feedback_json = {
@@ -1120,7 +1138,7 @@ class QuizService:
         return (
             QuizQuestionResultResponse(
                 question_id=snapshot.question_id,
-                score=float(llm_result.data.score),
+                score=float(final_score),
                 max_score=snapshot.max_score,
                 grading_method="rubric_llm",
                 correct=None,

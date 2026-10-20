@@ -187,12 +187,14 @@ class OpenAICompatibleAdapter(LLMAdapter):
     ) -> Any:
         """Normalize safe presentation variants without inventing grading facts."""
         if response_model is QuizGenerationCandidate:
-            return self._normalize_quiz_payload(payload)
+            return self._normalize_quiz_payload(payload, user_payload=user_payload)
         if response_model is KnowledgeFrameworkCandidate:
             return self._normalize_knowledge_payload(payload, user_payload=user_payload)
+        if response_model is ShortAnswerGradingCandidate:
+            return self._normalize_grading_payload(payload)
         return payload
 
-    def _normalize_quiz_payload(self, payload: Any) -> Any:
+    def _normalize_quiz_payload(self, payload: Any, *, user_payload: dict[str, Any] | None = None) -> Any:
         if isinstance(payload, list):
             payload = {"questions": payload}
         if not isinstance(payload, dict):
@@ -207,6 +209,7 @@ class OpenAICompatibleAdapter(LLMAdapter):
         questions = normalized.get("questions")
         if not isinstance(questions, list):
             return normalized
+        requested_difficulty = (user_payload or {}).get("difficulty") or "low"
         normalized_questions = []
         for raw_question in questions:
             if not isinstance(raw_question, dict):
@@ -225,9 +228,15 @@ class OpenAICompatibleAdapter(LLMAdapter):
                 "single": "single_choice",
                 "multiple": "multiple_choice",
                 "short": "short_answer",
+                "单选": "single_choice",
+                "多选": "multiple_choice",
+                "简答": "short_answer",
+                "简答题": "short_answer",
             }.get(question_type, question_type)
             options = question.get("options")
-            if isinstance(options, dict):
+            if options is None:
+                question["options"] = []
+            elif isinstance(options, dict):
                 question["options"] = [
                     {"id": str(option_id), "text": str(option_text)}
                     for option_id, option_text in options.items()
@@ -238,12 +247,144 @@ class OpenAICompatibleAdapter(LLMAdapter):
                     for index, option in enumerate(options)
                 ]
             for field in ("answer_key_option_ids", "source_chunk_ids", "source_page_numbers"):
-                if isinstance(question.get(field), str):
+                if question.get(field) is None:
+                    question[field] = []
+                elif isinstance(question.get(field), str):
                     question[field] = [question[field]]
-            if isinstance(question.get("knowledge_mappings"), dict):
-                question["knowledge_mappings"] = [question["knowledge_mappings"]]
+            if isinstance(question.get("source_page_numbers"), list):
+                question["source_page_numbers"] = [
+                    int(page)
+                    for page in question["source_page_numbers"]
+                    if isinstance(page, (int, float)) or (isinstance(page, str) and page.strip().lstrip("Pp").isdigit())
+                ]
+            # 选择题不参与 rubric 评分：模型附加的 rubric 一律置空（真实模型验收 2026-10-20 D1）
+            if question["question_type"] in ("single_choice", "multiple_choice"):
+                question["rubric"] = None
+            else:
+                question["rubric"] = self._normalize_rubric(question.get("rubric"))
+            if not isinstance(question.get("difficulty"), str) or not question.get("difficulty", "").strip():
+                question["difficulty"] = requested_difficulty
+            question["knowledge_mappings"] = self._normalize_knowledge_mappings(
+                question.get("knowledge_mappings")
+            )
             normalized_questions.append(question)
         normalized["questions"] = normalized_questions
+        return normalized
+
+    def _normalize_rubric(self, rubric: Any) -> dict | None:
+        """兼容常见 rubric 变体（points/point 别名、字符串 criteria、缺 criterion_id），
+        不发明评分事实：max_points 只做求和兜底，不改单项分值语义。"""
+        if isinstance(rubric, list):
+            rubric = {"criteria": rubric}
+        if not isinstance(rubric, dict):
+            return None
+        criteria = rubric.get("criteria")
+        if isinstance(criteria, dict):
+            criteria = [criteria]
+        if not isinstance(criteria, list):
+            return None
+        normalized_criteria = []
+        for index, criterion in enumerate(criteria, start=1):
+            if isinstance(criterion, str):
+                criterion = {"description": criterion}
+            if not isinstance(criterion, dict):
+                continue
+            criterion = dict(criterion)
+            self._rename_if_missing(criterion, "max_points", "points")
+            self._rename_if_missing(criterion, "max_points", "point")
+            self._rename_if_missing(criterion, "max_points", "score")
+            if not isinstance(criterion.get("criterion_id"), str) or not criterion.get("criterion_id"):
+                criterion["criterion_id"] = f"c{index}"
+            description = criterion.get("description") or criterion.get("text") or f"Criterion {index}"
+            criterion["description"] = str(description)[:500]
+            max_points = criterion.get("max_points")
+            if not isinstance(max_points, (int, float)) or isinstance(max_points, bool) or max_points <= 0:
+                criterion["max_points"] = 1
+            phrases = criterion.get("acceptable_phrases")
+            if isinstance(phrases, str):
+                criterion["acceptable_phrases"] = [phrases]
+            elif not isinstance(phrases, list):
+                criterion["acceptable_phrases"] = []
+            normalized_criteria.append(criterion)
+        if not normalized_criteria:
+            return None
+        max_points = rubric.get("max_points")
+        if not isinstance(max_points, (int, float)) or isinstance(max_points, bool) or max_points <= 0:
+            max_points = sum(float(criterion["max_points"]) for criterion in normalized_criteria)
+        return {"max_points": float(max_points), "criteria": normalized_criteria}
+
+    def _normalize_knowledge_mappings(self, mappings: Any) -> list:
+        """字符串数组 / 缺 relation_role、weight 的映射修补为合法形态。"""
+        if isinstance(mappings, str):
+            mappings = [mappings]
+        if not isinstance(mappings, list):
+            return mappings if isinstance(mappings, list) else []
+        normalized = []
+        for mapping in mappings:
+            if isinstance(mapping, str):
+                normalized.append(
+                    {"knowledge_node_id": mapping, "relation_role": "primary", "weight": 1.0}
+                )
+                continue
+            if not isinstance(mapping, dict):
+                continue
+            mapping = dict(mapping)
+            self._rename_if_missing(mapping, "knowledge_node_id", "node_id")
+            if not isinstance(mapping.get("relation_role"), str) or not mapping.get("relation_role"):
+                mapping["relation_role"] = "primary"
+            weight = mapping.get("weight")
+            if not isinstance(weight, (int, float)) or isinstance(weight, bool) or not 0 < weight <= 1:
+                mapping["weight"] = 1.0
+            normalized.append(mapping)
+        return normalized
+
+    def _normalize_grading_payload(self, payload: Any) -> Any:
+        """简答批改字段别名归一（真实模型验收 2026-10-20 D2：字段名完全不同的原始输出）。
+        只做改名与求和兜底，不改判分语义；clamp 与总分一致性在 service 层处理。"""
+        if not isinstance(payload, dict):
+            return payload
+        normalized = deepcopy(payload)
+        self._rename_if_missing(normalized, "criterion_scores", "criteria_results")
+        self._rename_if_missing(normalized, "feedback", "overall_feedback")
+        self._rename_if_missing(normalized, "rationale", "reason")
+        self._rename_if_missing(normalized, "rationale", "explanation")
+
+        criteria = normalized.get("criterion_scores")
+        if isinstance(criteria, dict):
+            criteria = [criteria]
+        if isinstance(criteria, list):
+            normalized_criteria = []
+            for criterion in criteria:
+                if not isinstance(criterion, dict):
+                    continue
+                criterion = dict(criterion)
+                self._rename_if_missing(criterion, "awarded_points", "points_awarded")
+                self._rename_if_missing(criterion, "awarded_points", "points")
+                self._rename_if_missing(criterion, "rationale", "feedback")
+                self._rename_if_missing(criterion, "rationale", "reason")
+                awarded = criterion.get("awarded_points")
+                if not isinstance(awarded, (int, float)) or isinstance(awarded, bool) or awarded < 0:
+                    criterion["awarded_points"] = 0.0
+                if not isinstance(criterion.get("rationale"), str) or not criterion.get("rationale"):
+                    criterion["rationale"] = "Graded by rubric criterion."
+                normalized_criteria.append(criterion)
+            normalized["criterion_scores"] = normalized_criteria
+
+        # 缺 score 时以分项求和兜底（最终一致性仍由 service 层裁决）
+        score = normalized.get("score", normalized.get("points_awarded"))
+        if not isinstance(score, (int, float)) or isinstance(score, bool) or score < 0:
+            criteria = normalized.get("criterion_scores")
+            score = (
+                sum(float(c.get("awarded_points", 0)) for c in criteria if isinstance(c, dict))
+                if isinstance(criteria, list)
+                else 0.0
+            )
+        normalized["score"] = float(score)
+        # feedback / rationale 互为兜底：真实输出常常只给其中之一（overall_feedback）
+        if not isinstance(normalized.get("feedback"), str) or not normalized.get("feedback"):
+            normalized["feedback"] = normalized.get("rationale") or "Graded against the rubric."
+        if not isinstance(normalized.get("rationale"), str) or not normalized.get("rationale"):
+            normalized["rationale"] = normalized.get("feedback") or "Graded against the rubric."
         return normalized
 
     def _normalize_knowledge_payload(self, payload: Any, *, user_payload: dict[str, Any]) -> Any:

@@ -8,6 +8,46 @@ Output contract:
 - Every question must include all required fields for its type.
 - Use only the supplied knowledge_node_id, chunk_id, and page_number values.
 
+Per-type output rules (strict):
+- `question_type` must be exactly one of: `single_choice`, `multiple_choice`, `short_answer`.
+- For single_choice / multiple_choice:
+  - `options` is an array of `{"id": "A", "text": "..."}` objects (at least 2 for single, at least 3 for multiple).
+  - `answer_key_option_ids` must contain ids that exist in `options` (exactly 1 for single_choice, at least 2 for multiple_choice).
+  - `rubric` MUST be `null`.
+- For short_answer:
+  - `options` and `answer_key_option_ids` MUST be empty arrays `[]`.
+  - `rubric` MUST be an object: `{"max_points": <number>, "criteria": [...]}`.
+  - Every criterion MUST be an object with exactly `criterion_id` (stable short id like "c1"),
+    `description`, `max_points` (> 0), `acceptable_phrases` (array of strings, may be empty).
+  - Do NOT use `points` or `point` as the criterion field name; it is `max_points`.
+  - The rubric's `max_points` must equal the sum of criterion `max_points`.
+- `difficulty` must copy the requested difficulty value from the payload verbatim.
+- `knowledge_mappings` entries must be `{"knowledge_node_id": "<copy an id from knowledge_points verbatim>", "relation_role": "primary", "weight": 1.0}`.
+
+Example short-answer question (field names and shapes are contractual):
+{
+  "question_type": "short_answer",
+  "stem": "请说明 TCP 超时与收到 3 个重复 ACK 后拥塞窗口的恢复方式有何不同。",
+  "options": [],
+  "answer_key_option_ids": [],
+  "reference_answer": "超时后 ssthresh 减半并重新慢启动；3 个重复 ACK 触发快重传与快恢复。",
+  "rubric": {
+    "max_points": 5,
+    "criteria": [
+      {"criterion_id": "c1", "description": "正确说明超时后 ssthresh 减半并重新慢启动", "max_points": 2, "acceptable_phrases": ["ssthresh 减半", "重新慢启动"]},
+      {"criterion_id": "c2", "description": "正确说明 3 个重复 ACK 触发快重传与快恢复", "max_points": 2, "acceptable_phrases": ["快重传", "快恢复"]},
+      {"criterion_id": "c3", "description": "能对比两种恢复方式的差别", "max_points": 1, "acceptable_phrases": []}
+    ]
+  },
+  "explanation": "考查拥塞控制两种恢复路径。",
+  "difficulty": "low",
+  "knowledge_mappings": [
+    {"knowledge_node_id": "<copy from knowledge_points>", "relation_role": "primary", "weight": 1.0}
+  ],
+  "source_chunk_ids": ["<copy from knowledge_points.source_excerpts>"],
+  "source_page_numbers": [1]
+}
+
 Rules:
 - Stay within the provided course content.
 - Generate questions that test understanding, application, comparison, or explanation of the
