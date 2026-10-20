@@ -25,6 +25,19 @@ Default startup binds to `127.0.0.1` only.
 uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
+## Repository layout
+
+- `app/`: FastAPI application（`api/routes` → `schemas` → `services` → `repositories` → `db/models`）
+- `alembic/`: database migrations
+- `tests/`: pytest suite（`unit/`、`integration/`、`e2e/`；fixtures 在 `tests/fixtures/`）
+- `scripts/smoke/`: manual smoke scripts that require a running backend
+- `scripts/fixtures/`: fixture generators（生成 `tests/fixtures/f1-sample.pdf`）
+- `docs/spec/`: backend specification and environment baseline
+- `docs/testing/`: acceptance and test reports
+- `docs/demo/`: demo script
+- `data/`: local runtime data（SQLite、uploads；gitignored）
+- `frontend/`: React SPA
+
 ## Configuration
 
 Use `.env.example` as the baseline local configuration:
@@ -54,6 +67,8 @@ alembic upgrade head
 ```bash
 pytest
 ```
+
+Manual smoke scripts live in `scripts/smoke/` and require a running backend. The smoke fixture is `tests/fixtures/f1-sample.pdf`; regenerate it with `python scripts/fixtures/make_sample_pdf.py`.
 
 Stage 8 verification includes:
 
@@ -119,4 +134,4 @@ Stage 8 verification includes:
 
 ## Environment Tracking
 
-See `ENVIRONMENT.md` for the current development baseline that will be used when authoring container images later.
+See `docs/spec/environment.md` for the current development baseline that will be used when authoring container images later.
