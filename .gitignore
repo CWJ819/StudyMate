@@ -5,6 +5,10 @@
 .pytest_cache/
 __pycache__/
 *.pyc
-data/*.db
-data/uploads/
+data/
 *.egg-info/
+
+# frontend
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/

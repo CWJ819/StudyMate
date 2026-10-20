@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+/* 视觉基线：方向一「今日清单」（docs/frontend-plan.md §4.5，token 取自 docs/design/mockups/dir1-*.html） */
+@theme {
+  --color-bg: #fbfbf9;
+  --color-surface: #ffffff;
+  --color-border: #e5e3dc;
+  --color-border2: #d0cdc4;
+  --color-ink: #24292f;
+  --color-ink2: #57606a;
+  --color-ink3: #8c959f;
+  --color-accent: #0969da;
+  --color-accent-bg: #ddf0ff;
+  --color-success: #1a7f37;
+  --color-success-bg: #dafbe1;
+  --color-warning: #9a6700;
+  --color-warning-bg: #fff8c5;
+  --color-warning-border: #d4a72c;
+  --color-error: #cf222e;
+  --color-error-bg: #ffebe9;
+  --color-untested: #8c959f;
+  --color-untested-bg: #eff1f3;
+  --color-quote-bg: #f6f8fa;
+  --font-sans: "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", "PingFang SC", sans-serif;
+  --font-mono: Consolas, Menlo, "Courier New", monospace;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
