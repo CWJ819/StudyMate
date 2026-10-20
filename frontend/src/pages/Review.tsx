@@ -7,7 +7,6 @@ import { useState } from 'react'
 import {
   generateQuiz,
   getKnowledge,
-  getMasteryOverview,
   getWrongbook,
   listMastery,
   postReviewTargets,
@@ -86,11 +85,6 @@ export function ReviewPage() {
   const mastery = useQuery({
     queryKey: ['mastery', courseId],
     queryFn: () => listMastery(courseId!),
-    enabled: courseId !== undefined,
-  })
-  const masteryOverview = useQuery({
-    queryKey: ['mastery-overview', courseId],
-    queryFn: () => getMasteryOverview(courseId!),
     enabled: courseId !== undefined,
   })
   const wrongbook = useQuery({
@@ -212,48 +206,6 @@ export function ReviewPage() {
           <p className="border-t border-dashed border-border px-5 py-2 text-[11.5px] leading-relaxed text-ink3">
             估计值 = 作答记录的统计推断，不是精确测量。
           </p>
-        </section>
-
-        <section className="mt-6 overflow-hidden rounded-lg border border-border bg-surface">
-          <div className="flex items-baseline gap-3 px-5 pb-2 pt-4">
-            <h2 className="text-[15px] font-semibold">章节复习概览</h2>
-            <span className="text-[12.5px] text-ink3">覆盖率与薄弱点密度，仅为派生统计</span>
-          </div>
-          {masteryOverview.isLoading && (
-            <p className="px-5 pb-4 text-[13px] text-ink3">加载中…</p>
-          )}
-          {masteryOverview.isError && (
-            <div className="px-5 pb-4">
-              <ErrorNotice error={masteryOverview.error} />
-            </div>
-          )}
-          {!masteryOverview.isLoading &&
-            !masteryOverview.isError &&
-            (masteryOverview.data?.chapters.length ?? 0) === 0 && (
-              <p className="border-t border-border px-5 py-4 text-[13px] text-ink3">
-                当前框架还没有可聚合的章节容器。
-              </p>
-            )}
-          {masteryOverview.data?.chapters.map((chapter) => (
-            <div key={chapter.node_version_id} className="border-t border-border px-5 py-3">
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="truncate text-[14px] font-semibold" title={chapter.section_path.join(' / ')}>
-                  {chapter.title}
-                </span>
-                <span className="shrink-0 font-mono text-[12px] text-ink2">
-                  {Math.round(chapter.coverage * 100)}% 已测
-                </span>
-              </div>
-              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[12px] text-ink3">
-                <span>{chapter.total_leaves} 个知识点</span>
-                <span>未测 {chapter.untested_leaves}</span>
-                <span>薄弱 {chapter.low_mastery_leaves}</span>
-                {chapter.average_mastery != null && (
-                  <span>平均掌握度 {chapter.average_mastery.toFixed(2)}</span>
-                )}
-              </div>
-            </div>
-          ))}
         </section>
 
         <section className="mt-6 overflow-hidden rounded-lg border border-border bg-surface">

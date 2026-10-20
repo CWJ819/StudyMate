@@ -5,9 +5,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class MasteryStateResponse(BaseModel):
     knowledge_node_id: str
-    node_version_id: str | None = None
-    parent_id: str | None = None
-    section_path: list[str] = Field(default_factory=list)
     title: str | None
     alpha: float
     beta: float
@@ -21,7 +18,6 @@ class KnowledgeGapResponse(BaseModel):
     knowledge_node_id: str
     node_version_id: str
     title: str
-    section_path: list[str] = Field(default_factory=list)
     gap_type: str
     status: str
     confidence: float
@@ -41,7 +37,6 @@ class ReviewTargetResponse(BaseModel):
     knowledge_node_id: str
     node_version_id: str
     title: str
-    section_path: list[str] = Field(default_factory=list)
     priority: float
     mastery_estimate: float | None
     evidence_count: int
@@ -52,22 +47,3 @@ class ReviewTargetsResponse(BaseModel):
     strategy_log_id: str
     strategy_version: str
     targets: list[ReviewTargetResponse]
-
-
-class ChapterMasterySummaryResponse(BaseModel):
-    node_version_id: str
-    title: str
-    level: int
-    section_path: list[str] = Field(default_factory=list)
-    total_leaves: int
-    tested_leaves: int
-    untested_leaves: int
-    coverage: float
-    average_mastery: float | None
-    low_mastery_leaves: int
-    weak_density: float
-    priority: float
-
-
-class MasteryOverviewResponse(BaseModel):
-    chapters: list[ChapterMasterySummaryResponse]

@@ -6,7 +6,6 @@ from sqlalchemy.orm import Session, selectinload
 from app.db.models.course import Course
 from app.db.models.document import Document, DocumentChunk, DocumentPage
 from app.db.models.knowledge import (
-    KnowledgeBuildBatch,
     KnowledgeFrameworkVersion,
     KnowledgeNode,
     KnowledgeNodeRelation,
@@ -31,69 +30,16 @@ class KnowledgeRepository:
         course_id: str,
         version_number: int,
         status: str,
-        input_revision: int = 0,
-        input_document_ids: list[str] | None = None,
     ) -> KnowledgeFrameworkVersion:
         version = KnowledgeFrameworkVersion(
             course_id=course_id,
             version_number=version_number,
             status=status,
-            input_revision=input_revision,
-            input_document_ids=input_document_ids or [],
         )
         session.add(version)
         session.flush()
         session.refresh(version)
         return version
-
-    def get_build_batches(self, session: Session, framework_version_id: str) -> list[KnowledgeBuildBatch]:
-        return list(
-            session.scalars(
-                select(KnowledgeBuildBatch)
-                .where(KnowledgeBuildBatch.framework_version_id == framework_version_id)
-                .order_by(KnowledgeBuildBatch.batch_index.asc())
-            )
-        )
-
-    def get_reusable_batch_candidate(
-        self,
-        session: Session,
-        *,
-        course_id: str,
-        framework_version_id: str,
-        batch_index: int,
-        input_hash: str,
-    ) -> dict | None:
-        statement = (
-            select(KnowledgeBuildBatch.candidate_json)
-            .join(
-                KnowledgeFrameworkVersion,
-                KnowledgeFrameworkVersion.id == KnowledgeBuildBatch.framework_version_id,
-            )
-            .where(KnowledgeFrameworkVersion.course_id == course_id)
-            .where(KnowledgeFrameworkVersion.id != framework_version_id)
-            .where(KnowledgeFrameworkVersion.status.in_(["active", "stale"]))
-            .where(KnowledgeBuildBatch.batch_index == batch_index)
-            .where(KnowledgeBuildBatch.input_hash == input_hash)
-            .where(KnowledgeBuildBatch.status == "succeeded")
-            .where(KnowledgeBuildBatch.candidate_json.is_not(None))
-            .order_by(KnowledgeFrameworkVersion.version_number.desc())
-            .limit(1)
-        )
-        return session.scalar(statement)
-
-    def create_build_batch(
-        self, session: Session, *, framework_version_id: str, batch_index: int, input_hash: str
-    ) -> KnowledgeBuildBatch:
-        batch = KnowledgeBuildBatch(
-            framework_version_id=framework_version_id,
-            batch_index=batch_index,
-            input_hash=input_hash,
-            status="pending",
-        )
-        session.add(batch)
-        session.flush()
-        return batch
 
     def get_framework_version(
         self, session: Session, framework_version_id: str
@@ -120,48 +66,19 @@ class KnowledgeRepository:
         )
         return list(session.scalars(statement))
 
-    def get_latest_framework_pair(
-        self, session: Session, course_id: str
-    ) -> tuple[KnowledgeFrameworkVersion | None, KnowledgeFrameworkVersion | None]:
-        versions = list(
-            session.scalars(
-                select(KnowledgeFrameworkVersion)
-                .where(KnowledgeFrameworkVersion.course_id == course_id)
-                .where(KnowledgeFrameworkVersion.status.in_(["active", "stale"]))
-                .options(selectinload(KnowledgeFrameworkVersion.node_versions))
-                .order_by(KnowledgeFrameworkVersion.version_number.desc())
-                .limit(2)
-            )
-        )
-        current = versions[0] if versions else None
-        previous = versions[1] if len(versions) > 1 else None
-        return current, previous
-
     def get_active_framework(
         self, session: Session, course_id: str
     ) -> KnowledgeFrameworkVersion | None:
         statement = (
             select(KnowledgeFrameworkVersion)
             .where(KnowledgeFrameworkVersion.course_id == course_id)
-            .where(KnowledgeFrameworkVersion.status.in_(["active", "stale"]))
+            .where(KnowledgeFrameworkVersion.status == "active")
             .options(
                 selectinload(KnowledgeFrameworkVersion.node_versions).selectinload(
                     KnowledgeNodeVersion.sources
                 ),
                 selectinload(KnowledgeFrameworkVersion.relations),
             )
-            .order_by(KnowledgeFrameworkVersion.version_number.desc())
-            .limit(1)
-        )
-        return session.scalar(statement)
-
-    def get_building_framework(
-        self, session: Session, course_id: str
-    ) -> KnowledgeFrameworkVersion | None:
-        statement = (
-            select(KnowledgeFrameworkVersion)
-            .where(KnowledgeFrameworkVersion.course_id == course_id)
-            .where(KnowledgeFrameworkVersion.status == "building")
             .order_by(KnowledgeFrameworkVersion.version_number.desc())
             .limit(1)
         )
@@ -290,23 +207,10 @@ class KnowledgeRepository:
             select(Document)
             .where(Document.course_id == course_id)
             .where(Document.status.in_(["completed", "completed_with_warnings"]))
-            .where(Document.archived_at.is_(None))
             .options(selectinload(Document.pages), selectinload(Document.chunks))
             .order_by(Document.created_at.asc())
         )
         return list(session.scalars(statement))
-
-    def mark_active_frameworks_stale(self, session: Session, course_id: str) -> int:
-        versions = list(
-            session.scalars(
-                select(KnowledgeFrameworkVersion)
-                .where(KnowledgeFrameworkVersion.course_id == course_id)
-                .where(KnowledgeFrameworkVersion.status == "active")
-            )
-        )
-        for version in versions:
-            version.status = "stale"
-        return len(versions)
 
     def document_page_exists(
         self, session: Session, *, document_id: str, page_number: int

@@ -134,47 +134,8 @@ export function listKnowledgeVersions(courseId: string) {
   return request<KnowledgeVersion[]>(`/api/courses/${courseId}/knowledge/versions`)
 }
 
-export type KnowledgeIdentityMatch = {
-  current_node_id: string
-  current_title: string
-  previous_node_id: string | null
-  previous_title: string | null
-  confidence: number
-  match_type: string
-  safe_to_migrate: boolean
-}
-
-export function getKnowledgeIdentityDiagnostics(courseId: string) {
-  return request<{
-    current_version_id: string
-    previous_version_id: string | null
-    matches: KnowledgeIdentityMatch[]
-  }>(`/api/courses/${courseId}/knowledge/identity-diagnostics`)
-}
-
 export function listMastery(courseId: string) {
   return request<MasteryState[]>(`/api/courses/${courseId}/mastery`)
-}
-
-export type MasteryChapterSummary = {
-  node_version_id: string
-  title: string
-  level: number
-  section_path: string[]
-  total_leaves: number
-  tested_leaves: number
-  untested_leaves: number
-  coverage: number
-  average_mastery: number | null
-  low_mastery_leaves: number
-  weak_density: number
-  priority: number
-}
-
-export function getMasteryOverview(courseId: string) {
-  return request<{ chapters: MasteryChapterSummary[] }>(
-    `/api/courses/${courseId}/mastery/overview`,
-  )
 }
 
 // ---- 测验 ----

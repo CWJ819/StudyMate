@@ -8,22 +8,12 @@ from app.schemas.knowledge import (
     KnowledgeBuildRequest,
     KnowledgeBuildResponse,
     KnowledgeFrameworkResponse,
-    KnowledgeIdentityDiagnosticsResponse,
     KnowledgeNodeDetailResponse,
     KnowledgeVersionResponse,
 )
 from app.services.knowledge_service import KnowledgeService
 
 router = APIRouter(tags=["knowledge"])
-
-
-@router.get(
-    "/courses/{course_id}/knowledge/identity-diagnostics",
-    response_model=KnowledgeIdentityDiagnosticsResponse,
-)
-async def knowledge_identity_diagnostics(course_id: str) -> KnowledgeIdentityDiagnosticsResponse:
-    with session_scope() as session:
-        return KnowledgeService().identity_diagnostics(session, course_id)
 
 
 def _trigger_jobs_once() -> None:

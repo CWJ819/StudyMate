@@ -27,7 +27,6 @@ from app.llm.schemas import (
     ShortAnswerRubricCandidate,
 )
 from app.repositories.job_repository import JobRepository
-from app.repositories.llm_repository import LLMRepository
 from app.repositories.quiz_repository import QuizRepository
 from app.schemas.quiz import (
     QUESTION_TYPE_MULTIPLE_CHOICE,
@@ -85,11 +84,9 @@ class QuizService:
         self,
         repository: QuizRepository | None = None,
         job_repository: JobRepository | None = None,
-        llm_repository: LLMRepository | None = None,
     ) -> None:
         self.repository = repository or QuizRepository()
         self.job_repository = job_repository or JobRepository()
-        self.llm_repository = llm_repository or LLMRepository()
 
     def start_generate(
         self,
@@ -207,7 +204,6 @@ class QuizService:
             prepared_questions = self._generate_questions_with_dedup(
                 session,
                 quiz_id=quiz.id,
-                course_id=course_id,
                 course_name=self.repository.get_course(session, course_id).name,  # type: ignore[union-attr]
                 settings=settings,
                 node_versions=selected_nodes,
@@ -377,7 +373,6 @@ class QuizService:
         session: Session,
         *,
         quiz_id: str,
-        course_id: str,
         course_name: str,
         settings: QuizGenerateRequest,
         node_versions: list[Any],
@@ -422,11 +417,6 @@ class QuizService:
                     status="failed",
                     error_code=exc.code,
                 )
-                self._record_failed_llm_call(
-                    session, course_id=course_id, operation="quiz_generation",
-                    prompt_version=QUIZ_GENERATION_PROMPT_VERSION, error_code=exc.code,
-                    input_summary={"attempt": attempt_number, "requested_count": remaining},
-                )
                 raise
             except AppError as exc:
                 self.repository.create_generation_run(
@@ -438,11 +428,6 @@ class QuizService:
                     output_summary_json={},
                     status="failed",
                     error_code=exc.code,
-                )
-                self._record_failed_llm_call(
-                    session, course_id=course_id, operation="quiz_generation",
-                    prompt_version=QUIZ_GENERATION_PROMPT_VERSION, error_code=exc.code,
-                    input_summary={"attempt": attempt_number, "requested_count": remaining},
                 )
                 raise
 
@@ -477,19 +462,6 @@ class QuizService:
                 },
                 status="succeeded",
             )
-            self.llm_repository.add_call_log(
-                session,
-                course_id=course_id,
-                operation="quiz_generation",
-                provider=llm_result.summary.provider,
-                model_name=llm_result.summary.model_name,
-                prompt_version=llm_result.summary.prompt_version,
-                status="succeeded",
-                attempt_count=llm_result.summary.attempt_count,
-                duration_ms=llm_result.summary.duration_ms,
-                input_summary={"attempt": attempt_number, "requested_count": remaining, "knowledge_node_count": len(node_versions)},
-                output_summary={"candidate_count": len(llm_result.data.questions), "accepted_count": accepted_this_round},
-            )
 
         if len(prepared_questions) < settings.question_count:
             raise AppError(
@@ -502,30 +474,6 @@ class QuizService:
                 },
             )
         return prepared_questions[: settings.question_count]
-
-    def _record_failed_llm_call(
-        self,
-        session: Session,
-        *,
-        course_id: str,
-        operation: str,
-        prompt_version: str,
-        error_code: str,
-        input_summary: dict[str, Any],
-    ) -> None:
-        adapter = get_llm_adapter()
-        settings = getattr(adapter, "settings", None)
-        self.llm_repository.add_call_log(
-            session,
-            course_id=course_id,
-            operation=operation,
-            provider="mock" if getattr(settings, "llm_base_url", "").startswith("mock://") else "openai-compatible",
-            model_name=getattr(settings, "llm_model", None) or "unknown",
-            prompt_version=prompt_version,
-            status="failed",
-            error_code=error_code,
-            input_summary=input_summary,
-        )
 
     def _build_generation_payload(
         self,

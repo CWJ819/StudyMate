@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import time
 from copy import deepcopy
 from typing import Any
 
@@ -87,7 +86,6 @@ class OpenAICompatibleAdapter(LLMAdapter):
             "Content-Type": "application/json",
         }
         invalid_type = "unknown"
-        started = time.perf_counter()
         validation_hint = ""
         for attempt in range(self.settings.llm_max_retries + 1):
             retry_instruction = ""
@@ -170,8 +168,6 @@ class OpenAICompatibleAdapter(LLMAdapter):
                     model_name=self.settings.llm_model,
                     prompt_version=prompt_version,
                     provider="openai-compatible",
-                    attempt_count=attempt + 1,
-                    duration_ms=round((time.perf_counter() - started) * 1000),
                 ),
                 data=data,
             )
@@ -325,8 +321,6 @@ class OpenAICompatibleAdapter(LLMAdapter):
                 model_name=self.settings.llm_model or "mock-llm",
                 prompt_version=prompt_version,
                 provider="mock",
-                attempt_count=1,
-                duration_ms=0,
             ),
             data=data,
         )

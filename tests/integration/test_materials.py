@@ -181,9 +181,8 @@ async def test_pptx_upload_and_delete_material(
         delete_response = await client.delete(f"/api/materials/{material_id}")
         assert delete_response.status_code == 204
 
-        archived_response = await client.get(f"/api/materials/{material_id}")
-        assert archived_response.status_code == 200
-        assert archived_response.json()["status"] == "archived"
+        missing_response = await client.get(f"/api/materials/{material_id}")
+        assert missing_response.status_code == 404
 
 
 @pytest.mark.anyio

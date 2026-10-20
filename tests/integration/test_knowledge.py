@@ -145,15 +145,6 @@ async def test_knowledge_build_and_query_flow(
         assert detail["sources"]
         assert detail["framework_version_id"] == build_body["framework_version_id"]
 
-        diagnostics_response = await client.get(
-            f"/api/courses/{course_id}/knowledge/identity-diagnostics"
-        )
-        assert diagnostics_response.status_code == 200
-        diagnostics = diagnostics_response.json()
-        assert diagnostics["current_version_id"] == build_body["framework_version_id"]
-        assert diagnostics["previous_version_id"] is None
-        assert diagnostics["matches"] == []
-
     reset_settings_cache()
 
 
@@ -336,8 +327,7 @@ async def test_knowledge_build_payload_includes_context_and_filtering_rules(
         "Generate source-backed knowledge points"
     )
     assert "table-of-contents" in " ".join(payload["selection_rules"])
-    assert "section containers" in payload["output_shape"]["nodes"]
-    assert "filenames as containers" in payload["output_shape"]["nodes"]
+    assert "document or section containers" in payload["output_shape"]["nodes"]
     document_payload = payload["documents"][0]
     assert len(document_payload["nearby_page_context"]) == 3
     assert "Temporal locality" in document_payload["nearby_page_context"][2]["text_preview"]
@@ -382,7 +372,7 @@ async def test_knowledge_build_fails_for_invalid_batch_output(
 
 
 @pytest.mark.anyio
-async def test_material_delete_archives_when_used_by_framework(
+async def test_material_delete_rejected_when_used_by_framework(
     migrated_database_url: str,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -414,17 +404,8 @@ async def test_material_delete_archives_when_used_by_framework(
         delete_response = await client.delete(
             f"/api/materials/{material_body['document_id']}"
         )
-        assert delete_response.status_code == 204
-        material_response = await client.get(
-            f"/api/materials/{material_body['document_id']}"
-        )
-        assert material_response.status_code == 200
-        assert material_response.json()["status"] == "archived"
-        framework_response = await client.get(
-            f"/api/courses/{course_id}/knowledge"
-        )
-        assert framework_response.status_code == 200
-        assert framework_response.json()["status"] == "stale"
+        assert delete_response.status_code == 409
+        assert delete_response.json()["error"]["code"] == "MATERIAL_IN_USE"
 
     reset_settings_cache()
 
@@ -455,12 +436,6 @@ async def test_failed_knowledge_rebuild_does_not_replace_active_version(
         first_build_body = first_build_response.json()
         first_job = await _wait_for_job(client, first_build_body["job_id"])
         assert first_job["status"] == "succeeded"
-
-        # Change the build input so the second build cannot legitimately
-        # reuse the first framework's batch checkpoints.
-        second_pdf_path = tmp_path / "lesson-update.pdf"
-        _create_pdf(second_pdf_path, ["Energy moves through an ecosystem and matter cycles."])
-        await _upload_pdf_material(client, course_id, second_pdf_path)
 
         class FailingAdapter:
             def ensure_available(self) -> None:

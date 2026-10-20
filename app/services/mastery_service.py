@@ -10,10 +10,8 @@ from app.db.models.mastery import KnowledgeGap, StudentGapState
 from app.db.models.quiz import Attempt, QuestionKnowledge
 from app.repositories.mastery_repository import MasteryRepository
 from app.schemas.mastery import (
-    ChapterMasterySummaryResponse,
     KnowledgeGapResponse,
     MasteryStateResponse,
-    MasteryOverviewResponse,
     ReviewTargetResponse,
     ReviewTargetsRequest,
     ReviewTargetsResponse,
@@ -49,9 +47,9 @@ class MasteryService:
 
     def list_mastery(self, session: Session, course_id: str) -> list[MasteryStateResponse]:
         self._require_course(session, course_id)
-        nodes = self.repository.list_current_framework_nodes(session, course_id)
-        active_nodes = {node.knowledge_node_id: node for node in nodes}
-        node_context = self._node_context(nodes)
+        active_nodes = {
+            node.knowledge_node_id: node for node in self.repository.list_active_leaf_nodes(session, course_id)
+        }
         responses: list[MasteryStateResponse] = []
         for state in self.repository.list_states(session, course_id):
             node = active_nodes.get(state.knowledge_node_id)
@@ -59,9 +57,6 @@ class MasteryService:
                 MasteryStateResponse(
                     knowledge_node_id=state.knowledge_node_id,
                     title=node.title if node is not None else None,
-                    node_version_id=node.id if node is not None else None,
-                    parent_id=node.parent_id if node is not None else None,
-                    section_path=self._section_path(node, node_context) if node is not None else [],
                     alpha=state.alpha,
                     beta=state.beta,
                     mastery_estimate=state.mastery_estimate,
@@ -71,53 +66,9 @@ class MasteryService:
             )
         return responses
 
-    def mastery_overview(self, session: Session, course_id: str) -> MasteryOverviewResponse:
-        self._require_course(session, course_id)
-        nodes = self.repository.list_current_framework_nodes(session, course_id)
-        if not nodes:
-            raise AppError(
-                code="RESOURCE_NOT_FOUND",
-                message="No active knowledge framework exists for this course.",
-                status_code=404,
-                details={"course_id": course_id},
-            )
-        context = self._node_context(nodes)
-        states = {state.knowledge_node_id: state for state in self.repository.list_states(session, course_id)}
-        summaries: list[ChapterMasterySummaryResponse] = []
-        for chapter in (node for node in nodes if not node.is_leaf and node.parent_id is not None):
-            leaves = [leaf for leaf in nodes if leaf.is_leaf and self._belongs_to(leaf, chapter, context)]
-            if not leaves:
-                continue
-            tested = [states[leaf.knowledge_node_id] for leaf in leaves if leaf.knowledge_node_id in states]
-            low = sum(1 for state in tested if state.mastery_estimate < 0.6)
-            coverage = len(tested) / len(leaves)
-            weak_density = low / len(tested) if tested else 0.0
-            average = sum(state.mastery_estimate for state in tested) / len(tested) if tested else None
-            priority = (1.0 - (average if average is not None else 0.5)) * 0.6
-            priority += (1.0 - coverage) * 0.25 + weak_density * 0.15
-            summaries.append(
-                ChapterMasterySummaryResponse(
-                    node_version_id=chapter.id,
-                    title=chapter.title,
-                    level=chapter.level,
-                    section_path=self._section_path(chapter, context),
-                    total_leaves=len(leaves),
-                    tested_leaves=len(tested),
-                    untested_leaves=len(leaves) - len(tested),
-                    coverage=round(coverage, 6),
-                    average_mastery=round(average, 6) if average is not None else None,
-                    low_mastery_leaves=low,
-                    weak_density=round(weak_density, 6),
-                    priority=round(priority, 6),
-                )
-            )
-        summaries.sort(key=lambda item: (-item.priority, item.node_version_id))
-        return MasteryOverviewResponse(chapters=summaries)
-
     def list_wrongbook(self, session: Session, course_id: str) -> list[KnowledgeGapResponse]:
         self._require_course(session, course_id)
-        context = self._node_context(self.repository.list_current_framework_nodes(session, course_id))
-        return [self._gap_response(gap, context) for gap in self.repository.list_gaps(session, course_id)]
+        return [self._gap_response(gap) for gap in self.repository.list_gaps(session, course_id)]
 
     def select_review_targets(
         self,
@@ -127,8 +78,7 @@ class MasteryService:
         request: ReviewTargetsRequest,
     ) -> ReviewTargetsResponse:
         self._require_course(session, course_id)
-        all_nodes = self.repository.list_current_framework_nodes(session, course_id)
-        leaf_nodes = [node for node in all_nodes if node.is_leaf]
+        leaf_nodes = self.repository.list_active_leaf_nodes(session, course_id)
         if not leaf_nodes:
             raise AppError(
                 code="RESOURCE_NOT_FOUND",
@@ -140,13 +90,11 @@ class MasteryService:
         states_by_node = {
             state.knowledge_node_id: state for state in self.repository.list_states(session, course_id)
         }
-        node_context = self._node_context(all_nodes)
-        chapter_bonuses = self._chapter_bonuses(all_nodes, states_by_node)
         weakness_targets: list[ReviewTargetResponse] = []
         exploration_targets: list[ReviewTargetResponse] = []
         for node in leaf_nodes:
             state = states_by_node.get(node.knowledge_node_id)
-            target = self._score_target(node, state, node_context, chapter_bonuses)
+            target = self._score_target(node, state)
             if state is None:
                 exploration_targets.append(target)
             else:
@@ -179,7 +127,6 @@ class MasteryService:
                 "limit": request.limit,
                 "exploration_ratio": request.exploration_ratio,
                 "rule": "Prioritize low mastery while keeping untested leaves visible.",
-                "chapter_aggregation": "Chapter priority combines weakness, coverage, and weak-leaf density; leaf evidence remains authoritative.",
             },
         )
         session.commit()
@@ -319,17 +266,13 @@ class MasteryService:
         self,
         node: KnowledgeNodeVersion,
         state: StudentGapState | None,
-        node_context: dict[str, KnowledgeNodeVersion],
-        chapter_bonuses: dict[str, float],
     ) -> ReviewTargetResponse:
-        bonus = chapter_bonuses.get(self._chapter_key(node, node_context), 0.0)
         if state is None:
             return ReviewTargetResponse(
                 knowledge_node_id=node.knowledge_node_id,
                 node_version_id=node.id,
                 title=node.title,
-                section_path=self._section_path(node, node_context),
-                priority=round(1.15 + bonus, 6),
+                priority=1.15,
                 mastery_estimate=None,
                 evidence_count=0,
                 reason="exploration_untested",
@@ -340,22 +283,18 @@ class MasteryService:
             knowledge_node_id=node.knowledge_node_id,
             node_version_id=node.id,
             title=node.title,
-            section_path=self._section_path(node, node_context),
-            priority=round(priority + bonus, 6),
+            priority=round(priority, 6),
             mastery_estimate=state.mastery_estimate,
             evidence_count=state.evidence_count,
             reason="weak_mastery" if state.mastery_estimate < 0.6 else "coverage_check",
         )
 
-    def _gap_response(
-        self, gap: KnowledgeGap, node_context: dict[str, KnowledgeNodeVersion]
-    ) -> KnowledgeGapResponse:
+    def _gap_response(self, gap: KnowledgeGap) -> KnowledgeGapResponse:
         return KnowledgeGapResponse(
             gap_id=gap.id,
             knowledge_node_id=gap.node_version.knowledge_node_id,
             node_version_id=gap.node_version_id,
             title=gap.node_version.title,
-            section_path=self._section_path(gap.node_version, node_context),
             gap_type=gap.gap_type,
             status=gap.status,
             confidence=gap.confidence,
@@ -363,68 +302,6 @@ class MasteryService:
             evidence_summary=gap.evidence_summary_json,
             updated_at=gap.updated_at,
         )
-
-    def _node_context(self, nodes: list[KnowledgeNodeVersion]) -> dict[str, KnowledgeNodeVersion]:
-        return {node.id: node for node in nodes}
-
-    def _section_path(
-        self, node: KnowledgeNodeVersion, nodes: dict[str, KnowledgeNodeVersion]
-    ) -> list[str]:
-        path: list[str] = []
-        current: KnowledgeNodeVersion | None = node
-        while current is not None and current.parent_id is not None:
-            path.append(current.title)
-            current = nodes.get(current.parent_id)
-        if path:
-            # The leaf itself is not a section; the remaining titles are its
-            # container path below the synthetic root node.
-            path.pop(0)
-        return list(reversed(path))
-
-    def _belongs_to(
-        self,
-        leaf: KnowledgeNodeVersion,
-        ancestor: KnowledgeNodeVersion,
-        nodes: dict[str, KnowledgeNodeVersion],
-    ) -> bool:
-        current = leaf
-        while current.parent_id is not None:
-            if current.parent_id == ancestor.id:
-                return True
-            current = nodes.get(current.parent_id)
-            if current is None:
-                return False
-        return False
-
-    def _chapter_key(
-        self, node: KnowledgeNodeVersion, nodes: dict[str, KnowledgeNodeVersion]
-    ) -> str:
-        current = node
-        while current.parent_id is not None:
-            parent = nodes.get(current.parent_id)
-            if parent is None or parent.parent_id is None:
-                return parent.id if parent is not None else current.id
-            current = parent
-        return current.id
-
-    def _chapter_bonuses(
-        self,
-        nodes: list[KnowledgeNodeVersion],
-        states: dict[str, StudentGapState],
-    ) -> dict[str, float]:
-        context = self._node_context(nodes)
-        chapters = [node for node in nodes if not node.is_leaf and node.parent_id is not None]
-        bonuses: dict[str, float] = {}
-        for chapter in chapters:
-            leaves = [leaf for leaf in nodes if leaf.is_leaf and self._belongs_to(leaf, chapter, context)]
-            if not leaves:
-                continue
-            tested = [states[leaf.knowledge_node_id] for leaf in leaves if leaf.knowledge_node_id in states]
-            average = sum(state.mastery_estimate for state in tested) / len(tested) if tested else 0.5
-            coverage = len(tested) / len(leaves)
-            weak_density = sum(1 for state in tested if state.mastery_estimate < 0.6) / len(tested) if tested else 0.0
-            bonuses[chapter.id] = round((1.0 - average) * 0.08 + (1.0 - coverage) * 0.04 + weak_density * 0.03, 6)
-        return bonuses
 
     def _require_course(self, session: Session, course_id: str) -> None:
         if self.repository.get_course(session, course_id) is None:

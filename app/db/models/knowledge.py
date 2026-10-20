@@ -7,7 +7,6 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
-    JSON,
     String,
     Text,
     UniqueConstraint,
@@ -30,8 +29,6 @@ class KnowledgeFrameworkVersion(Base):
     )
     version_number: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[str] = mapped_column(String(50), nullable=False)
-    input_revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    input_document_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -51,22 +48,6 @@ class KnowledgeFrameworkVersion(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
-
-
-class KnowledgeBuildBatch(Base):
-    __tablename__ = "knowledge_build_batches"
-    __table_args__ = (UniqueConstraint("framework_version_id", "batch_index"),)
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
-    framework_version_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("knowledge_framework_versions.id", ondelete="CASCADE"), nullable=False, index=True
-    )
-    batch_index: Mapped[int] = mapped_column(Integer, nullable=False)
-    input_hash: Mapped[str] = mapped_column(String(64), nullable=False)
-    status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending")
-    candidate_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    error_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
 
 class KnowledgeNode(Base):

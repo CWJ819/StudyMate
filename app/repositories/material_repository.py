@@ -48,16 +48,6 @@ class MaterialRepository:
         )
         return list(session.scalars(statement))
 
-    def list_active_documents(self, session: Session, course_id: str) -> list[Document]:
-        statement = (
-            select(Document)
-            .where(Document.course_id == course_id)
-            .where(Document.archived_at.is_(None))
-            .order_by(Document.created_at.desc())
-            .options(selectinload(Document.pages), selectinload(Document.chunks))
-        )
-        return list(session.scalars(statement))
-
     def replace_pages_and_chunks(
         self,
         session: Session,
@@ -83,7 +73,6 @@ class MaterialRepository:
             select(DocumentChunk)
             .join(Document)
             .where(Document.course_id == course_id)
-            .where(Document.archived_at.is_(None))
             .where(DocumentChunk.text.ilike(f"%{query}%"))
             .options(selectinload(DocumentChunk.document))
             .order_by(Document.created_at.desc(), DocumentChunk.page_start.asc())

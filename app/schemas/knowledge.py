@@ -21,7 +21,6 @@ class KnowledgeVersionResponse(BaseModel):
     status: str
     created_at: datetime
     activated_at: datetime | None
-    input_revision: int
 
 
 class KnowledgeSourceResponse(BaseModel):
@@ -72,19 +71,3 @@ class KnowledgeNodeDetailResponse(BaseModel):
     is_leaf: bool
     sources: list[KnowledgeSourceResponse]
     relations: list[KnowledgeRelationResponse]
-
-
-class KnowledgeIdentityMatchResponse(BaseModel):
-    current_node_id: str
-    current_title: str
-    previous_node_id: str | None
-    previous_title: str | None
-    confidence: float
-    match_type: str
-    safe_to_migrate: bool
-
-
-class KnowledgeIdentityDiagnosticsResponse(BaseModel):
-    current_version_id: str
-    previous_version_id: str | None
-    matches: list[KnowledgeIdentityMatchResponse]

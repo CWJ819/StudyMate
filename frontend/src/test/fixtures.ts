@@ -9,7 +9,6 @@ import type {
   KnowledgeNodeDetail,
   KnowledgeVersion,
   MasteryState,
-  MasteryChapterSummary,
   MaterialDetail,
   MaterialSummary,
   QuizDetail,
@@ -328,23 +327,6 @@ export const masteryStates: MasteryState[] = [
     mastery_estimate: 0.42,
     evidence_count: 3,
     updated_at: '2026-01-03T11:00:00Z',
-  },
-]
-
-export const masteryChapterSummaries: MasteryChapterSummary[] = [
-  {
-    node_version_id: 'chapter-transport',
-    title: '第 3 章 运输层',
-    level: 1,
-    section_path: ['第 3 章 运输层'],
-    total_leaves: 3,
-    tested_leaves: 2,
-    untested_leaves: 1,
-    coverage: 2 / 3,
-    average_mastery: 0.58,
-    low_mastery_leaves: 1,
-    weak_density: 0.5,
-    priority: 0.42,
   },
 ]
 

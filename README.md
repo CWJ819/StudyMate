@@ -54,29 +54,9 @@ Key settings:
 - `LLM_API_KEY`: environment-only secret; it is never returned by `GET /api/settings`
 - `MAX_UPLOAD_BYTES`, `MAX_DOCUMENT_PAGES`, `JOB_MAX_ATTEMPTS`: local safety and capacity limits
 
-## Material and framework lifecycle
-
-Deleting a material is an archive operation rather than a physical delete. Archived materials
-remain available for historical source inspection, but are excluded from search, new framework
-builds, and new quiz generation. If an active framework used the material, it is marked `stale`
-and remains readable until a new framework is built and validated.
-
-Run a new framework build after archiving or uploading materials:
-
-```bash
-curl -X POST http://127.0.0.1:8000/api/courses/{course_id}/knowledge/build \
-  -H "Content-Type: application/json" \
-  -d '{}'
-```
-
-The framework records the material revision and document IDs used as its input. A build that
-starts from an outdated input snapshot cannot activate over newer material changes.
-
 ## Migrations
 
-Alembic includes the `Stage 1` schema for `courses` and `settings`, the `Stage 2` material parsing tables, the `Stage 3` jobs table, the `Stage 4` knowledge framework tables, the `Stage 5` quiz/question tables, the `Stage 6` mastery and gap tracking tables, and the `Stage 7` study plan tables. Later migrations add material lifecycle, framework checkpoints, and metadata-only LLM call logs.
-
-LLM logs store model and prompt metadata plus aggregate counts only. They do not store API keys, full prompts, uploaded material, or student answers. Knowledge identity diagnostics are advisory only and do not migrate mastery automatically.
+Alembic includes the `Stage 1` schema for `courses` and `settings`, the `Stage 2` material parsing tables, the `Stage 3` jobs table, the `Stage 4` knowledge framework tables, the `Stage 5` quiz/question tables, the `Stage 6` mastery and gap tracking tables, and the `Stage 7` study plan tables.
 
 ```bash
 alembic upgrade head
@@ -117,12 +97,10 @@ Stage 8 verification includes:
 - `GET /api/courses/{course_id}/knowledge`
 - `GET /api/knowledge/{knowledge_point_id}`
 - `GET /api/courses/{course_id}/knowledge/versions`
-- `GET /api/courses/{course_id}/knowledge/identity-diagnostics`
 - `POST /api/courses/{course_id}/quiz/generate`
 - `GET /api/quizzes/{quiz_id}`
 - `POST /api/quizzes/{quiz_id}/submit`
 - `GET /api/courses/{course_id}/mastery`
-- `GET /api/courses/{course_id}/mastery/overview`
 - `GET /api/courses/{course_id}/wrongbook`
 - `POST /api/courses/{course_id}/review-targets`
 - `POST /api/courses/{course_id}/plan`

@@ -183,13 +183,10 @@ class MasteryRepository:
         return list(session.scalars(statement))
 
     def list_active_leaf_nodes(self, session: Session, course_id: str) -> list[KnowledgeNodeVersion]:
-        return [node for node in self.list_current_framework_nodes(session, course_id) if node.is_leaf]
-
-    def list_current_framework_nodes(self, session: Session, course_id: str) -> list[KnowledgeNodeVersion]:
         active_statement = (
             select(KnowledgeFrameworkVersion.id)
             .where(KnowledgeFrameworkVersion.course_id == course_id)
-            .where(KnowledgeFrameworkVersion.status.in_(["active", "stale"]))
+            .where(KnowledgeFrameworkVersion.status == "active")
             .order_by(KnowledgeFrameworkVersion.version_number.desc())
             .limit(1)
         )
@@ -199,7 +196,8 @@ class MasteryRepository:
         statement = (
             select(KnowledgeNodeVersion)
             .where(KnowledgeNodeVersion.framework_version_id == active_id)
-            .order_by(KnowledgeNodeVersion.sort_order.asc())
+            .where(KnowledgeNodeVersion.is_leaf.is_(True))
+            .order_by(KnowledgeNodeVersion.level.asc(), KnowledgeNodeVersion.sort_order.asc())
         )
         return list(session.scalars(statement))
 
