@@ -1,231 +1,282 @@
-# StudyMate
+# 智学伴 StudyMate
 
-StudyMate is a local-first, single-user study workspace: course material parsing, knowledge-framework management, quiz generation and grading, mastery tracking, review-target selection, and study planning. The FastAPI backend lives in `app/`; the React SPA lives in `frontend/`.
+> 面向中国高校本科生的本地 AI 期末复习工作台：把课件变成**带出处的知识框架、可提交的测验和可执行的复习计划**。
+>
+> 核心差异化：**靠“测”，不靠“问”** —— 不依赖学生自述哪里不会，而是根据作答记录、错因证据和掌握度估计决定下一步复习什么。
 
-## Status (2026-10-20)
+![今日清单](docs/screenshots/02-今日清单.png)
 
-The backend implements `Stage 8`: project skeleton, configuration, logging, error handling, Alembic wiring, database-backed settings overrides, course CRUD, material upload/parsing for PDF and PPTX files, a persistent SQLite-backed job system, knowledge framework generation/query APIs, quiz generation/grading APIs with snapshotting and idempotent submission, mastery tracking, gap evidence, review target selection, study plan generation, end-to-end coverage, and Stage 8 documentation/hardening checks.
+## 当前状态
 
-The SPA covers courses, materials, knowledge frameworks, quizzes, review/mastery, study plans, and settings. It uses React 19, Vite 8, TypeScript 5.9, Tailwind CSS 4, TanStack Query 5, and a HashRouter.
+> 当前是**本地单用户版**，适合在自己电脑上使用或做比赛演示；没有账号体系，也没有多用户隔离，**不要直接暴露到公网**。
 
-The repository root also contains a two-stage `Dockerfile` that builds the SPA with Node 24 and runs the API + SPA on one port with Python 3.13.
+| 维度 | 状态（2026-10-21） |
+|---|---|
+| 后端 | 内部 Stage 8 已完成，并补齐本地 LLM 密钥、部署入口与知识框架修复 |
+| 前端 | 课程、总览、资料（含详情）、知识框架、测验、复习、计划、设置等 9 个页面已接入真实接口 |
+| 测试 | 后端 `pytest` 50 passed；前端 `vitest` 63 passed；`npm run build` 通过 |
+| 部署 | 多阶段 Docker 镜像已在 7860 单容器验证（2026-10-20）；API + SPA 同源提供 |
+| 模式 | `mock://local` 可离线跑通全流程；也支持任意 OpenAI 兼容服务 |
 
-Verification baseline for this revision: 47 backend `pytest` tests and 58 frontend `vitest` tests pass; `npm run build` succeeds.
+## 它解决什么问题
 
-This is still a trusted-local-use service: there is no authentication and no workspace isolation. Do not expose it directly to the public internet.
+| 痛点 | StudyMate 的做法 |
+|---|---|
+| 课件太多，不知道先看哪一页 | 从 PDF/PPTX 抽取知识框架，每个知识点保留文件名、页码和原文片段 |
+| “感觉会了”但一考就错 | 用选择题/简答题测验，客观题后端判分，简答题按评分要点批改 |
+| 错题看完就忘 | 错题本记录知识缺口；复习目标把薄弱点直接变成下一轮测验 |
+| 复习没有节奏 | 按考试日期和每日分钟数生成任务，每天额度不超限，任务状态可追踪 |
+| 数据不想上传到云端 | 课件、作答、计划默认保存在本机 SQLite/文件中；启用真实模型时，必要的材料片段会发送到你配置的 LLM 服务 |
 
-## Requirements
+## 功能一览
 
-- Python `3.12+` (tested with `3.13`)
-- Node.js `24+` and npm (frontend)
-- SQLite is embedded; no external database, queue, or cache is required
+| 模块 | 已实现 |
+|---|---|
+| 课程与资料 | 课程 CRUD；PDF/PPTX 上传、逐页解析、页码级出处、全文子串检索、被引用材料删除保护 |
+| 知识框架 | 异步构建 + 任务轮询、版本化、按资料分组、节点详情与原文出处 |
+| 测验 | 单选 / 多选 / 简答出题；客观题确定性判分；简答按 rubric 批改；幂等提交 |
+| 掌握度与复习 | Beta-Binomial 掌握度估计、证据计数、错题本（知识缺口）、复习目标 |
+| 复习计划 | 按考试日与每日时长生成计划、保留历史版本、任务状态迁移 |
+| 设置与演示 | 页面可改服务地址/模型/API Key；`mock://local` 演示模式；健康状态展示 |
 
-## Setup
+> 掌握度是暂定的工程估计，不是精确测量；界面上的“未测验”不等于“薄弱”。
+
+## 界面
+
+| 资料库：逐页解析与警告状态 | 知识框架：知识点 + 原文出处 |
+|---|---|
+| ![资料库](docs/screenshots/03-资料库.png) | ![知识框架详情](docs/screenshots/05-知识框架-详情与原文.png) |
+
+| 测验：提交后自动批改 | 复习计划：按天分组、容量受限 |
+|---|---|
+| ![测验自动批改](docs/screenshots/07-测验-自动批改.png) | ![复习计划](docs/screenshots/09-复习计划.png) |
+
+更多界面（课程列表、今日清单、知识框架分组、测验作答、错题与薄弱点、设置）见 [`docs/screenshots/`](docs/screenshots/)。
+
+> 截图为真实模型验收课程，仅用于展示界面；`mock://local` 模式下题目内容是英文模板，适合流程演示。
+
+## 快速开始
+
+### 方式一：Docker（推荐体验）
+
+要求本机已安装 Docker Desktop，并预留 `7860` 端口。
+
+```bash
+docker build -t studymate:local .
+
+docker run -d --name studymate \
+  -p 7860:7860 \
+  -v studymate-data:/mnt/workspace/studymate \
+  -e LLM_BASE_URL=mock://local \
+  studymate:local
+```
+
+镜像约 283 MB；首次构建需要拉取 `node:24.13.0-bookworm-slim` 和 `python:3.13-slim-bookworm`。
+
+打开 <http://127.0.0.1:7860>，健康检查：
+
+```bash
+curl http://127.0.0.1:7860/api/health
+```
+
+- `mock://local` 是内置假模型，不消耗 API 配额，适合先体验完整流程。
+- SQLite、上传文件和本机 API Key 都在 `/mnt/workspace/studymate`，挂载卷后容器重建不会丢。
+- 停止/再次启动：`docker stop studymate` / `docker start studymate`；查看日志：`docker logs -f studymate`。
+
+接真实模型有两种方式：
+
+1. **在页面里配置（推荐）**：打开「设置 → 模型服务」，填写服务地址、模型名和 API Key，保存后下一次出题/知识构建立即生效，无需重启。
+2. **用环境变量启动**：
+
+```bash
+docker run -d --name studymate \
+  -p 7860:7860 \
+  -v studymate-data:/mnt/workspace/studymate \
+  -e LLM_BASE_URL=https://api.deepseek.com \
+  -e LLM_MODEL=deepseek-chat \
+  -e LLM_API_KEY=sk-... \
+  studymate:local
+```
+
+页面保存的 Key 优先于环境变量；Key 不会写进 SQLite 普通设置表，也不会经接口返回或写入日志。
+
+### 方式二：本地开发
+
+要求：Python ≥ 3.12（实测 3.13）、Node.js ≥ 24、npm。
+
+后端：
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
 cp .env.example .env
-```
-
-## Run
-
-Default startup binds to `127.0.0.1` only. Apply migrations first:
-
-```bash
 alembic upgrade head
 uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Use a real OpenAI-compatible model:
-
-```bash
-export LLM_BASE_URL=https://your-endpoint.example/v1
-export LLM_MODEL=your-model
-export LLM_API_KEY=...
-uvicorn app.main:app --host 127.0.0.1 --port 8000
-```
-
-Run without an API key using the built-in mock adapter:
+无 Key 离线启动：
 
 ```bash
 LLM_BASE_URL=mock://local uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-The mock adapter returns English template questions. It is suitable for exercising the full flow, not for product demos that need realistic course content.
-
-## Frontend
+前端（另开终端）：
 
 ```bash
 cd frontend
 npm install
-npm run dev         # http://localhost:5173; /api is proxied to 127.0.0.1:8000
-npm run test        # vitest + msw
-npm run typecheck
-npm run build       # tsc --noEmit + vite build, output in frontend/dist
-npm run gen:types   # regenerate src/api/schema.d.ts from openapi/openapi.json
+npm run dev
 ```
 
-See [frontend/README.md](frontend/README.md) for the SPA structure, visual baseline, and integration notes.
+打开 <http://localhost:5173>。Vite 会把 `/api` 代理到 `127.0.0.1:8000`。
 
-## Container image
+## 配置
 
-The repository root contains the multi-stage `Dockerfile` and `.dockerignore`; `deploy/` holds the single-port ASGI entrypoint and the pinned runtime constraints.
+以 [`.env.example`](.env.example) 为模板，常用项：
 
-```bash
-docker build -t studymate:local .
-docker run --rm -p 7860:7860 \
-  -v studymate-data:/mnt/workspace/studymate \
-  -e LLM_BASE_URL=mock://local \
-  studymate:local
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `APP_ENV` | `development` | 环境标识，健康检查会返回 |
+| `DATABASE_URL` | `sqlite:///./data/studymate.db` | SQLite 路径；本地单文件库 |
+| `STORAGE_ROOT` | `./data/uploads` | 上传文件目录 |
+| `LLM_BASE_URL` | 空 | OpenAI 兼容服务地址；`mock://local` 启用内置假模型 |
+| `LLM_MODEL` | 空 | 模型名，例如 `deepseek-chat` |
+| `LLM_API_KEY` | 空 | 环境变量兜底密钥；页面保存的本机 Key 优先 |
+| `LLM_TIMEOUT_SECONDS` | `60` | 单次 LLM 请求超时 |
+| `LLM_MAX_RETRIES` | `2` | 临时失败重试次数 |
+| `MAX_UPLOAD_BYTES` | `10485760` | 单文件大小上限（10 MB） |
+| `MAX_DOCUMENT_PAGES` | `500` | PDF/PPTX 页数上限 |
+| `JOB_MAX_ATTEMPTS` | `3` | 后台任务最大尝试次数 |
+| `LOCAL_SECRETS_PATH` | 空 | 可选：覆盖本机密钥文件路径 |
+
+### 配置优先级
+
+- **模型服务**：设置页保存到 SQLite 的 `llm_base_url`、`llm_model`、超时和重试覆盖环境变量，下一次 LLM 调用生效，无需重启。
+- **API Key**：设置页保存的 Key 存在数据库同目录的 `local_secrets.json`（POSIX 下尽量收紧为 `0600`），优先于环境变量 `LLM_API_KEY`；不写入普通设置表，不返回给前端，不写日志。`PUT /api/settings` 传 `{"llm_api_key": ""}` 可清除本机 Key。
+- **上传与任务限制**：`MAX_UPLOAD_BYTES`、`MAX_DOCUMENT_PAGES`、`JOB_MAX_ATTEMPTS` 仍以环境变量为准；`PUT /api/settings` 里对应的覆盖值目前只影响 `GET /api/settings` 的显示。
+- **服务器路径**：`GET /api/settings` 会返回真实的 `database_url` 和 `storage_root`，设置页刻意不展示。
+
+![设置页：模型服务与 API Key](docs/screenshots/10-设置-模型服务.png)
+
+## 工作原理
+
+```text
+浏览器 SPA（React + HashRouter）
+        │  /api/*
+        ▼
+FastAPI routes → services → repositories → SQLite
+        │
+        ├─ 进程内 job worker：解析资料 / 构建知识框架 / 出题
+        └─ LLMAdapter：OpenAI 兼容服务，或 mock://local
 ```
 
-Open <http://127.0.0.1:7860>; the health endpoint is `GET /api/health`. The entrypoint creates `/mnt/workspace/studymate`, runs `alembic upgrade head`, and starts one uvicorn worker on `0.0.0.0:7860`. The image keeps SQLite and uploads under `/mnt/workspace/studymate`, so mount a volume to keep data across containers.
+| 层 | 技术 |
+|---|---|
+| 前端 | React 19、Vite 8、TypeScript 5.9、Tailwind CSS 4、TanStack Query 5、HashRouter |
+| 后端 | FastAPI、Pydantic 2、SQLAlchemy 2、Alembic |
+| 数据 | SQLite + 本地文件存储；无 Redis/Celery |
+| 部署 | 多阶段 Docker：Node 24 构建 SPA，Python 3.13 运行 API；单端口 7860 |
+| 测试 | pytest（后端）、Vitest + MSW（前端） |
 
-The backend does not mount static files itself. `deploy/serve.py` mounts `frontend/dist` after the API routes, so `/api/*`, `/docs`, and `/openapi.json` keep their handlers and the SPA is served from the same origin.
+## 目录结构
 
-For ModelScope Studio, use this repository root as the repository/Docker build root; the image already targets `0.0.0.0:7860` and reads secrets from the environment.
-
-Validated on 2026-10-20: the image is about 283 MB; `/api/health`, the SPA, and static assets work on 7860; the full mock flow (upload with an empty page → knowledge framework → quiz → idempotent submit → mastery/wrongbook → review targets → plan → task completion) passes, and data survives a container restart via the mounted volume.
-
-## Repository layout
-
-- `app/`: FastAPI application (`api/routes` → `schemas` → `services` → `repositories` → `db/models`)
-- `alembic/`: database migrations
-- `tests/`: pytest suite (`unit/`, `integration/`, `e2e/`; fixtures in `tests/fixtures/`)
-- `frontend/`: React SPA (Vite + TypeScript + Tailwind CSS 4)
-- `deploy/`: container entrypoint (`serve.py`) and pinned runtime constraints
-- `Dockerfile`, `.dockerignore`: single-container API + SPA build
-- `scripts/smoke/`: manual smoke scripts that require a running backend
-- `scripts/fixtures/`: fixture generators (generate `tests/fixtures/f1-sample.pdf`)
-- `docs/spec/`: backend specification and environment baseline
-- `docs/testing/`: acceptance and test reports
-- `docs/demo/`: demo script
-- `docs/reviews/`: backend design reviews and improvement proposals
-- `data/`: local runtime data (SQLite, uploads; gitignored)
-
-## Configuration
-
-Use `.env.example` as the baseline local configuration:
-
-```bash
-cp .env.example .env
+```text
+StudyMate/
+├─ app/
+│  ├─ api/routes/        # 路由
+│  ├─ schemas/           # 请求/响应模型
+│  ├─ services/          # 业务逻辑（课程、资料、知识、测验、掌握度、计划、设置）
+│  ├─ repositories/      # 数据访问
+│  ├─ db/                # SQLAlchemy 模型与会话
+│  ├─ jobs/              # 进程内任务 worker
+│  └─ llm/               # OpenAI 兼容适配器与 mock
+├─ alembic/              # 数据库迁移
+├─ tests/                # unit / integration / e2e
+├─ frontend/             # React SPA（见 frontend/README.md）
+├─ deploy/               # serve.py 容器入口 + constraints.txt
+├─ docs/                 # 后端规范、演示脚本、测试与评审报告、截图
+├─ scripts/              # 手工冒烟脚本与 fixture 生成器
+├─ data/                 # 本地运行数据（gitignored）
+├─ Dockerfile
+├─ .dockerignore
+└─ pyproject.toml
 ```
 
-Key settings:
+## API 一览
 
-- `DATABASE_URL`: SQLite database path, default `sqlite:///./data/studymate.db`
-- `STORAGE_ROOT`: local upload directory, default `./data/uploads`
-- `LLM_BASE_URL` and `LLM_MODEL`: required for real LLM-backed knowledge/quiz features, or set `LLM_BASE_URL=mock://local` for offline testing
-- `LLM_API_KEY`: optional fallback secret. The settings page can also save a key locally in `local_secrets.json` next to the SQLite database; neither value is returned by `GET /api/settings` or written to logs
-- `MAX_UPLOAD_BYTES`, `MAX_DOCUMENT_PAGES`, `JOB_MAX_ATTEMPTS`: local safety and capacity limits
+所有业务接口都在 `/api` 前缀下；`/openapi.json` 和 `/docs` 在根路径。
 
-`PUT /api/settings` stores LLM runtime overrides (`llm_base_url`, `llm_model`, timeout, retries) that apply to the next LLM call without a restart. Upload limits, page limits, and job retry counts still come from the process environment. An API key saved from the settings page takes precedence over `LLM_API_KEY`; it lives in `local_secrets.json` next to the database (mode 0600 on POSIX), never in the settings table, and `PUT /api/settings` with `{"llm_api_key": ""}` clears it.
+| 模块 | 接口 |
+|---|---|
+| 系统 | `GET /api/health`；`GET /api/settings`；`PUT /api/settings` |
+| 课程 | `POST/GET /api/courses`；`GET/PATCH/DELETE /api/courses/{course_id}` |
+| 资料 | `POST/GET /api/courses/{course_id}/materials`；`GET/DELETE /api/materials/{material_id}`；`GET /api/courses/{course_id}/search`；`GET /api/chunks/{chunk_id}` |
+| 知识 | `POST /api/courses/{course_id}/knowledge/build`；`GET /api/courses/{course_id}/knowledge`；`GET /api/knowledge/{knowledge_point_id}`；`GET /api/courses/{course_id}/knowledge/versions` |
+| 测验 | `POST /api/courses/{course_id}/quiz/generate`；`GET /api/quizzes/{quiz_id}`；`POST /api/quizzes/{quiz_id}/submit` |
+| 掌握度/复习 | `GET /api/courses/{course_id}/mastery`；`GET /api/courses/{course_id}/wrongbook`；`POST /api/courses/{course_id}/review-targets` |
+| 计划 | `POST /api/courses/{course_id}/plan`；`GET /api/courses/{course_id}/plans`；`GET /api/plans/{plan_id}`；`PATCH /api/tasks/{task_id}` |
+| 任务 | `GET /api/jobs/{job_id}` |
 
-## Migrations
+## 关键行为与客户端约定
 
-Alembic includes the `Stage 1` schema for `courses` and `settings`, the `Stage 2` material parsing tables, the `Stage 3` jobs table, the `Stage 4` knowledge framework tables, the `Stage 5` quiz/question tables, the `Stage 6` mastery and gap tracking tables, and the `Stage 7` study plan tables. Later revisions add section labels and knowledge content.
+- **错误信封**：业务错误为 `{"error": {"code", "message", "details", "request_id"}}`，并带 `x-request-id` 头；路由层 404/405 可能是 FastAPI 默认的 `{"detail": "..."}`。
+- **异步任务**：上传、建知识框架、出题返回 `job_id`；轮询任务到 `succeeded` / `failed` / `cancelled`。`progress` 只有 0 和 100，不能做真实进度条。
+- **知识框架空状态**：活动框架不存在时，`GET /knowledge` 返回 `404 RESOURCE_NOT_FOUND`，这是“尚未构建”，不是服务故障。
+- **测验幂等**：一份测验只能提交一次，且必须每题都有答案；同一幂等键 + 同一答案重试会返回已保存结果，换新键会得到 `409 QUIZ_NOT_OPEN`。
+- **简答批改**：在提交请求内同步调用 LLM；临时失败返回 503 且不落库，可用同一幂等键重试。
+- **计划任务**：`completed` / `skipped` 是终态，不能撤回。
+- **静态文件**：后端本身不挂载前端构建；`deploy/serve.py` 在容器入口把 `frontend/dist` 挂在 API 路由之后。
+
+## 测试与验证
 
 ```bash
-alembic upgrade head
-```
-
-If the database is not at the latest revision, `GET /api/health` returns `503 DATABASE_SCHEMA_OUTDATED`.
-
-## Test
-
-```bash
+# 后端（仓库根目录）
 pytest -q
-```
 
-Manual smoke scripts live in `scripts/smoke/` and require a running backend. The smoke fixture is `tests/fixtures/f1-sample.pdf`; regenerate it with `python scripts/fixtures/make_sample_pdf.py`.
-
-Frontend:
-
-```bash
+# 前端
 cd frontend
 npm run test
 npm run build
 ```
 
-Stage 8 verification includes:
+当前基线（2026-10-21）：后端 **50 passed**，前端 **63 passed**，生产构建通过。测试使用 mock LLM 或本地替身，不需要真实 API Key。
 
-- `tests/e2e/test_stage8_flow.py`
-- `tests/integration/test_stage8_security.py`
-- security masking and health checks in `tests/integration/test_health.py` and `tests/integration/test_settings.py`
-- the frontend Vitest suite (58 tests) and production build
+- Docker 构建、7860 启动、完整 mock 流程与重启持久化记录：[`docs/testing/docker-deployment-report-2026-10-20.md`](docs/testing/docker-deployment-report-2026-10-20.md)
+- 真实模型验收、已知结构化输出问题记录：[`docs/testing/real-model-acceptance-report-2026-10-20.md`](docs/testing/real-model-acceptance-report-2026-10-20.md)
 
-## Implemented APIs
+## 已知限制
 
-- `GET /api/health`
-- `GET /api/settings`
-- `PUT /api/settings`
-- `POST /api/courses`
-- `GET /api/courses`
-- `GET /api/courses/{course_id}`
-- `PATCH /api/courses/{course_id}`
-- `DELETE /api/courses/{course_id}`
-- `GET /api/jobs/{job_id}`
-- `POST /api/courses/{course_id}/materials`
-- `GET /api/courses/{course_id}/materials`
-- `GET /api/materials/{material_id}`
-- `DELETE /api/materials/{material_id}`
-- `GET /api/courses/{course_id}/search`
-- `GET /api/chunks/{chunk_id}`
-- `POST /api/courses/{course_id}/knowledge/build`
-- `GET /api/courses/{course_id}/knowledge`
-- `GET /api/knowledge/{knowledge_point_id}`
-- `GET /api/courses/{course_id}/knowledge/versions`
-- `POST /api/courses/{course_id}/quiz/generate`
-- `GET /api/quizzes/{quiz_id}`
-- `POST /api/quizzes/{quiz_id}/submit`
-- `GET /api/courses/{course_id}/mastery`
-- `GET /api/courses/{course_id}/wrongbook`
-- `POST /api/courses/{course_id}/review-targets`
-- `POST /api/courses/{course_id}/plan`
-- `GET /api/courses/{course_id}/plans`
-- `GET /api/plans/{plan_id}`
-- `PATCH /api/tasks/{task_id}`
+- **单用户、无认证、无工作区隔离**：所有课程和资料对访问者可见，只适合本机或受信内网。
+- **设置写接口无鉴权**：`PUT /api/settings` 可以修改服务地址、模型和本机 API Key；把服务暴露到公网前必须关闭该接口或加认证，否则访客可能借服务端 Key 发起模型请求。
+- **单实例**：SQLite + 进程内 job worker，只能跑一个 uvicorn worker；不支持多副本和高可用。
+- **解析范围**：支持 `.pdf` / `.pptx`，旧版 `.ppt` 和 OCR 尚未实现；扫描页会如实标记“无可提取文本”。
+- **mock 内容有限**：内置假模型输出英文模板题，适合流程演示，不适合展示题目质量。
+- **真实模型依赖服务商**：需要 OpenAI 兼容接口；结构化输出失败、超时或限流会影响出题与简答批改。
+- **掌握度是估计值**：Beta-Binomial 更新只覆盖主要知识映射，不向关联节点传播；不能当作精确测量。
+- **接口缺口**：没有变式题、dashboard 聚合、LLM 连通测试、quiz 列表、job 列表、demo/seed 接口；前端用“错题本/复习目标 → 再出题”完成闭环。
+- **设置覆盖范围有限**：上传/页数/任务重试上限仍以环境变量为准；页面只负责展示。
+- **后端不托管 SPA**：容器用 `deploy/serve.py` 补上静态托管；直接运行后端时访问 `/` 仍是 404。
 
-The OpenAPI document is served at `/openapi.json` (root path, not under `/api`); `/docs` provides the interactive UI.
+## 常见问题
 
-## Notes for API clients
+| 现象 | 处理 |
+|---|---|
+| 容器启动后页面打不开 | `docker logs -f studymate`；确认 `GET /api/health` 返回 200，端口映射是 `7860:7860` |
+| 出题/建框架提示 `LLM_NOT_CONFIGURED` | 在设置页填服务地址、模型名和 Key；或启动时加 `-e LLM_BASE_URL=mock://local` |
+| 健康检查返回 `DATABASE_SCHEMA_OUTDATED` | 执行 `alembic upgrade head`；容器入口会自动执行 |
+| 上传被拒绝 | 只支持 `.pdf` / `.pptx`，默认单文件 10 MB、500 页；检查 `MAX_UPLOAD_BYTES` / `MAX_DOCUMENT_PAGES` |
+| 7860 被占用 | 改用 `-p 7861:7860`，容器内仍监听 7860 |
+| 数据与 Key 在哪 | 本地默认 `data/`；Docker 在 `/mnt/workspace/studymate`。备份 `studymate.db`、`uploads/` 和 `local_secrets.json`（后者按密钥保管） |
 
-- Application errors use `{"error": {"code", "message", "details", "request_id"}}` and carry an `x-request-id` header. Route-level 404/405 responses may instead use FastAPI's `{"detail": "..."}` shape.
-- Upload, knowledge-build, and quiz-generation requests return a `job_id`; poll `GET /api/jobs/{job_id}` until `succeeded`, `failed`, or `cancelled`. `progress` is only 0 or 100.
-- `GET /api/courses/{course_id}/knowledge` returns `404 RESOURCE_NOT_FOUND` when no active framework exists. That is an empty state, not a server failure.
-- A quiz can be submitted only once, with an answer for every question. Reuse the same idempotency key and payload to retry transport failures; a fresh key returns `409 QUIZ_NOT_OPEN`.
-- Short-answer grading calls the LLM synchronously during submission. A temporary LLM failure returns `503` without saving the attempt, so the same idempotency key can be retried.
-- `GET /api/settings` returns the real local `database_url` and `storage_root`; clients should not display them.
+## 文档
 
-## Current Limitations
-
-- Upload and parsing currently support `.pdf` and `.pptx`. Legacy `.ppt` is not implemented yet; OCR is not supported.
-- Material uploads enqueue persistent `document.parse` jobs and return a `job_id` for polling.
-- The job worker is single-process and SQLite-backed. It supports retry and stale-running recovery, but it is not a multi-instance queue.
-- Knowledge framework generation currently uses either a configured OpenAI-compatible API or the built-in mock adapter for offline testing.
-- Knowledge framework generation blocks material deletion when the material is referenced by framework sources.
-- Quiz generation deduplicates by normalized stem hash within a course and snapshots full question content into each quiz.
-- `GET /api/quizzes/{quiz_id}` hides answer keys, rubrics, explanations, and internal metadata until after submission.
-- Objective grading is deterministic on the backend. Multiple-choice questions only receive full credit on exact set match.
-- Short-answer grading is synchronous and requires an available LLM adapter at submission time. Pending/retry background grading is not implemented yet.
-- Mastery tracking uses a transparent Beta-Binomial update over primary knowledge mappings only; wrong answers are not propagated to secondary or related nodes. The estimate is a provisional engineering value, not a precise measurement.
-- Review target selection uses a simple weakness/exploration heuristic and records strategy logs; it is not MCTS.
-- Study plan generation is deterministic and capacity-limited by `daily_minutes`; it preserves old plan versions and does not overwrite historical task state.
-- The API has no variant-question endpoint, dashboard aggregate, LLM connectivity test, quiz list, job list, or demo/seed endpoint. The frontend substitutes a review-target → new-quiz loop for variants.
-- There is no authentication and no workspace/session isolation. All courses and materials are visible to every caller; the service is intended only for trusted local use.
-- The backend does not mount `frontend/dist`. The repository's container entrypoint (`deploy/serve.py`) serves the SPA after the API routes; adding static hosting to `app/main.py` remains a deployment follow-up.
-
-## Stage 8 Checklist
-
-- End-to-end flow is covered from material upload through knowledge build, quiz generation/submission, mastery update, review-target selection, and plan generation.
-- Application errors use a consistent envelope with `error.code`, `error.message`, `error.details`, and `request_id`; route-level 404/405 responses may use FastAPI's default `detail` shape.
-- Settings and error responses do not expose `LLM_API_KEY`; `GET /api/settings` only reports `llm_auth_configured` and `llm_api_key_source`.
-- Upload filenames reject path traversal inputs and startup documentation binds to `127.0.0.1`.
-- README, `.env.example`, and migrations are present; the Stage 8 tests run successfully in the current environment.
-- The frontend test suite and production build are part of the current verification baseline.
-
-## Environment Tracking
-
-See [docs/spec/environment.md](docs/spec/environment.md) for the development baseline. The repository's container image uses Python 3.13 and Node 24, with runtime dependencies pinned in `deploy/constraints.txt`.
+| 文档 | 内容 |
+|---|---|
+| [`frontend/README.md`](frontend/README.md) | 前端结构、命令、联调方式与视觉基线 |
+| [`docs/spec/backend-spec.md`](docs/spec/backend-spec.md) | 后端技术设计与实现规范 |
+| [`docs/spec/environment.md`](docs/spec/environment.md) | 开发环境基线 |
+| [`docs/demo/demo-script.md`](docs/demo/demo-script.md) | 5 分钟演示脚本 |
+| [`docs/testing/`](docs/testing/) | 真实模型与 Docker 验收报告 |
+| [`docs/reviews/`](docs/reviews/) | 后端设计复盘与改进提案 |
+| [`docs/screenshots/`](docs/screenshots/) | 产品界面截图 |
