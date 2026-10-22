@@ -1,7 +1,10 @@
 from datetime import UTC, datetime
 from uuid import uuid4
 
+from typing import Any
+
 from sqlalchemy import (
+    JSON,
     Boolean,
     DateTime,
     Float,
@@ -29,6 +32,9 @@ class KnowledgeFrameworkVersion(Base):
     )
     version_number: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[str] = mapped_column(String(50), nullable=False)
+    # v5 起记录构建器版本与课程材料指纹；旧版本两列为 NULL（legacy）。
+    builder_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    source_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -187,4 +193,55 @@ class KnowledgeNodeRelation(Base):
     target_node_version: Mapped["KnowledgeNodeVersion"] = relationship(
         foreign_keys=[target_node_version_id],
         back_populates="incoming_relations",
+    )
+
+
+class KnowledgeSectionCache(Base):
+    """v5 流水线的 section/window 级断点缓存。
+
+    只有通过 Pydantic 校验的抽取结果才入缓存；构建失败后重新触发可
+    直接复用，跳过已完成的 LLM 调用。独立于构建事务提交。
+    """
+
+    __tablename__ = "knowledge_section_cache"
+    __table_args__ = (UniqueConstraint("cache_key"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    cache_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    model_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    provider_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+    )
+
+
+class KnowledgeOutlineCache(Base):
+    """v5 Stage A 的 LLM 大纲缓存。
+
+    大纲由模型生成，每次可能有细微差异；不缓存就会让 section 缓存键
+    （含 section 路径与页码区间）失效，重建/续跑退化为全量重抽。
+    缓存键包含解析器版本、文档内容指纹、模型与 provider。
+    """
+
+    __tablename__ = "knowledge_outline_cache"
+    __table_args__ = (UniqueConstraint("cache_key"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    cache_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    document_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    parser_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    model_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    provider_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
     )

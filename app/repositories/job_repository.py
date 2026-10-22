@@ -73,6 +73,30 @@ class JobRepository:
         job.finished_at = now
         job.updated_at = now
 
+    def update_progress(
+        self,
+        session: Session,
+        job_id: str,
+        *,
+        progress: int,
+        phase: str,
+        completed_units: int,
+        total_units: int,
+        message: str | None,
+    ) -> bool:
+        """阶段进度写入；progress 单调不回退。调用方负责用独立短事务提交。"""
+        job = session.get(Job, job_id)
+        if job is None or job.status != JOB_STATUS_RUNNING:
+            return False
+        if progress < job.progress:
+            return False
+        job.progress = progress
+        job.phase = phase
+        job.completed_units = completed_units
+        job.total_units = total_units
+        job.message = message
+        return True
+
     def mark_failed(self, session: Session, job: Job, *, error_code: str, error_summary: str) -> None:
         now = datetime.now(UTC)
         job.status = JOB_STATUS_FAILED

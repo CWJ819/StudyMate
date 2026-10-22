@@ -6,8 +6,11 @@ from app.db.models.knowledge import (
     KnowledgeNode,
     KnowledgeNodeRelation,
     KnowledgeNodeVersion,
+    KnowledgeOutlineCache,
+    KnowledgeSectionCache,
     KnowledgeSource,
 )
+from app.db.models.llm_call import LLMCall
 from app.db.models.mastery import (
     AttemptGapEvidence,
     KnowledgeGap,
@@ -40,7 +43,10 @@ __all__ = [
     "KnowledgeNode",
     "KnowledgeNodeRelation",
     "KnowledgeNodeVersion",
+    "KnowledgeOutlineCache",
+    "KnowledgeSectionCache",
     "KnowledgeSource",
+    "LLMCall",
     "MasteryEvent",
     "Question",
     "QuestionGenerationRun",

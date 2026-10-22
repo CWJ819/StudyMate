@@ -53,10 +53,14 @@ class MasteryService:
         responses: list[MasteryStateResponse] = []
         for state in self.repository.list_states(session, course_id):
             node = active_nodes.get(state.knowledge_node_id)
+            if node is None:
+                # 旧框架的节点已不在活动树里（换模型/重建后常见）：跳过这行，
+                # 不返回 title=None 的空条目；DB 记录本身保留，等迁移审计决定。
+                continue
             responses.append(
                 MasteryStateResponse(
                     knowledge_node_id=state.knowledge_node_id,
-                    title=node.title if node is not None else None,
+                    title=node.title,
                     alpha=state.alpha,
                     beta=state.beta,
                     mastery_estimate=state.mastery_estimate,

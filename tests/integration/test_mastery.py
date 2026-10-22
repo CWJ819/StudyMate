@@ -1,5 +1,7 @@
 import asyncio
+from datetime import UTC, datetime
 from pathlib import Path
+from uuid import uuid4
 
 import fitz
 import pytest
@@ -7,7 +9,8 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import func, select
 
 from app.core.config import reset_settings_cache
-from app.db.models.mastery import MasteryEvent, ReviewStrategyLog
+from app.db.models.knowledge import KnowledgeNode
+from app.db.models.mastery import MasteryEvent, ReviewStrategyLog, StudentGapState
 from app.db.session import session_scope
 from app.main import app
 
@@ -150,5 +153,37 @@ async def test_quiz_submission_updates_mastery_gaps_and_review_targets(
         strategy_log_count = session.scalar(select(func.count(ReviewStrategyLog.id)))
     assert event_count == 2
     assert strategy_log_count == 1
+
+    # 孤儿掌握度：节点不在活动框架里（换模型/重建后常见），接口不能返回空标题行
+    with session_scope() as session:
+        orphan_node = KnowledgeNode(
+            id=str(uuid4()), course_id=course_id, stable_key=f"orphan:{uuid4()}"
+        )
+        session.add(orphan_node)
+        session.flush()
+        session.add(
+            StudentGapState(
+                id=str(uuid4()),
+                course_id=course_id,
+                knowledge_node_id=orphan_node.id,
+                alpha=2.0,
+                beta=9.0,
+                mastery_estimate=0.2,
+                evidence_count=3,
+                updated_at=datetime.now(UTC),
+            )
+        )
+        session.commit()
+
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        filtered = await client.get(f"/api/courses/{course_id}/mastery")
+        assert filtered.status_code == 200
+        assert [row["knowledge_node_id"] for row in filtered.json()] == [
+            mastery[0]["knowledge_node_id"]
+        ]
+        assert all(row["title"] for row in filtered.json())
+
+    with session_scope() as session:
+        assert session.scalar(select(func.count(StudentGapState.id))) == 2  # DB 记录保留
 
     reset_settings_cache()

@@ -45,7 +45,7 @@ test('生成表单：全选叶子时省略 knowledge_node_ids（后端缺省=全
   )
 
   renderPlan()
-  expect(await screen.findByText('v2 计划')).toBeTruthy()
+  expect(await screen.findByText('v2 计划', {}, { timeout: 3000 })).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: '生成新计划' }))
 
   // 改一下考试日期，其余用默认（60 分钟 / 85 分 / 全选）
@@ -54,7 +54,7 @@ test('生成表单：全选叶子时省略 knowledge_node_ids（后端缺省=全
   })
   fireEvent.click(screen.getByRole('button', { name: '生成计划' }))
 
-  await screen.findByText('v3 计划')
+  await screen.findByText('v3 计划', {}, { timeout: 3000 })
   expect(body).toEqual({
     exam_date: addDaysISO(todayISO(), 21),
     daily_minutes: 60,

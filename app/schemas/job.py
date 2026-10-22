@@ -20,3 +20,8 @@ class JobResponse(BaseModel):
     finished_at: datetime | None
     created_at: datetime
     updated_at: datetime
+    # v5 构建流水线的阶段进度；旧任务/其他任务类型为 None
+    phase: str | None = None
+    completed_units: int | None = None
+    total_units: int | None = None
+    message: str | None = None

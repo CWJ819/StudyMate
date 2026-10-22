@@ -92,9 +92,31 @@ function countTested(node: KnowledgeTreeNode, mastery: Map<string, MasteryState>
   return n
 }
 
+/** section_label 已经出现在 title 开头时不再重复渲染（如 label=第3章、title=第3章 运输层） */
+function labelDuplicatesTitle(label: string | null | undefined, title: string): boolean {
+  const normalized = (label ?? '').trim()
+  if (!normalized) return false
+  return title.trim().startsWith(normalized)
+}
+
+/** 后代叶子总数（容器摘要卡的「M 个知识点」） */
+function countLeaves(node: KnowledgeTreeNode): number {
+  const children = node.children ?? []
+  if (children.length === 0) return node.is_leaf ? 1 : 0
+  return children.reduce((sum, child) => sum + countLeaves(child), 0)
+}
+
+function findTreeNode(nodes: KnowledgeTreeNode[], id: string): KnowledgeTreeNode | null {
+  for (const node of nodes) {
+    if (node.knowledge_node_id === id) return node
+    const found = findTreeNode(node.children ?? [], id)
+    if (found) return found
+  }
+  return null
+}
+
 /** 掌握度叠加（估计值·依据次数，未测验灰）；树行与平铺兜底行共用 */
-function MasteryBadge({ m }: { m?: MasteryState }) {
-  if (!m) return <span className="flex-none text-[11px] text-ink3">未测验</span>
+function MasteryBadge({ m }: { m?: MasteryState }) {  if (!m) return <span className="flex-none text-[11px] text-ink3">未测验</span>
   return (
     <span className="flex flex-none items-center gap-1 font-mono text-[11.5px] text-ink2">
       <span className="inline-block h-1.5 w-10 overflow-hidden rounded-sm bg-untested-bg">
@@ -161,7 +183,7 @@ function FlatLeafRow({
       aria-selected={selectedId === node.knowledge_node_id}
     >
       <span className="min-w-0 flex-1 truncate" title={node.title}>
-        {node.section_label && (
+        {node.section_label && !labelDuplicatesTitle(node.section_label, node.title) && (
           <span className="mr-1 font-mono text-[11px] text-ink3">{node.section_label}</span>
         )}
         <span className="align-baseline">{node.title}</span>
@@ -305,7 +327,7 @@ function TreeRow({
           <span className="w-4 flex-none text-center text-[10px] text-ink3">·</span>
         )}
         <span className="min-w-0 flex-1 truncate" title={node.title}>
-          {node.section_label && (
+          {node.section_label && !labelDuplicatesTitle(node.section_label, node.title) && (
             <span className="mr-1 font-mono text-[12px] text-ink3">{node.section_label}</span>
           )}
           <span className="align-baseline">{node.title}</span>
@@ -354,7 +376,60 @@ function TreeRow({
   )
 }
 
-function NodeDetail({ nodeId }: { nodeId: string }) {
+/** 容器节点摘要：标题 + 小节/知识点/已测计数 + 可直接点开的小节行（无新 API） */
+function ContainerSummary({
+  node,
+  mastery,
+  onSelect,
+}: {
+  node: KnowledgeTreeNode
+  mastery: Map<string, MasteryState>
+  onSelect: (id: string) => void
+}) {
+  const children = node.children ?? []
+  const sections = children.filter((child) => (child.children ?? []).length > 0)
+  const directLeaves = children.length - sections.length
+  const tested = countTested(node, mastery)
+  return (
+    <div className="mb-4 rounded-lg border border-border bg-bg px-4 py-3">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="min-w-0 truncate text-[17px] font-bold" title={node.title}>
+          {node.title}
+        </h2>
+        <span className="flex-none font-mono text-[11.5px] text-ink3">
+          {sections.length} 个小节 · {countLeaves(node)} 个知识点
+          {tested > 0 ? ` · 已测 ${tested}` : ''}
+        </span>
+      </div>
+      {sections.length > 0 && (
+        <div className="mt-2 grid gap-0.5">
+          {sections.map((child) => (
+            <button
+              key={child.knowledge_node_id}
+              type="button"
+              onClick={() => onSelect(child.knowledge_node_id)}
+              className="flex items-center gap-2 rounded px-2 py-1 text-left text-[12.5px] text-ink2 hover:bg-surface"
+            >
+              <span className="min-w-0 flex-1 truncate" title={child.title}>
+                {child.title}
+              </span>
+              <span className="flex-none font-mono text-[11px] text-ink3">
+                {countLeaves(child)} 个 · 已测 {countTested(child, mastery)}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+      {directLeaves > 0 && (
+        <p className="mt-1.5 text-[11.5px] text-ink3">
+          另有 {directLeaves} 个知识点直接挂在章下，展开左侧树即可查看。
+        </p>
+      )}
+    </div>
+  )
+}
+
+function NodeDetail({ nodeId, hideHeading = false }: { nodeId: string; hideHeading?: boolean }) {
   const detail = useQuery({
     queryKey: ['knode', nodeId],
     queryFn: () => getKnowledgeNode(nodeId),
@@ -364,8 +439,14 @@ function NodeDetail({ nodeId }: { nodeId: string }) {
   const d = detail.data
   return (
     <div>
-      <div className="text-[12px] font-mono text-ink3">{d.section_label}</div>
-      <h2 className="mt-0.5 text-[18px] font-bold">{d.title}</h2>
+      {!hideHeading && (
+        <>
+          {d.section_label && !labelDuplicatesTitle(d.section_label, d.title) && (
+            <div className="text-[12px] font-mono text-ink3">{d.section_label}</div>
+          )}
+          <h2 className="mt-0.5 text-[18px] font-bold">{d.title}</h2>
+        </>
+      )}
       {d.content && (
         <p className="mt-2 whitespace-pre-wrap rounded-md bg-quote-bg px-4 py-3 text-[13.5px] leading-[1.7] text-ink">
           {d.content}
@@ -473,6 +554,11 @@ export function KnowledgePage() {
 
   const tree = framework.data?.tree ?? []
   const meta = framework.data ? frameworkStatus(framework.data.status) : null
+  // 右侧详情：容器节点额外渲染摘要卡（计数 + 可点开的小节）
+  const selectedNode = useMemo(
+    () => (selectedId ? findTreeNode(tree, selectedId) : null),
+    [tree, selectedId],
+  )
   // 旧框架（根 + 全叶子）→ 按来源文档分组的平铺兜底；新框架（有层级）→ 走 TreeRow
   const flatGroups = useMemo(() => buildFlatGroups(tree), [tree])
 
@@ -712,7 +798,14 @@ export function KnowledgePage() {
           </section>
           <section className="h-fit rounded-lg border border-border bg-surface px-5 py-4">
             {selectedId ? (
-              <NodeDetail nodeId={selectedId} />
+              selectedNode != null && (selectedNode.children ?? []).length > 0 ? (
+                <>
+                  <ContainerSummary node={selectedNode} mastery={masteryMap} onSelect={setSelectedId} />
+                  <NodeDetail nodeId={selectedId} hideHeading />
+                </>
+              ) : (
+                <NodeDetail nodeId={selectedId} />
+              )
             ) : (
               <p className="text-[13px] text-ink3">在左侧选择一个知识点查看详情与出处。</p>
             )}

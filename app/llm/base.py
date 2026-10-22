@@ -33,5 +33,6 @@ class LLMAdapter(ABC):
         system_prompt: str,
         user_payload: dict[str, Any],
         response_model: type[BaseModel],
+        timeout_seconds: int | None = None,
     ) -> LLMStructuredResult:
         raise NotImplementedError

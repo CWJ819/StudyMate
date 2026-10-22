@@ -28,6 +28,7 @@ def _handle_knowledge_build(session: Session, payload: KnowledgeBuildPayloadMode
         course_id=payload.course_id,
         framework_version_id=payload.framework_version_id,
         reference_outline=payload.reference_outline,
+        job_id=payload.job_id,
     )
 
 

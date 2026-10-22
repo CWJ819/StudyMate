@@ -57,7 +57,8 @@ test('未构建（404 RESOURCE_NOT_FOUND）：显示空状态而非报错，可�
 
   fireEvent.click(screen.getByRole('button', { name: '构建知识框架' }))
   // job 成功 → 失效刷新 → 框架出现（层级树默认只展开根，先看到文档层）
-  expect(await screen.findByText('拥塞控制', {}, { timeout: 3000 })).toBeTruthy()
+  const treeSection = await screen.findByRole('tree', { name: '知识框架树' })
+  expect(await within(treeSection).findByText('拥塞控制', {}, { timeout: 3000 })).toBeTruthy()
 })
 
 test('已有框架：渲染树与掌握度叠加，选中节点看详情与来源展开', async () => {
@@ -76,13 +77,18 @@ test('已有框架：渲染树与掌握度叠加，选中节点看详情与来�
   renderKnowledge()
 
   // 树 + 版本头；默认只展开根（文档组收起）
-  expect(await screen.findByText('拥塞控制')).toBeTruthy()
+  const treeSection = await screen.findByRole('tree', { name: '知识框架树' })
+  expect(await within(treeSection).findByText('拥塞控制')).toBeTruthy()
   expect(screen.getByText('4 个知识点')).toBeTruthy()
   expect(screen.queryByText('慢启动与拥塞避免')).toBeNull()
 
   // 组头计数徽标（后代 N 个 · 已测 M）
-  expect(screen.getByText('2 个 · 已测 1')).toBeTruthy() // 根
-  expect(screen.getByText('1 个 · 已测 1')).toBeTruthy() // 拥塞控制
+  expect(within(treeSection).getByText('2 个 · 已测 1')).toBeTruthy() // 根
+  expect(within(treeSection).getByText('1 个 · 已测 1')).toBeTruthy() // 拥塞控制
+
+  // 容器详情摘要卡（默认选中根）：计数 + 可点开的小节行
+  expect(screen.getByText('1 个小节 · 2 个知识点 · 已测 1')).toBeTruthy()
+  expect(screen.getByRole('button', { name: /拥塞控制/ })).toBeTruthy()
 
   // 展开文档组 → 叶子可见 + 掌握度叠加 + 行内页码
   fireEvent.click(screen.getByRole('button', { name: '展开' }))
@@ -107,7 +113,6 @@ test('已有框架：渲染树与掌握度叠加，选中节点看详情与来�
 
   // 全部收起 → 组折叠；全部展开 → 恢复（卡头按钮，操作所有组；断言限定在树内，
   // 选中节点的标题/关联还会出现在右侧详情面板里）
-  const treeSection = screen.getByRole('tree', { name: '知识框架树' })
   fireEvent.click(screen.getByRole('button', { name: '全部收起' }))
   expect(within(treeSection).queryByText('慢启动与拥塞避免')).toBeNull()
   fireEvent.click(screen.getByRole('button', { name: '全部展开' }))
@@ -132,7 +137,8 @@ test('构建失败：显示 job.error_code 的中文文案', async () => {
 
 test('版本列表：展示版本与状态', async () => {
   renderKnowledge()
-  await screen.findByText('拥塞控制')
+  const treeSection = await screen.findByRole('tree', { name: '知识框架树' })
+  await within(treeSection).findByText('拥塞控制')
 
   fireEvent.click(screen.getByRole('button', { name: '版本列表' }))
   // 等第二行（v2）出现，避免把页头的 v3 当成列表行

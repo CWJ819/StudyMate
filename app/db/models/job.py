@@ -16,6 +16,12 @@ class Job(Base):
     status: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     payload_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
     progress: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # v5 构建流水线的阶段进度（outline/extract/merge/validate/activate）。
+    # 进度写入走独立短事务会话，避免与构建事务互相锁库。
+    phase: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    completed_units: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_units: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    message: Mapped[str | None] = mapped_column(String(500), nullable=True)
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     max_attempts: Mapped[int] = mapped_column(Integer, nullable=False)
     run_after: Mapped[datetime] = mapped_column(

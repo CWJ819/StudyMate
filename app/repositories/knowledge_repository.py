@@ -10,8 +10,12 @@ from app.db.models.knowledge import (
     KnowledgeNode,
     KnowledgeNodeRelation,
     KnowledgeNodeVersion,
+    KnowledgeOutlineCache,
+    KnowledgeSectionCache,
     KnowledgeSource,
 )
+from app.db.models.job import Job
+from app.db.models.quiz import QuestionKnowledge
 
 
 class KnowledgeRepository:
@@ -84,6 +88,62 @@ class KnowledgeRepository:
         )
         return session.scalar(statement)
 
+    # ------------------------------------------------------------------
+    # 评分读取时计算用的聚合查询（不写库、不缓存）
+    # ------------------------------------------------------------------
+
+    def count_source_pages_by_node(
+        self, session: Session, *, framework_version_id: str
+    ) -> dict[str, int]:
+        """每片叶子 distinct 的来源页数（document_id + page_number 去重）。"""
+        rows = session.execute(
+            select(
+                KnowledgeSource.node_version_id,
+                KnowledgeSource.document_id,
+                KnowledgeSource.page_number,
+            )
+            .join(
+                KnowledgeNodeVersion,
+                KnowledgeNodeVersion.id == KnowledgeSource.node_version_id,
+            )
+            .where(KnowledgeNodeVersion.framework_version_id == framework_version_id)
+        )
+        pages: dict[str, set[tuple[str, int]]] = {}
+        for node_version_id, document_id, page_number in rows:
+            pages.setdefault(node_version_id, set()).add((document_id, page_number))
+        return {node_version_id: len(values) for node_version_id, values in pages.items()}
+
+    def count_question_mappings_by_node(
+        self, session: Session, *, framework_version_id: str
+    ) -> dict[str, int]:
+        """每片叶子映射到的题目数（同一题多角色只算一次）。"""
+        rows = session.execute(
+            select(
+                QuestionKnowledge.node_version_id,
+                func.count(func.distinct(QuestionKnowledge.question_id)),
+            )
+            .join(
+                KnowledgeNodeVersion,
+                KnowledgeNodeVersion.id == QuestionKnowledge.node_version_id,
+            )
+            .where(KnowledgeNodeVersion.framework_version_id == framework_version_id)
+            .group_by(QuestionKnowledge.node_version_id)
+        )
+        return {node_version_id: int(count) for node_version_id, count in rows}
+
+    def list_version_relations(
+        self, session: Session, *, framework_version_id: str
+    ) -> list[tuple[str, str, str]]:
+        """active 版本的关系边 (source_node_version_id, target_node_version_id, type)。"""
+        rows = session.execute(
+            select(
+                KnowledgeNodeRelation.source_node_version_id,
+                KnowledgeNodeRelation.target_node_version_id,
+                KnowledgeNodeRelation.relation_type,
+            ).where(KnowledgeNodeRelation.framework_version_id == framework_version_id)
+        )
+        return [(source, target, relation_type) for source, target, relation_type in rows]
+
     def get_or_create_node(
         self, session: Session, *, course_id: str, stable_key: str
     ) -> KnowledgeNode:
@@ -99,6 +159,134 @@ class KnowledgeRepository:
         session.flush()
         session.refresh(node)
         return node
+
+    def find_node_by_stable_key(
+        self, session: Session, *, course_id: str, stable_key: str
+    ) -> KnowledgeNode | None:
+        return session.scalar(
+            select(KnowledgeNode)
+            .where(KnowledgeNode.course_id == course_id)
+            .where(KnowledgeNode.stable_key == stable_key)
+        )
+
+    def update_node_stable_key(
+        self, session: Session, *, knowledge_node: KnowledgeNode, stable_key: str
+    ) -> None:
+        knowledge_node.stable_key = stable_key
+        session.flush()
+
+    def get_building_framework_version(
+        self, session: Session, course_id: str
+    ) -> KnowledgeFrameworkVersion | None:
+        return session.scalar(
+            select(KnowledgeFrameworkVersion)
+            .where(KnowledgeFrameworkVersion.course_id == course_id)
+            .where(KnowledgeFrameworkVersion.status == "building")
+            .order_by(KnowledgeFrameworkVersion.version_number.desc())
+            .limit(1)
+        )
+
+    def has_pending_build_job(
+        self, session: Session, *, framework_version_id: str
+    ) -> bool:
+        return (
+            session.scalar(
+                select(Job.id)
+                .where(Job.type == "knowledge_framework.build")
+                .where(Job.status.in_(["queued", "running", "retry_wait"]))
+                .where(
+                    func.json_extract(Job.payload_json, "$.framework_version_id")
+                    == framework_version_id
+                )
+                .limit(1)
+            )
+            is not None
+        )
+
+    def get_section_cache_payloads(
+        self, session: Session, *, cache_keys: list[str]
+    ) -> dict[str, dict]:
+        if not cache_keys:
+            return {}
+        rows = session.scalars(
+            select(KnowledgeSectionCache).where(
+                KnowledgeSectionCache.cache_key.in_(cache_keys)
+            )
+        )
+        return {row.cache_key: row.payload_json for row in rows}
+
+    def add_section_cache_entry(
+        self,
+        session: Session,
+        *,
+        cache_key: str,
+        content_hash: str,
+        prompt_version: str,
+        model_name: str,
+        provider_hash: str,
+        payload_json: dict,
+    ) -> None:
+        existing = session.scalar(
+            select(KnowledgeSectionCache.id).where(
+                KnowledgeSectionCache.cache_key == cache_key
+            )
+        )
+        if existing is not None:
+            return
+        session.add(
+            KnowledgeSectionCache(
+                cache_key=cache_key,
+                content_hash=content_hash,
+                prompt_version=prompt_version,
+                model_name=model_name,
+                provider_hash=provider_hash,
+                payload_json=payload_json,
+            )
+        )
+        session.flush()
+
+    def get_outline_cache_payload(
+        self, session: Session, *, cache_key: str
+    ) -> dict | None:
+        return session.scalar(
+            select(KnowledgeOutlineCache.payload_json).where(
+                KnowledgeOutlineCache.cache_key == cache_key
+            )
+        )
+
+    def add_outline_cache_entry(
+        self,
+        session: Session,
+        *,
+        cache_key: str,
+        document_id: str,
+        content_hash: str,
+        parser_version: str,
+        prompt_version: str,
+        model_name: str,
+        provider_hash: str,
+        payload_json: dict,
+    ) -> None:
+        existing = session.scalar(
+            select(KnowledgeOutlineCache.id).where(
+                KnowledgeOutlineCache.cache_key == cache_key
+            )
+        )
+        if existing is not None:
+            return
+        session.add(
+            KnowledgeOutlineCache(
+                cache_key=cache_key,
+                document_id=document_id,
+                content_hash=content_hash,
+                parser_version=parser_version,
+                prompt_version=prompt_version,
+                model_name=model_name,
+                provider_hash=provider_hash,
+                payload_json=payload_json,
+            )
+        )
+        session.flush()
 
     def add_node_version(
         self,

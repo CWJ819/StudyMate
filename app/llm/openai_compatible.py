@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from copy import deepcopy
 from typing import Any
 
@@ -14,7 +15,10 @@ from app.llm.base import LLMAdapter, LLMTemporaryError
 from app.llm.schemas import (
     KnowledgeFrameworkCandidate,
     KnowledgeNodeCandidate,
+    KnowledgeOutlineV5,
     KnowledgeRelationCandidate,
+    KnowledgeRelationV5,
+    KnowledgeSectionExtractionV5,
     KnowledgeSourceCandidate,
     LLMRunSummary,
     LLMStructuredResult,
@@ -77,6 +81,7 @@ class OpenAICompatibleAdapter(LLMAdapter):
         system_prompt: str,
         user_payload: dict[str, Any],
         response_model: type[BaseModel],
+        timeout_seconds: int | None = None,
     ) -> LLMStructuredResult:
         self.ensure_available()
         if self.settings.llm_base_url and self.settings.llm_base_url.startswith("mock://"):
@@ -90,6 +95,7 @@ class OpenAICompatibleAdapter(LLMAdapter):
             system_prompt=system_prompt,
             user_payload=user_payload,
             response_model=response_model,
+            timeout_seconds=timeout_seconds,
         )
 
     def _generate_http_output(
@@ -99,6 +105,7 @@ class OpenAICompatibleAdapter(LLMAdapter):
         system_prompt: str,
         user_payload: dict[str, Any],
         response_model: type[BaseModel],
+        timeout_seconds: int | None = None,
     ) -> LLMStructuredResult:
         assert self.settings.llm_base_url is not None
         assert self.settings.llm_model is not None
@@ -110,6 +117,8 @@ class OpenAICompatibleAdapter(LLMAdapter):
         }
         invalid_type = "unknown"
         validation_hint = ""
+        request_timeout = timeout_seconds or self.settings.llm_timeout_seconds
+        started_at = time.monotonic()
         for attempt in range(self.settings.llm_max_retries + 1):
             retry_instruction = ""
             if attempt:
@@ -133,7 +142,7 @@ class OpenAICompatibleAdapter(LLMAdapter):
                 ],
             }
             try:
-                with httpx.Client(timeout=self.settings.llm_timeout_seconds) as client:
+                with httpx.Client(timeout=request_timeout) as client:
                     response = client.post(
                         f"{self.settings.llm_base_url.rstrip('/')}/chat/completions",
                         json=request_body,
@@ -191,6 +200,8 @@ class OpenAICompatibleAdapter(LLMAdapter):
                     model_name=self.settings.llm_model,
                     prompt_version=prompt_version,
                     provider="openai-compatible",
+                    latency_ms=int((time.monotonic() - started_at) * 1000),
+                    attempts=attempt + 1,
                 ),
                 data=data,
             )
@@ -485,6 +496,8 @@ class OpenAICompatibleAdapter(LLMAdapter):
                 model_name=self.settings.llm_model or "mock-llm",
                 prompt_version=prompt_version,
                 provider="mock",
+                latency_ms=0,
+                attempts=1,
             ),
             data=data,
         )
@@ -494,6 +507,10 @@ class OpenAICompatibleAdapter(LLMAdapter):
     ) -> dict[str, Any]:
         if response_model is KnowledgeFrameworkCandidate:
             return self._build_mock_knowledge_framework_candidate(user_payload)
+        if response_model is KnowledgeOutlineV5:
+            return self._build_mock_outline_v5_candidate(user_payload)
+        if response_model is KnowledgeSectionExtractionV5:
+            return self._build_mock_section_v5_candidate(user_payload)
         if response_model is QuizGenerationCandidate:
             return self._build_mock_quiz_generation_candidate(user_payload)
         if response_model is ShortAnswerGradingCandidate:
@@ -503,6 +520,109 @@ class OpenAICompatibleAdapter(LLMAdapter):
             message="The mock LLM adapter does not support this response model.",
             status_code=500,
         )
+
+    def _build_mock_outline_v5_candidate(self, user_payload: dict[str, Any]) -> dict[str, Any]:
+        document = user_payload.get("document", {})
+        total_pages = int(document.get("total_pages", 1) or 1)
+        inventory = user_payload.get("page_inventory", [])
+        pages = [entry.get("page_number", 1) for entry in inventory if entry.get("page_number")]
+        if not pages:
+            pages = list(range(1, total_pages + 1))
+
+        heading_pages = [
+            entry
+            for entry in inventory
+            if entry.get("headings") and 1 <= entry.get("page_number", 0) <= total_pages
+        ]
+        first_heading = (
+            " ".join(heading_pages[0]["headings"][0].split())[:120]
+            if heading_pages
+            else str(user_payload.get("course_name") or "Study material")
+        )
+
+        sections: list[dict[str, Any]] = [
+            {
+                "ref": "chapter_1",
+                "title": first_heading,
+                "level": 1,
+                "parent_ref": None,
+                "page_start": min(pages),
+                "page_end": max(pages),
+                "evidence_page_numbers": [min(pages)],
+            }
+        ]
+        # 其余标题页降级为 level-2 小节，保证 mock 大纲结构可预测且页码合法。
+        for index, entry in enumerate(heading_pages[1:5], start=1):
+            page_number = entry["page_number"]
+            title = " ".join(entry["headings"][0].split())[:120]
+            sections.append(
+                {
+                    "ref": f"section_{index}",
+                    "title": title,
+                    "level": 2,
+                    "parent_ref": "chapter_1",
+                    "page_start": page_number,
+                    "page_end": max(page_number, min(total_pages, page_number + 2)),
+                    "evidence_page_numbers": [page_number],
+                }
+            )
+        return KnowledgeOutlineV5(
+            root_title=str(document.get("filename") or first_heading),
+            sections=sections,
+        ).model_dump()
+
+    def _build_mock_section_v5_candidate(self, user_payload: dict[str, Any]) -> dict[str, Any]:
+        leaves: list[dict[str, Any]] = []
+        for index, segment in enumerate(user_payload.get("source_segments", [])[:3], start=1):
+            text = " ".join(str(segment.get("text", "")).split())
+            chunk_id = segment.get("chunk_id")
+            leaves.append(
+                {
+                    "ref": f"leaf_{index}",
+                    "title": (text[:60] or f"Mock topic {index}"),
+                    "content": (
+                        text[:240]
+                        if len(text) >= 24
+                        else f"{text} — explanation produced by the built-in mock LLM adapter for testing."
+                    )[:1000],
+                    "sources": [
+                        {
+                            "document_id": segment["document_id"],
+                            "page_number": segment["page_start"],
+                            "chunk_id": chunk_id,
+                            "evidence_type": "chunk" if chunk_id else "page_excerpt",
+                        }
+                    ],
+                }
+            )
+        # mock 也产出关系：引用自己刚构造的 ref，集成测试才能看到落库后的边。
+        # 只有一个叶子时无法构成合法关系（自环会被丢弃），返回空列表。
+        relations: list[dict[str, Any]] = []
+        if len(leaves) >= 2:
+            relations.append(
+                KnowledgeRelationV5(
+                    source_ref=leaves[0]["ref"],
+                    target_ref=leaves[1]["ref"],
+                    relation_type="prerequisite",
+                    confidence=0.6,
+                    evidence="Mock adapter links consecutive extracted topics.",
+                ).model_dump()
+            )
+        if len(leaves) >= 3:
+            relations.append(
+                KnowledgeRelationV5(
+                    source_ref=leaves[1]["ref"],
+                    target_ref=leaves[2]["ref"],
+                    relation_type="derives",
+                    confidence=0.5,
+                    evidence="Mock adapter links consecutive extracted topics.",
+                ).model_dump()
+            )
+        return KnowledgeSectionExtractionV5(
+            section_ref=str(user_payload.get("section_ref", "section")),
+            leaves=leaves,
+            relations=relations,
+        ).model_dump()
 
     def _build_mock_knowledge_framework_candidate(self, user_payload: dict[str, Any]) -> dict[str, Any]:
         documents = user_payload.get("documents", [])

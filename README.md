@@ -230,7 +230,7 @@ StudyMate/
 | 系统 | `GET /api/health`；`GET /api/settings`；`PUT /api/settings` |
 | 课程 | `POST/GET /api/courses`；`GET/PATCH/DELETE /api/courses/{course_id}` |
 | 资料 | `POST/GET /api/courses/{course_id}/materials`；`GET/DELETE /api/materials/{material_id}`；`GET /api/courses/{course_id}/search`；`GET /api/chunks/{chunk_id}` |
-| 知识 | `POST /api/courses/{course_id}/knowledge/build`；`GET /api/courses/{course_id}/knowledge`；`GET /api/knowledge/{knowledge_point_id}`；`GET /api/courses/{course_id}/knowledge/versions` |
+| 知识 | `POST /api/courses/{course_id}/knowledge/build`；`GET /api/courses/{course_id}/knowledge`；`GET /api/courses/{course_id}/knowledge/graph`；`GET /api/courses/{course_id}/knowledge/tree`；`GET /api/courses/{course_id}/knowledge/highlights`；`GET /api/knowledge/{knowledge_point_id}`；`GET /api/courses/{course_id}/knowledge/versions` |
 | 测验 | `POST /api/courses/{course_id}/quiz/generate`；`GET /api/quizzes/{quiz_id}`；`POST /api/quizzes/{quiz_id}/submit` |
 | 掌握度/复习 | `GET /api/courses/{course_id}/mastery`；`GET /api/courses/{course_id}/wrongbook`；`POST /api/courses/{course_id}/review-targets` |
 | 计划 | `POST /api/courses/{course_id}/plan`；`GET /api/courses/{course_id}/plans`；`GET /api/plans/{plan_id}`；`PATCH /api/tasks/{task_id}` |
@@ -240,7 +240,8 @@ StudyMate/
 
 - **错误信封**：业务错误为 `{"error": {"code", "message", "details", "request_id"}}`，并带 `x-request-id` 头；路由层 404/405 可能是 FastAPI 默认的 `{"detail": "..."}`。
 - **异步任务**：上传、建知识框架、出题返回 `job_id`；轮询任务到 `succeeded` / `failed` / `cancelled`。`progress` 只有 0 和 100，不能做真实进度条。
-- **知识框架空状态**：活动框架不存在时，`GET /knowledge` 返回 `404 RESOURCE_NOT_FOUND`，这是“尚未构建”，不是服务故障。
+- **知识框架空状态**：活动框架不存在时，`GET /knowledge`、`GET /knowledge/tree`、`GET /knowledge/highlights` 都返回 `404 RESOURCE_NOT_FOUND`，这是“尚未构建”，不是服务故障。
+- **重难点评分**：`GET /knowledge/tree` 在旧树节点上追加 `importance` / `difficulty`（容器取后代最大值，叶子另带 `components` 四分量原值）；`GET /knowledge/highlights?limit=20&order=importance|difficulty|gap` 返回 `{items, basis}`，`order=gap` 用 `importance × (1 − mastery_estimate)`，未测验的排在最后且 `untested: true`（未测验 ≠ 薄弱）。分数在读取时计算，不落库、不调 LLM；`limit` 上限 50，非法 `order` 或越界 `limit` 返回 422 `VALIDATION_ERROR`；旧 `GET /knowledge` 与详情接口保持不变。
 - **测验幂等**：一份测验只能提交一次，且必须每题都有答案；同一幂等键 + 同一答案重试会返回已保存结果，换新键会得到 `409 QUIZ_NOT_OPEN`。
 - **简答批改**：在提交请求内同步调用 LLM；临时失败返回 503 且不落库，可用同一幂等键重试。
 - **计划任务**：`completed` / `skipped` 是终态，不能撤回。
@@ -258,7 +259,7 @@ npm run test
 npm run build
 ```
 
-当前基线（2026-10-21）：后端 **50 passed**，前端 **63 passed**，生产构建通过。测试使用 mock LLM 或本地替身，不需要真实 API Key。
+当前基线（2026-10-22）：后端 **131 passed**（约 58 秒），前端 **63 passed**，生产构建通过。测试使用 mock LLM 或本地替身，不需要真实 API Key。
 
 - Docker 构建、7860 启动、完整 mock 流程与重启持久化记录：[`docs/testing/docker-deployment-report-2026-10-20.md`](docs/testing/docker-deployment-report-2026-10-20.md)
 - 真实模型验收、已知结构化输出问题记录：[`docs/testing/real-model-acceptance-report-2026-10-20.md`](docs/testing/real-model-acceptance-report-2026-10-20.md)
@@ -269,6 +270,10 @@ npm run build
 - **设置写接口无鉴权**：`PUT /api/settings` 可以修改服务地址、模型和本机 API Key；把服务暴露到公网前必须关闭该接口或加认证，否则访客可能借服务端 Key 发起模型请求。
 - **单实例**：SQLite + 进程内 job worker，只能跑一个 uvicorn worker；不支持多副本和高可用。
 - **解析范围**：支持 `.pdf` / `.pptx`，旧版 `.ppt` 和 OCR 尚未实现；扫描页会如实标记“无可提取文本”。
+- **章节树由大纲推断**：无书签的幻灯片型 PDF 由模型归并为章节，一级章节数上限为 `max(20, ceil(页数/12))`，叶子必须 ≥ level 2。模型给不出合格结构时构建显式失败（`KNOWLEDGE_OUTLINE_FAILED`），不会退回“一页一章节”的平铺树。大纲会缓存，重建不重复调用。单章教材会被收敛成“文档级章 → 节”两级（`wrap_document_outline`），章首、章尾和节间未被小节声明的页面并入相邻小节（`absorb_chapter_lead_in`），每章页码连续、不会漏抽。
+- **知识点关系是模型判断，不是课程事实**：构建时同一次抽取里产出的 `prerequisite / derives / causes / contrasts_with / applies_to / counterexample_of` 六类关系随框架版本落库，详情接口和 `GET /courses/{id}/knowledge/graph` 可读；只连同一节内的叶子，自环、未知类型、越界置信度和引用被丢弃叶子的关系会被直接丢弃（不会让构建失败），每叶最多 3 条。关系不参与判分和掌握度计算。
+- **叶子密度受窗口页数与预算限制**：每个抽取窗口的叶子预算按覆盖页数缩放（`clamp(页数/2, 10, 20)`），幻灯片型 PDF 的“页”才是一个知识单元，因此大教材约为“节数 × 10–20”个知识点，不会按页数线性增长；实测 425 页课 258 叶、187 页课 98 叶。预算值已并入 section 缓存键，调参后重建会自动全量重抽。
+- **重难点分数是工程估计，不是教材重要性事实**：`importance = 0.3·出处页数 + 0.3·关系中心性 + 0.2·篇幅 + 0.2·测验题目数`（各分量按全体叶最大值归一化），`difficulty = 0.5·前置链深度 + 0.3·前置入度 + 0.2·篇幅`。权重是 `app/services/knowledge_scoring.py` 里的模块常量，改权重立即生效、无需重建或迁移。它度量的是“抽取出处有多密”，没有语义先验：只被抽到 1 页、没有关系的重点概念会排在后面；重新作答前测验分量为 0，`order=gap` 与 `order=importance` 等价。分数与掌握度都只是参考估计，不能写成精确测量。
 - **mock 内容有限**：内置假模型输出英文模板题，适合流程演示，不适合展示题目质量。
 - **真实模型依赖服务商**：需要 OpenAI 兼容接口；结构化输出失败、超时或限流会影响出题与简答批改。
 - **掌握度是估计值**：Beta-Binomial 更新只覆盖主要知识映射，不向关联节点传播；不能当作精确测量。
