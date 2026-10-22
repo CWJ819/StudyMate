@@ -9,8 +9,17 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import func, select
 
 from app.core.config import reset_settings_cache
-from app.db.models.knowledge import KnowledgeNode
-from app.db.models.mastery import MasteryEvent, ReviewStrategyLog, StudentGapState
+from app.db.models.knowledge import (
+    KnowledgeFrameworkVersion,
+    KnowledgeNode,
+    KnowledgeNodeVersion,
+)
+from app.db.models.mastery import (
+    KnowledgeGap,
+    MasteryEvent,
+    ReviewStrategyLog,
+    StudentGapState,
+)
 from app.db.session import session_scope
 from app.main import app
 
@@ -173,6 +182,36 @@ async def test_quiz_submission_updates_mastery_gaps_and_review_targets(
                 updated_at=datetime.now(UTC),
             )
         )
+        orphan_framework = KnowledgeFrameworkVersion(
+            id=str(uuid4()),
+            course_id=course_id,
+            version_number=99,
+            status="failed",
+        )
+        session.add(orphan_framework)
+        session.flush()
+        orphan_version = KnowledgeNodeVersion(
+            id=str(uuid4()),
+            framework_version_id=orphan_framework.id,
+            knowledge_node_id=orphan_node.id,
+            title="孤儿节点",
+            level=2,
+            is_leaf=True,
+            sort_order=0,
+        )
+        session.add(orphan_version)
+        session.flush()
+        session.add(
+            KnowledgeGap(
+                id=str(uuid4()),
+                course_id=course_id,
+                node_version_id=orphan_version.id,
+                gap_type="low_score",
+                status="suspected",
+                confidence=0.9,
+                evidence_summary_json={"total_evidence": 1, "low_score_evidence": 1},
+            )
+        )
         session.commit()
 
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
@@ -183,7 +222,13 @@ async def test_quiz_submission_updates_mastery_gaps_and_review_targets(
         ]
         assert all(row["title"] for row in filtered.json())
 
+        filtered_gaps = await client.get(f"/api/courses/{course_id}/wrongbook")
+        assert filtered_gaps.status_code == 200
+        assert [row["gap_id"] for row in filtered_gaps.json()] == [gaps[0]["gap_id"]]
+        assert all(row["title"] for row in filtered_gaps.json())
+
     with session_scope() as session:
         assert session.scalar(select(func.count(StudentGapState.id))) == 2  # DB 记录保留
+        assert session.scalar(select(func.count(KnowledgeGap.id))) == 2  # 旧 gap 亦保留
 
     reset_settings_cache()

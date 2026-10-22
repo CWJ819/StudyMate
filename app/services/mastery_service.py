@@ -72,7 +72,16 @@ class MasteryService:
 
     def list_wrongbook(self, session: Session, course_id: str) -> list[KnowledgeGapResponse]:
         self._require_course(session, course_id)
-        return [self._gap_response(gap) for gap in self.repository.list_gaps(session, course_id)]
+        active_node_ids = {
+            node.knowledge_node_id for node in self.repository.list_active_leaf_nodes(session, course_id)
+        }
+        responses: list[KnowledgeGapResponse] = []
+        for gap in self.repository.list_gaps(session, course_id):
+            if gap.node_version.knowledge_node_id not in active_node_ids:
+                # 与 /mastery 一致：指向旧框架的 gap 不再展示；DB 记录保留待迁移审计。
+                continue
+            responses.append(self._gap_response(gap))
+        return responses
 
     def select_review_targets(
         self,
