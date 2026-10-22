@@ -259,7 +259,7 @@ npm run test
 npm run build
 ```
 
-当前基线（2026-10-22）：后端 **131 passed**（约 58 秒），前端 **63 passed**，生产构建通过。测试使用 mock LLM 或本地替身，不需要真实 API Key。
+当前基线（2026-10-22）：后端 **132 passed**（约 71 秒），前端 **63 passed**，生产构建通过。测试使用 mock LLM 或本地替身，不需要真实 API Key。
 
 - Docker 构建、7860 启动、完整 mock 流程与重启持久化记录：[`docs/testing/docker-deployment-report-2026-10-20.md`](docs/testing/docker-deployment-report-2026-10-20.md)
 - 真实模型验收、已知结构化输出问题记录：[`docs/testing/real-model-acceptance-report-2026-10-20.md`](docs/testing/real-model-acceptance-report-2026-10-20.md)
