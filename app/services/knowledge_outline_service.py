@@ -195,6 +195,19 @@ def normalize_outline_title(title: str) -> str:
     return normalized.strip(" .·:：-—_")
 
 
+def outline_merge_key(title: str) -> str:
+    """多文档大纲合并键：NFKC + casefold + 去掉全部空白（不是折叠）。
+
+    PDF/LLM 抽取常在 CJK 标题里带出多余空格（"第二章 物理层" vs
+    "第二章物理层"），按 `normalize_outline_title` 会漏合并成两个章。
+    拉丁标题的 "sliding window" 与 "slidingwindow" 也会被合并——这是有意
+    的取舍：同一门课内这种撞名概率极低，合并只会多吸收重复窗口、可重建。
+    显示标题仍取首见文档的原文。
+    """
+    normalized = unicodedata.normalize("NFKC", title).casefold()
+    return "".join(normalized.split())
+
+
 def clean_outline_title(raw_title: str) -> str:
     title = " ".join(raw_title.replace("\r", " ").split())
     # 去掉目录条目常见的页码引导符（如 "拥塞控制 ...... 42"）
@@ -304,7 +317,7 @@ def merge_document_outlines(
     for document, sections in doc_sections:
         current_chapter: MergedSection | None = None
         for section in sorted(sections, key=lambda item: (item.page_start, item.level)):
-            key = normalize_outline_title(section.title)
+            key = outline_merge_key(section.title)
             if not key:
                 continue
             if section.level == 1:

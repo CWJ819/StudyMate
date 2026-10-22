@@ -12,6 +12,7 @@ from app.services.knowledge_outline_service import (
     OutlineSection,
     classify_heading,
     merge_document_outlines,
+    outline_merge_key,
 )
 from app.services.knowledge_pipeline import (
     IdentityDecision,
@@ -175,6 +176,60 @@ def test_merge_document_outlines_dedupes_chapters_across_documents() -> None:
     assert second.page_ranges == [("doc-a", 4, 6), ("doc-b", 1, 1)]
     assert [child.title for child in second.children] == ["2.1 UDP"]
     assert second.children[0].page_ranges == [("doc-b", 2, 3)]
+
+
+def test_merge_document_outlines_ignores_whitespace_in_chapter_and_section_titles() -> None:
+    doc_a = SimpleNamespace(id="doc-a", filename="a.pdf")
+    doc_b = SimpleNamespace(id="doc-b", filename="b.pdf")
+    doc_a_sections = [
+        OutlineSection("doc-a", "第二章 物理层", 1, 1, 10),
+        OutlineSection("doc-a", "2.1 传输介质", 2, 2, 5),
+    ]
+    doc_b_sections = [
+        OutlineSection("doc-b", "第二章物理层", 1, 1, 8),
+        OutlineSection("doc-b", "2.1传输介质", 2, 2, 4),
+    ]
+
+    merged = merge_document_outlines([(doc_a, doc_a_sections), (doc_b, doc_b_sections)])
+
+    assert len(merged) == 1
+    assert merged[0].title == "第二章 物理层"  # 显示首见原文
+    assert merged[0].page_ranges == [("doc-a", 1, 10), ("doc-b", 1, 8)]
+    assert [child.title for child in merged[0].children] == ["2.1 传输介质"]
+    assert merged[0].children[0].page_ranges == [("doc-a", 2, 5), ("doc-b", 2, 4)]
+    assert outline_merge_key("第二章  物理层") == "第二章物理层"
+
+
+def test_merge_document_outlines_does_not_merge_different_chapter_numbers() -> None:
+    doc_a = SimpleNamespace(id="doc-a", filename="a.pdf")
+    doc_b = SimpleNamespace(id="doc-b", filename="b.pdf")
+    merged = merge_document_outlines(
+        [
+            (doc_a, [OutlineSection("doc-a", "第二章 物理层", 1, 1, 5)]),
+            (doc_b, [OutlineSection("doc-b", "第三章 数据链路层", 1, 1, 6)]),
+        ]
+    )
+
+    assert [chapter.title for chapter in merged] == ["第二章 物理层", "第三章 数据链路层"]
+    assert [chapter.page_ranges for chapter in merged] == [
+        [("doc-a", 1, 5)],
+        [("doc-b", 1, 6)],
+    ]
+
+
+def test_merge_document_outlines_treats_latin_whitespace_variants_as_same_key() -> None:
+    # 预期取舍：拉丁标题去空白后会合并，避免 PDF 抽取空格造成重复章。
+    doc_a = SimpleNamespace(id="doc-a", filename="a.pdf")
+    doc_b = SimpleNamespace(id="doc-b", filename="b.pdf")
+    merged = merge_document_outlines(
+        [
+            (doc_a, [OutlineSection("doc-a", "Sliding Window", 1, 1, 4)]),
+            (doc_b, [OutlineSection("doc-b", "slidingwindow", 1, 1, 3)]),
+        ]
+    )
+
+    assert len(merged) == 1
+    assert merged[0].page_ranges == [("doc-a", 1, 4), ("doc-b", 1, 3)]
 
 
 # --------------------------------------------------------------------------
