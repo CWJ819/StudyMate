@@ -5,6 +5,7 @@
 - `smoke/f4_plans.py`：F4 计划接口冒烟，使用固定课程 ID，会修改开发库中的计划/任务。
 - `smoke/f5_full_chain.py`：F5 全链路冒烟（建课 → 上传 → 建框架 → 出题 → 提交 → 掌握度 → 复习目标 → 计划 → 清理课程），使用 `tests/fixtures/f1-sample.pdf`。
 - `smoke/p0_real_model.py`：P0 真实模型验收（三题型出题 → 含简答提交 → 幂等重放），需要真实 DeepSeek 配置和 8001 端口的临时后端，会创建并提交测验。
+- `seed_demo_data.py`：在冻结的 v16 结构上播种演示数据——两门课各生成 2 场 10 题单选、固定随机种子作答，断言掌握度/错题本/评分排序生效；只调测验与掌握度接口，不触发知识构建、不改设置，会写入开发库。
 - `fixtures/make_sample_pdf.py`：重新生成 `tests/fixtures/f1-sample.pdf`（3 页，第 2 页无文本）。
 
 运行前先启动后端：
