@@ -67,6 +67,13 @@ async def delete_material(material_id: str) -> None:
         MaterialService().delete_material(session, material_id)
 
 
+@router.post("/materials/{material_id}/delete", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_material_via_post(material_id: str) -> None:
+    """ModelScope's API gateway rejects DELETE; the SPA uses this POST alias."""
+    with session_scope() as session:
+        MaterialService().delete_material(session, material_id)
+
+
 @router.get(
     "/courses/{course_id}/search",
     response_model=list[ChunkSearchResult],

@@ -178,7 +178,8 @@ async def test_pptx_upload_and_delete_material(
         assert detail["pages"][0]["extraction_status"] == "extracted"
         assert detail["pages"][1]["extraction_status"] == "empty"
 
-        delete_response = await client.delete(f"/api/materials/{material_id}")
+        # ModelScope's gateway rejects DELETE; the SPA deletes through the POST alias.
+        delete_response = await client.post(f"/api/materials/{material_id}/delete")
         assert delete_response.status_code == 204
 
         missing_response = await client.get(f"/api/materials/{material_id}")

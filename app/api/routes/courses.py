@@ -42,3 +42,10 @@ async def update_course(
 async def delete_course(course_id: str) -> None:
     with session_scope() as session:
         service.delete_course(session, course_id)
+
+
+@router.post("/courses/{course_id}/delete", status_code=204)
+async def delete_course_via_post(course_id: str) -> None:
+    """ModelScope's API gateway rejects DELETE; the SPA uses this POST alias."""
+    with session_scope() as session:
+        service.delete_course(session, course_id)

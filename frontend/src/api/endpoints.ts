@@ -70,7 +70,8 @@ export function updateCourse(courseId: string, body: CourseUpdate) {
 }
 
 export function deleteCourse(courseId: string) {
-  return request<void>(`/api/courses/${courseId}`, { method: 'DELETE' })
+  // ModelScope's gateway rejects DELETE; use the POST alias.
+  return request<void>(`/api/courses/${courseId}/delete`, { method: 'POST' })
 }
 
 // ---- 材料 ----
@@ -94,7 +95,8 @@ export function getMaterial(materialId: string) {
 }
 
 export function deleteMaterial(materialId: string) {
-  return request<void>(`/api/materials/${materialId}`, { method: 'DELETE' })
+  // ModelScope's gateway rejects DELETE; use the POST alias.
+  return request<void>(`/api/materials/${materialId}/delete`, { method: 'POST' })
 }
 
 // ---- 检索与 chunk ----

@@ -41,3 +41,21 @@ async def test_course_crud_flow(migrated_database_url: str) -> None:
         missing_response = await client.get(f"/api/courses/{course_id}")
         assert missing_response.status_code == 404
         assert missing_response.json()["error"]["code"] == "RESOURCE_NOT_FOUND"
+
+
+@pytest.mark.anyio
+async def test_course_delete_via_post_alias(migrated_database_url: str) -> None:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        create_response = await client.post(
+            "/api/courses",
+            json={"name": "Discrete Mathematics", "description": ""},
+        )
+        course_id = create_response.json()["id"]
+
+        delete_response = await client.post(f"/api/courses/{course_id}/delete")
+        assert delete_response.status_code == 204
+
+        missing_response = await client.get(f"/api/courses/{course_id}")
+        assert missing_response.status_code == 404
+        assert missing_response.json()["error"]["code"] == "RESOURCE_NOT_FOUND"

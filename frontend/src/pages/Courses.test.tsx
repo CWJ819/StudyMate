@@ -60,9 +60,9 @@ test('新建课程：提交 POST，成功后出现在列表', async () => {
   )
 })
 
-test('删除课程：二次确认后才发 DELETE', async () => {
+test('删除课程：二次确认后才发删除请求', async () => {
   let deleted = false
-  server.use(http.delete('*/api/courses/c1', () => {
+  server.use(http.post('*/api/courses/c1/delete', () => {
     deleted = true
     return new HttpResponse(null, { status: 204 })
   }))

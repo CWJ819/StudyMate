@@ -269,6 +269,7 @@ npm run build
 - **单用户、无认证、无工作区隔离**：所有课程和资料对访问者可见，只适合本机或受信内网。
 - **设置写接口无鉴权**：`PUT /api/settings` 可以修改服务地址、模型和本机 API Key；把服务暴露到公网前必须关闭该接口或加认证，否则访客可能借服务端 Key 发起模型请求。
 - **单实例**：SQLite + 进程内 job worker，只能跑一个 uvicorn worker；不支持多副本和高可用。
+- **线上删除走 POST 别名**：魔搭 API 网关拒绝 `DELETE` 方法（403 `AccessDenied: unauthorized method 'DELETE'`），因此前端删除课程/资料调用 `POST /api/courses/{id}/delete` 和 `POST /api/materials/{id}/delete`；后端保留原 `DELETE` 路由供本地与脚本使用。
 - **解析范围**：支持 `.pdf` / `.pptx`，旧版 `.ppt` 和 OCR 尚未实现；扫描页会如实标记“无可提取文本”。
 - **章节树由大纲推断**：无书签的幻灯片型 PDF 由模型归并为章节，一级章节数上限为 `max(20, ceil(页数/12))`，叶子必须 ≥ level 2。模型给不出合格结构时构建显式失败（`KNOWLEDGE_OUTLINE_FAILED`），不会退回“一页一章节”的平铺树。大纲会缓存，重建不重复调用。单章教材会被收敛成“文档级章 → 节”两级（`wrap_document_outline`），章首、章尾和节间未被小节声明的页面并入相邻小节（`absorb_chapter_lead_in`），每章页码连续、不会漏抽。
 - **知识点关系是模型判断，不是课程事实**：构建时同一次抽取里产出的 `prerequisite / derives / causes / contrasts_with / applies_to / counterexample_of` 六类关系随框架版本落库，详情接口和 `GET /courses/{id}/knowledge/graph` 可读；只连同一节内的叶子，自环、未知类型、越界置信度和引用被丢弃叶子的关系会被直接丢弃（不会让构建失败），每叶最多 3 条。关系不参与判分和掌握度计算。

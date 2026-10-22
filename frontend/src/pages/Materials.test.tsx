@@ -33,7 +33,7 @@ test('材料列表：渲染排队/警告完成/失败三态与无文本页、失
 
 test('删除被知识框架引用的材料：显示 MATERIAL_IN_USE 中文提示', async () => {
   server.use(
-    http.delete('*/api/materials/m2', () =>
+    http.post('*/api/materials/m2/delete', () =>
       HttpResponse.json(
         {
           error: {
