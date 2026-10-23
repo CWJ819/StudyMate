@@ -654,11 +654,9 @@ function NodeDetail({
 
 function HighlightsPanel({
   courseId,
-  masteryMap,
   onPick,
 }: {
   courseId: string
-  masteryMap: Map<string, MasteryState>
   onPick: (id: string) => void
 }) {
   const [order, setOrder] = useState<'importance' | 'difficulty' | 'gap'>('importance')
@@ -716,7 +714,6 @@ function HighlightsPanel({
       {highlights.data && highlights.data.items.length > 0 && (
         <div className="divide-y divide-border">
           {highlights.data.items.map((item, index) => {
-            const m = masteryMap.get(item.knowledge_node_id)
             const gap = item.importance * (1 - (item.mastery_estimate ?? 0))
             const reasons = item.reasons ?? []
             return (
@@ -740,15 +737,17 @@ function HighlightsPanel({
                 <div className="flex flex-none items-center gap-3">
                   <ScoreBar value={item.importance} label="重要度" />
                   <ScoreBar value={item.difficulty} label="难度" />
-                  <span className="w-14 text-right font-mono text-[11px] text-ink3">
-                    {order === 'gap' ? `缺口 ${gap.toFixed(2)}` : ''}
-                  </span>
                   {item.untested || item.mastery_estimate == null ? (
                     <span className="flex-none rounded-full bg-untested-bg px-2 py-0.5 text-[11px] text-ink3">
                       未测验
                     </span>
                   ) : (
-                    <MasteryBadge m={m} />
+                    <span
+                      className="flex-none rounded-full bg-surface px-2 py-0.5 font-mono text-[11px] text-ink2"
+                      title={`掌握度 ${item.mastery_estimate.toFixed(2)} · 证据 ${item.evidence_count} 条`}
+                    >
+                      缺口 {gap.toFixed(2)} · 证据 {item.evidence_count}
+                    </span>
                   )}
                   <span
                     className="flex-none cursor-help text-[11px] text-ink3"
@@ -1330,7 +1329,6 @@ export function KnowledgePage() {
       {view === 'highlights' && courseId && (
         <HighlightsPanel
           courseId={courseId}
-          masteryMap={masteryMap}
           onPick={(id) => {
             setView('tree')
             setSelectedId(id)

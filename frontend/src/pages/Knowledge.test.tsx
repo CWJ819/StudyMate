@@ -95,6 +95,7 @@ test('重难点：排序切换、未测验灰显、点击标题跳回树并选�
   expect(await screen.findByText('慢启动与拥塞避免')).toBeTruthy()
   expect(screen.getByText('可靠传输：GBN 与 SR')).toBeTruthy()
   expect(screen.getAllByText('未测验').length).toBeGreaterThan(0)
+  expect(screen.getAllByText(/^缺口 \d\.\d\d · 证据 \d+$/).length).toBeGreaterThan(0)
 
   const gapButton = screen.getByRole('button', { name: '掌握缺口' })
   fireEvent.click(gapButton)
