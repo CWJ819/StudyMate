@@ -246,6 +246,6 @@ class ShortAnswerGradingCandidate(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     score: float = Field(ge=0, le=100)
-    criterion_scores: list[ShortAnswerCriterionScoreCandidate] = Field(default_factory=list)
+    criterion_scores: list[ShortAnswerCriterionScoreCandidate] = Field(min_length=1)
     feedback: str = Field(min_length=1, max_length=1000)
     rationale: str = Field(min_length=1, max_length=1000)

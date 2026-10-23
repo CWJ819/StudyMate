@@ -5,6 +5,7 @@ const RETRYABLE_CODES: ReadonlySet<string> = new Set([
   'LLM_TIMEOUT',
   'LLM_NETWORK_ERROR',
   'LLM_UPSTREAM_TEMPORARY',
+  'DATABASE_BUSY',
   'LLM_OUTPUT_INVALID',
   // 前端合成的网络错误码，不属于后端契约
   'NETWORK_ERROR',
@@ -34,6 +35,7 @@ const MESSAGES: Record<string, string> = {
   LLM_TIMEOUT: '模型响应超时，稍后可重试（答案已保留）',
   LLM_NETWORK_ERROR: '模型服务网络异常，稍后可重试（答案已保留）',
   LLM_UPSTREAM_TEMPORARY: '模型服务暂时不可用，稍后可重试（答案已保留）',
+  DATABASE_BUSY: '数据库繁忙，请稍后重试',
   INVALID_PLAN_CONSTRAINTS: '计划参数不合法（考试日期不能早于今天）',
   PLAN_CAPACITY_EXCEEDED: '计划容量不足：请增加每日分钟数或推迟考试日期',
   INVALID_TASK_STATUS: '任务状态不合法',

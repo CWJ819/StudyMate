@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -24,6 +25,8 @@ from app.schemas.material import (
     MaterialUploadResponse,
 )
 from app.storage.local import LocalStorage
+
+logger = logging.getLogger(__name__)
 
 DOCUMENT_STATUS_QUEUED = "queued"
 DOCUMENT_STATUS_PROCESSING = "processing"
@@ -165,10 +168,17 @@ class MaterialService:
                 status_code=409,
                 details={"material_id": document_id},
             )
-        self.storage.delete(document.storage_key)
+        storage_key = document.storage_key
         self.job_repository.cancel_document_jobs(session, document_id=document.id)
         self.material_repository.delete_document(session, document)
         session.commit()
+        try:
+            self.storage.delete(storage_key)
+        except Exception:
+            logger.warning(
+                "Failed to delete material from storage; leaving orphan file",
+                extra={"material_id": document_id, "storage_key": storage_key},
+            )
 
     def search_materials(
         self, session: Session, *, course_id: str, query: str
@@ -437,43 +447,59 @@ class MaterialService:
         document.status = DOCUMENT_STATUS_PROCESSING
         document.error_code = None
 
-        path = self.storage.resolve_path(document.storage_key)
-        parse_result = self._parse_file(path=path, suffix=Path(document.filename).suffix.lower())
-        pages = [
-            DocumentPage(
-                document_id=document.id,
-                page_number=page.page_number,
-                extracted_text=page.extracted_text,
-                extraction_status=page.extraction_status,
-                error_code=page.error_code,
+        try:
+            path = self.storage.resolve_path(document.storage_key)
+            parse_result = self._parse_file(
+                path=path, suffix=Path(document.filename).suffix.lower()
             )
-            for page in parse_result.pages
-        ]
-        chunks = [
-            DocumentChunk(
+            pages = [
+                DocumentPage(
+                    document_id=document.id,
+                    page_number=page.page_number,
+                    extracted_text=page.extracted_text,
+                    extraction_status=page.extraction_status,
+                    error_code=page.error_code,
+                )
+                for page in parse_result.pages
+            ]
+            chunks = [
+                DocumentChunk(
+                    document_id=document.id,
+                    page_start=chunk.page_start,
+                    page_end=chunk.page_end,
+                    text=chunk.text,
+                    content_hash=chunk.content_hash,
+                )
+                for chunk in parse_result.chunks
+            ]
+            self.material_repository.replace_pages_and_chunks(
+                session,
                 document_id=document.id,
-                page_start=chunk.page_start,
-                page_end=chunk.page_end,
-                text=chunk.text,
-                content_hash=chunk.content_hash,
+                pages=pages,
+                chunks=chunks,
             )
-            for chunk in parse_result.chunks
-        ]
-        self.material_repository.replace_pages_and_chunks(
-            session,
-            document_id=document.id,
-            pages=pages,
-            chunks=chunks,
-        )
-        document.status = parse_result.status
-        document.error_code = parse_result.error_code
+            document.status = parse_result.status
+            document.error_code = parse_result.error_code
 
-        if parse_result.status == DOCUMENT_STATUS_FAILED:
-            raise AppError(
-                code=parse_result.error_code or "DOCUMENT_PARSE_FAILED",
-                message="Document parsing failed.",
-                status_code=400,
+            if parse_result.status == DOCUMENT_STATUS_FAILED:
+                raise AppError(
+                    code=parse_result.error_code or "DOCUMENT_PARSE_FAILED",
+                    message="Document parsing failed.",
+                    status_code=400,
+                )
+        except AppError as exc:
+            document.status = DOCUMENT_STATUS_FAILED
+            document.error_code = (
+                exc.code
+                if exc.code
+                in {"DOCUMENT_TOO_MANY_PAGES", "INVALID_FILE_TYPE", "NO_EXTRACTABLE_TEXT"}
+                else "PARSE_FAILED"
             )
+            raise
+        except Exception:
+            document.status = DOCUMENT_STATUS_FAILED
+            document.error_code = "PARSE_FAILED"
+            raise
 
     def _normalize_text(self, text: str) -> str:
         lines = [line.strip() for line in text.splitlines()]

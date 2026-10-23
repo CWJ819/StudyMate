@@ -1,9 +1,10 @@
 // §7 手工清单的自动化部分：后端全部错误码（plan §4.1 契约）都必须有中文文案。
-// 清单提取自 app/ 全量 grep `code="…"`（2026-10-23，38 个）；后端新增码而此处未同步时，
+// 清单提取自 app/ 全量 grep `code="…"`（2026-10-23，39 个）；后端新增码而此处未同步时，
 // 这个测试会失败并提醒补文案。
 import { isRetryable, messageFor } from './errors'
 
 const BACKEND_CODES = [
+  'DATABASE_BUSY',
   'DATABASE_SCHEMA_OUTDATED',
   'DOCUMENT_TOO_MANY_PAGES',
   'FILE_TOO_LARGE',
@@ -61,6 +62,7 @@ test('前端合成码也有文案；未知码返回 null 由界面回退原文',
 test('可重试集合只包含瞬时性错误', () => {
   expect(isRetryable('LLM_TIMEOUT')).toBe(true)
   expect(isRetryable('NETWORK_ERROR')).toBe(true)
+  expect(isRetryable('DATABASE_BUSY')).toBe(true)
   expect(isRetryable('QUIZ_NOT_OPEN')).toBe(false)
   expect(isRetryable('INVALID_TASK_STATUS_TRANSITION')).toBe(false)
 })

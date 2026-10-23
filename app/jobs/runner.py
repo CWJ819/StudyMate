@@ -129,7 +129,40 @@ class JobRunner:
                     error_summary=str(exc),
                 )
 
-            session.commit()
+            try:
+                session.commit()
+            except Exception as exc:
+                session.rollback()
+                logger.exception(
+                    "Failed to commit job result; marking job failed in a fresh session",
+                    extra={"job_id": job_id},
+                )
+                self._mark_failed_after_commit_failure(job_id, exc)
+
+    def _mark_failed_after_commit_failure(self, job_id: str, exc: Exception) -> None:
+        """Write a terminal state with a brand-new session after a failed commit.
+
+        The original session may be poisoned (PendingRollbackError / locked
+        database).  A fresh session is the only reliable way to leave the job
+        in a terminal state without an application restart.
+        """
+        try:
+            with session_scope() as session:
+                job = self.repository.get_job(session, job_id)
+                if job is None or job.status != "running":
+                    return
+                self.repository.mark_failed(
+                    session,
+                    job,
+                    error_code="JOB_EXECUTION_FAILED",
+                    error_summary=f"Failed to persist job result: {type(exc).__name__}",
+                )
+                session.commit()
+        except Exception:  # pragma: no cover - last-resort persistence failure
+            logger.exception(
+                "Could not mark job as failed after commit failure",
+                extra={"job_id": job_id},
+            )
 
 
 _job_runner: JobRunner | None = None
@@ -148,6 +181,11 @@ async def run_worker_loop(stop_event: asyncio.Event) -> None:
     runner.recover_stale_jobs()
 
     while not stop_event.is_set():
+        try:
+            runner.recover_stale_jobs()
+        except Exception:  # pragma: no cover - recovery must not kill the loop
+            logger.exception("Stale job recovery failed")
+
         try:
             await asyncio.to_thread(runner.process_available_jobs)
         except Exception:  # pragma: no cover - safety net around loop

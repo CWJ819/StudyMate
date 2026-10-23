@@ -62,15 +62,29 @@ class QuestionRubricCriterion(BaseModel):
 
     criterion_id: str
     description: str
-    max_points: float
+    max_points: float = Field(gt=0)
     acceptable_phrases: list[str] = Field(default_factory=list)
 
 
 class QuestionRubric(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    max_points: float
-    criteria: list[QuestionRubricCriterion]
+    max_points: float = Field(gt=0)
+    criteria: list[QuestionRubricCriterion] = Field(min_length=1)
+
+
+def normalize_rubric(rubric: QuestionRubric) -> QuestionRubric:
+    """Keep the rubric total and its criteria in the same unit.
+
+    LLM candidates occasionally report a plausible total that does not match
+    the criterion breakdown.  The criteria are the grading source of truth, so
+    the stored total is aligned to their sum instead of rejecting an otherwise
+    usable generated question.
+    """
+    criterion_total = sum(float(criterion.max_points) for criterion in rubric.criteria)
+    if abs(float(rubric.max_points) - criterion_total) <= 1e-6:
+        return rubric
+    return rubric.model_copy(update={"max_points": criterion_total})
 
 
 class QuestionKnowledgeMappingSnapshot(BaseModel):

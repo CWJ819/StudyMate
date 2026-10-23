@@ -43,6 +43,7 @@ from app.schemas.quiz import (
     QuizDetailResponse,
     QuizGenerateRequest,
     QuizGenerateResponse,
+    normalize_rubric,
     QuizQuestionOption,
     QuizQuestionResponse,
     QuizQuestionResultResponse,
@@ -216,41 +217,47 @@ class QuizService:
                 existing_hashes=existing_hashes,
                 prior_stems=prior_stems,
             )
-        except (AppError, LLMTemporaryError):
+        except Exception:
             quiz.status = QUIZ_STATUS_FAILED
             raise
 
-        for ordinal, prepared_question in enumerate(prepared_questions, start=1):
-            question = self.repository.create_question(
-                session,
-                course_id=course_id,
-                question_type=prepared_question.question_type,
-                stem=prepared_question.stem,
-                options_json=prepared_question.options_json,
-                answer_key_json=prepared_question.answer_key_json,
-                rubric_json=prepared_question.rubric_json,
-                explanation=prepared_question.explanation,
-                difficulty=prepared_question.difficulty,
-                source_metadata_json=prepared_question.source_metadata_json,
-                content_hash=prepared_question.content_hash,
-            )
-            for mapping in prepared_question.snapshot.knowledge_mappings:
-                self.repository.add_question_mapping(
+        try:
+            for ordinal, prepared_question in enumerate(prepared_questions, start=1):
+                question = self.repository.create_question(
                     session,
-                    question_id=question.id,
-                    node_version_id=mapping.node_version_id,
-                    relation_role=mapping.relation_role,
-                    weight=mapping.weight,
+                    course_id=course_id,
+                    question_type=prepared_question.question_type,
+                    stem=prepared_question.stem,
+                    options_json=prepared_question.options_json,
+                    answer_key_json=prepared_question.answer_key_json,
+                    rubric_json=prepared_question.rubric_json,
+                    explanation=prepared_question.explanation,
+                    difficulty=prepared_question.difficulty,
+                    source_metadata_json=prepared_question.source_metadata_json,
+                    content_hash=prepared_question.content_hash,
                 )
-            snapshot = prepared_question.snapshot.model_copy(update={"question_id": question.id})
-            self.repository.add_quiz_question(
-                session,
-                quiz_id=quiz.id,
-                question_id=question.id,
-                ordinal=ordinal,
-                question_snapshot_json=snapshot.model_dump(),
-            )
-        quiz.status = QUIZ_STATUS_OPEN
+                for mapping in prepared_question.snapshot.knowledge_mappings:
+                    self.repository.add_question_mapping(
+                        session,
+                        question_id=question.id,
+                        node_version_id=mapping.node_version_id,
+                        relation_role=mapping.relation_role,
+                        weight=mapping.weight,
+                    )
+                snapshot = prepared_question.snapshot.model_copy(
+                    update={"question_id": question.id}
+                )
+                self.repository.add_quiz_question(
+                    session,
+                    quiz_id=quiz.id,
+                    question_id=question.id,
+                    ordinal=ordinal,
+                    question_snapshot_json=snapshot.model_dump(),
+                )
+            quiz.status = QUIZ_STATUS_OPEN
+        except Exception:
+            quiz.status = QUIZ_STATUS_FAILED
+            raise
 
     def get_quiz(self, session: Session, quiz_id: str) -> QuizDetailResponse:
         quiz = self.repository.get_quiz(session, quiz_id)
@@ -945,7 +952,16 @@ class QuizService:
                     message="Short-answer questions must include a rubric and reference answer.",
                     status_code=502,
                 )
-            rubric = QuestionRubric.model_validate(candidate.rubric.model_dump())
+            original_rubric = QuestionRubric.model_validate(candidate.rubric.model_dump())
+            rubric = normalize_rubric(original_rubric)
+            if rubric.max_points != original_rubric.max_points:
+                logger.warning(
+                    "Rubric max_points differed from criterion sum; using criterion sum",
+                    extra={
+                        "rubric_max_points": original_rubric.max_points,
+                        "criterion_total": rubric.max_points,
+                    },
+                )
             max_score = float(rubric.max_points)
             rubric_json = rubric.model_dump()
             answer_key_json = {"reference_answer": candidate.reference_answer}

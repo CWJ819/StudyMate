@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import JSON, func, select
+from sqlalchemy import JSON, func, select, update
 from sqlalchemy.orm import Session
 
 from app.db.models.job import Job
@@ -43,28 +43,45 @@ class JobRepository:
         return session.get(Job, job_id)
 
     def claim_next_available_job(self, session: Session) -> Job | None:
+        """Atomically claim exactly one queued/retry_wait job.
+
+        The previous SELECT-then-UPDATE sequence allowed the resident worker
+        and per-request worker threads to claim the same row.  A single
+        UPDATE ... WHERE id=(SELECT ...) makes the row transition atomic at
+        the database level; the winning session is the only one whose
+        RETURNING clause yields an id.
+        """
         now = datetime.now(UTC)
-        statement = (
-            select(Job)
+        next_job_id = (
+            select(Job.id)
             .where(Job.status.in_([JOB_STATUS_QUEUED, JOB_STATUS_RETRY_WAIT]))
             .where(Job.run_after <= now)
             .order_by(Job.created_at.asc())
             .limit(1)
+            .scalar_subquery()
         )
-        job = session.scalar(statement)
-        if job is None:
+        statement = (
+            update(Job)
+            .where(Job.id == next_job_id)
+            .where(Job.status.in_([JOB_STATUS_QUEUED, JOB_STATUS_RETRY_WAIT]))
+            .values(
+                status=JOB_STATUS_RUNNING,
+                attempts=Job.attempts + 1,
+                locked_at=now,
+                started_at=func.coalesce(Job.started_at, now),
+                finished_at=None,
+                error_code=None,
+                error_summary=None,
+            )
+            .returning(Job.id)
+            .execution_options(synchronize_session=False)
+        )
+        claimed_id = session.execute(statement).scalar_one_or_none()
+        if claimed_id is None:
+            session.rollback()
             return None
-
-        job.status = JOB_STATUS_RUNNING
-        job.attempts += 1
-        job.locked_at = now
-        job.started_at = job.started_at or now
-        job.finished_at = None
-        job.error_code = None
-        job.error_summary = None
         session.commit()
-        session.refresh(job)
-        return job
+        return session.get(Job, claimed_id)
 
     def mark_succeeded(self, session: Session, job: Job) -> None:
         now = datetime.now(UTC)

@@ -11,9 +11,11 @@ from app.core.config import get_settings
 _ENGINES: dict[str, Engine] = {}
 
 
-def _sqlite_connect_args(database_url: str) -> dict[str, bool]:
+def _sqlite_connect_args(database_url: str) -> dict[str, object]:
     if database_url.startswith("sqlite"):
-        return {"check_same_thread": False}
+        # Let SQLite wait for a competing writer instead of failing fast with
+        # "database is locked" during concurrent API/job transactions.
+        return {"check_same_thread": False, "timeout": 30}
     return {}
 
 
