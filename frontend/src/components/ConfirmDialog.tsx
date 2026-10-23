@@ -19,20 +19,27 @@ export function ConfirmDialog({
 }: PropsWithChildren<Props>) {
   const cancelRef = useRef<HTMLButtonElement>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
+  // 调用方多传内联箭头函数：onCancel 若进 effect 依赖，父组件任何重渲染（如列表轮询）
+  // 都会 cleanup+setup 抢焦点回「取消」，导致 Tab+Enter 误触发取消而非确认。
+  const onCancelRef = useRef(onCancel)
+
+  useEffect(() => {
+    onCancelRef.current = onCancel
+  })
 
   useEffect(() => {
     if (!open) return
     previousFocusRef.current = document.activeElement as HTMLElement | null
     cancelRef.current?.focus()
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancel()
+      if (e.key === 'Escape') onCancelRef.current()
     }
     document.addEventListener('keydown', onKey)
     return () => {
       document.removeEventListener('keydown', onKey)
       previousFocusRef.current?.focus?.()
     }
-  }, [open, onCancel])
+  }, [open])
 
   if (!open) return null
   return (

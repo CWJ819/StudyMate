@@ -2,8 +2,10 @@
 // 顶栏检索：全局（跨课程）检索，结果在搜索框下方就地展开并标注所属课程，页面不跳转
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen } from '@testing-library/react'
+import { http, HttpResponse } from 'msw'
 import { MemoryRouter, useLocation } from 'react-router'
 import type { PropsWithChildren } from 'react'
+import { server } from '../test/server'
 import { AppShell } from './AppShell'
 
 function withQueryClient(ui: PropsWithChildren['children'], initialEntry = '/') {
@@ -51,4 +53,30 @@ test('全局检索：无需课程上下文，结果就地展开并逐条标注�
   expect(screen.getByText(/拥塞避免：cwnd 超过 ssthresh 后进入线性增长阶段/)).toBeTruthy()
   // 检索不改变当前路由
   expect(screen.getByTestId('loc').textContent).toBe('/')
+})
+
+test('检索截断：命中超过 20 条默认只渲染前 20，点「展开其余」后全量渲染', async () => {
+  const manyHits = Array.from({ length: 25 }, (_, i) => ({
+    chunk_id: `ch-${i}`,
+    document_id: 'm2',
+    filename: '运输层讲义.pdf',
+    page_start: i + 1,
+    page_end: i + 1,
+    text: `慢启动命中片段 ${i + 1}`,
+  }))
+  server.use(http.get('*/api/courses/c1/search*', () => HttpResponse.json(manyHits)))
+
+  withQueryClient(<AppShell>内容</AppShell>)
+  const input = await screen.findByLabelText('搜索课件原文')
+  fireEvent.change(input, { target: { value: '慢启动' } })
+  fireEvent.submit(input.closest('form')!)
+
+  expect(await screen.findByText('25 条命中')).toBeTruthy()
+  // 默认只渲染前 20 条（一次性渲染上千条会阻塞主线程）
+  expect(screen.getByText('慢启动命中片段 20')).toBeTruthy()
+  expect(screen.queryByText('慢启动命中片段 21')).toBeNull()
+
+  fireEvent.click(screen.getByRole('button', { name: '展开其余 5 条 ▾' }))
+  expect(screen.getByText('慢启动命中片段 25')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: /展开其余/ })).toBeNull()
 })

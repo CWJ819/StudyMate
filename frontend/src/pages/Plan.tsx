@@ -384,7 +384,9 @@ function PlanDetailCard({
       )}
 
       {groups.map(({ date, tasks, totalMinutes }) => {
-        const pct = Math.min(100, (totalMinutes / plan.daily_minutes) * 100)
+        // 判色用未夹取的比值（超载日显红），设宽用夹取值
+        const ratio = totalMinutes / plan.daily_minutes
+        const pct = Math.min(100, ratio * 100)
         return (
           <div key={date} data-date-group={date}>
             <div className="flex items-baseline gap-3 border-t border-border px-5 pb-1.5 pt-3 first:border-t-0">
@@ -401,7 +403,7 @@ function PlanDetailCard({
               </span>
               <span className="h-1.5 max-w-40 flex-1 overflow-hidden rounded bg-untested-bg">
                 <span
-                  className={`block h-full ${pct > 100 ? 'bg-error' : 'bg-accent'}`}
+                  className={`block h-full ${ratio > 1 ? 'bg-error' : 'bg-accent'}`}
                   style={{ width: `${pct}%` }}
                 />
               </span>

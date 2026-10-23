@@ -157,6 +157,10 @@ test('清除本机 Key：PUT 空字符串，状态回到未配置', async () => 
 
   await screen.findByText('已保存（本机密钥文件）')
   fireEvent.click(screen.getByRole('button', { name: '清除本机 Key' }))
+  // 破坏性操作需二次确认：确认前不发请求
+  expect(puts).toEqual([])
+  expect(screen.getByText('清除本机保存的 API Key？')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: '清除' }))
 
   expect(await screen.findByText('未配置')).toBeTruthy()
   expect(puts).toEqual([{ llm_api_key: '' }])

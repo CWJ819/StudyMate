@@ -7,6 +7,7 @@ import { Link, useLocation } from 'react-router'
 import { getHealth, getSettings, updateSettings, type Settings } from '../api/endpoints'
 import { formatBytes } from '../api/status'
 import { AppShell } from '../components/AppShell'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { ErrorNotice } from '../components/ErrorNotice'
 import { settingsReturnTo } from '../lib/navigation'
 
@@ -36,6 +37,8 @@ function ModelCard({ settings }: { settings: Settings }) {
   const [model, setModel] = useState<string | null>(null)
   const [apiKey, setApiKey] = useState('')
   const [showApiKey, setShowApiKey] = useState(false)
+  // 清除 Key 是不可恢复的破坏性操作（Key 永不回显、无法从界面找回），必须二次确认
+  const [confirmClearKey, setConfirmClearKey] = useState(false)
 
   const shownBase = baseUrl ?? settings.llm_base_url ?? ''
   const shownModel = model ?? settings.llm_model ?? ''
@@ -136,7 +139,7 @@ function ModelCard({ settings }: { settings: Settings }) {
           {keyIsLocal && (
             <button
               type="button"
-              onClick={() => clearKey.mutate()}
+              onClick={() => setConfirmClearKey(true)}
               disabled={busy}
               className="rounded-md border border-border2 px-3.5 py-1.5 text-[13px] text-ink2 hover:bg-bg disabled:opacity-50"
             >
@@ -159,6 +162,19 @@ function ModelCard({ settings }: { settings: Settings }) {
           环境变量 <code className="font-mono">LLM_API_KEY</code> 仍可作兜底，本机保存的 Key 优先。
         </p>
       </form>
+      <ConfirmDialog
+        open={confirmClearKey}
+        title="清除本机保存的 API Key？"
+        confirmText="清除"
+        onConfirm={() => {
+          setConfirmClearKey(false)
+          clearKey.mutate()
+        }}
+        onCancel={() => setConfirmClearKey(false)}
+      >
+        Key 不会被回显，清除后无法从界面找回，需要重新输入才能继续使用真实模型；
+        若配置过环境变量 <code className="font-mono">LLM_API_KEY</code>，清除后回退到环境变量。
+      </ConfirmDialog>
       <div className="border-t border-border">
         <Row label="超时">{settings.llm_timeout_seconds} 秒</Row>
         <Row label="失败重试">最多 {settings.llm_max_retries} 次</Row>

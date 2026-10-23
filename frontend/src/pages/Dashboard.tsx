@@ -20,6 +20,7 @@ import { gapTypeLabel, isTaskTerminal, taskStatus, taskTypeLabel } from '../api/
 import { daysUntil, formatDateCN, formatDateLong, todayISO } from '../lib/date'
 import { collectLeaves } from '../lib/tree'
 import { ErrorNotice } from '../components/ErrorNotice'
+import { SkeletonRows } from '../components/Skeleton'
 
 /** 错题本证据摘要（与复习页同一口径：作答 5 · 低分 3 · 答对 2 · 最近得分 0.4） */
 const EVIDENCE_LABELS: Record<string, string> = {
@@ -146,7 +147,7 @@ function TodayTasksCard({ courseId }: { courseId: string }) {
         </div>
       )}
 
-      {detail.isLoading && <p className="border-t border-border px-5 py-3 text-[13px] text-ink3">加载中…</p>}
+      {detail.isLoading && <SkeletonRows rows={2} className="border-t border-border px-5 py-3.5" />}
 
       {!detail.isLoading && tasks.length === 0 && (
         <p className="border-t border-border px-5 py-4 text-[13px] text-ink3">
@@ -251,7 +252,7 @@ function WeakPointsCard({
         </Link>
       </div>
       {wrongbook.isLoading && (
-        <p className="border-t border-border px-5 py-3 text-[13px] text-ink3">加载中…</p>
+        <SkeletonRows rows={3} className="border-t border-border px-5 py-3.5" />
       )}
       {wrongbook.isError && (
         <div className="border-t border-border px-5 py-2">
@@ -340,23 +341,25 @@ function MasteryCard({
   const testedVisible = showAllTested ? testedRows : testedRows.slice(0, TESTED_LIMIT)
   const hiddenTested = testedRows.length - testedVisible.length
 
-  // 联动目标行若在折叠区，先展开——展开触发的重渲染之后，滚动 effect 才能定位到行
+  // 联动目标行若在折叠区，先展开——展开触发的重渲染之后，滚动 effect 才能定位到行。
+  // 数据就绪信号必须进依赖：薄弱点（wrongbook）常先于 mastery/knowledge 到达，
+  // 若数据到达后不重算，首屏窗口期的点击会静默失效（focusNodeId 不变则 effect 不重跑）。
   useEffect(() => {
     if (!focusNodeId) return
     if (untestedLeaves.some((l) => l.knowledge_node_id === focusNodeId)) setShowUntested(true)
     if (testedRows.findIndex((m) => m.knowledge_node_id === focusNodeId) >= TESTED_LIMIT) {
       setShowAllTested(true)
     }
-    // 只在切换焦点时判断；列表数据由查询缓存驱动，无需作为依赖
+    // 列表数组是渲染派生值（身份不稳定），用 dataUpdatedAt 作为数据就绪信号
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusNodeId])
+  }, [focusNodeId, mastery.dataUpdatedAt, knowledge.dataUpdatedAt])
 
   useEffect(() => {
     if (focusNodeId) {
       // jsdom 未实现 scrollIntoView，用可选调用兜底
       rowRefs.current.get(focusNodeId)?.scrollIntoView?.({ block: 'nearest' })
     }
-  }, [focusNodeId, showAllTested, showUntested])
+  }, [focusNodeId, showAllTested, showUntested, mastery.dataUpdatedAt, knowledge.dataUpdatedAt])
 
   return (
     <section className="min-w-0 overflow-hidden rounded-lg border border-border bg-surface">
@@ -366,7 +369,7 @@ function MasteryCard({
       </div>
 
       {mastery.isLoading && (
-        <p className="border-t border-border px-5 py-3 text-[13px] text-ink3">加载中…</p>
+        <SkeletonRows rows={4} className="border-t border-border px-5 py-3.5" />
       )}
       {mastery.isError && (
         <div className="border-t border-border px-5 py-2">

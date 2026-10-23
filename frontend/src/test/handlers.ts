@@ -6,6 +6,8 @@ import {
   graphFixture,
   healthOk,
   highlightsFixture,
+  jobFailed,
+  jobSucceeded,
   knowledgeVersions,
   masteryStates,
   materialsC1,
@@ -34,6 +36,14 @@ const allTasks = [...planDetailActive.tasks, ...planDetailInactive.tasks]
 export const handlers = [
   http.get('*/api/health', () => HttpResponse.json(healthOk)),
   http.get('*/api/settings', () => HttpResponse.json(settingsMock)),
+  // 异步任务：job-bad 失败，其余一律成功（出题/构建类测试靠它推进终态）
+  http.get('*/api/jobs/:jobId', ({ params }) =>
+    HttpResponse.json(
+      params.jobId === 'job-bad'
+        ? { ...jobFailed, id: String(params.jobId) }
+        : { ...jobSucceeded, id: String(params.jobId) },
+    ),
+  ),
   http.get('*/api/courses', () => HttpResponse.json([course1])),
   http.get('*/api/courses/c1', () => HttpResponse.json(course1)),
   http.get('*/api/courses/c1/materials', () => HttpResponse.json(materialsC1)),

@@ -5,7 +5,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { server } from '../test/server'
-import { planDetailActive } from '../test/fixtures'
+import { frameworkActive, masteryStates, planDetailActive } from '../test/fixtures'
 import { DashboardPage } from './Dashboard'
 
 function renderDashboard() {
@@ -125,6 +125,42 @@ test('薄弱点联动到未测验节点：自动展开灰条区并高亮对应�
   fireEvent.click(weakGap as HTMLElement)
 
   // 联动触发自动展开，目标行（而非折叠行）被高亮
+  await waitFor(() => expect(document.body.textContent).toContain('收起未测验'))
+  const pressed = document.querySelectorAll('[aria-pressed="true"]')
+  expect(pressed.length).toBe(1)
+  expect((pressed[0] as HTMLElement).textContent).toContain('可靠传输')
+})
+
+test('薄弱点先于掌握度到达：数据就绪后联动自动补展开（不再静默失效）', async () => {
+  // mastery/knowledge 被闸门延迟，wrongbook 立即返回——复现首屏窗口期点击
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  server.use(
+    http.get('*/api/courses/c1/mastery', async () => {
+      await gate
+      return HttpResponse.json(masteryStates)
+    }),
+    http.get('*/api/courses/c1/knowledge', async () => {
+      await gate
+      return HttpResponse.json(frameworkActive)
+    }),
+  )
+
+  renderDashboard()
+  // 薄弱点卡先渲染（gap2 → kn3，未测验节点）
+  await waitFor(() => expect(document.body.textContent).toContain('some_future_type'))
+
+  // 数据未就绪时点击：此刻 untestedLeaves 还是空的（旧实现会静默失效且无法恢复）
+  const weakGap = Array.from(document.querySelectorAll('button')).find((b) =>
+    b.textContent?.includes('some_future_type'),
+  )
+  expect(weakGap).toBeTruthy()
+  fireEvent.click(weakGap as HTMLElement)
+
+  // 数据到达后 effect 按 dataUpdatedAt 重算：自动展开灰条区并高亮 kn3
+  release()
   await waitFor(() => expect(document.body.textContent).toContain('收起未测验'))
   const pressed = document.querySelectorAll('[aria-pressed="true"]')
   expect(pressed.length).toBe(1)

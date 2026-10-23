@@ -1,5 +1,7 @@
 // 异步作业轮询（plan §4.2）：1s 起逐步放宽到 3s；终态停止；超时上限后提示“仍在处理”不再自动轮询。
 // 进度只有 0/100，用不定进度表达；retry_wait 显示“重试中”，不算失败。
+// 缓存失效只在「非终态→终态」的真实跃迁时触发一次，且放在 effect 里：
+// 从 localStorage 恢复的历史 job 往往早已 succeeded，挂载首渲染就失效会误伤正在飞行的请求。
 import { useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getJob, type Job } from '../api/endpoints'
@@ -35,11 +37,19 @@ export function useJob(
   const queryClient = useQueryClient()
   const startedAtRef = useRef(Date.now())
   const settledRef = useRef(false)
+  // 本次 jobId 生命周期内是否见过非终态：只在真实跃迁时失效
+  const sawNonTerminalRef = useRef(false)
+  const invalidateKeysRef = useRef<readonly unknown[][]>(onSettledInvalidate)
   const [deadlinePassed, setDeadlinePassed] = useState(false)
+
+  useEffect(() => {
+    invalidateKeysRef.current = onSettledInvalidate
+  })
 
   useEffect(() => {
     startedAtRef.current = Date.now()
     settledRef.current = false
+    sawNonTerminalRef.current = false
     setDeadlinePassed(false)
     if (jobId == null || jobId === '') return
     const timer = setTimeout(() => setDeadlinePassed(true), timeoutMs)
@@ -65,12 +75,17 @@ export function useJob(
   const terminal = job != null && isJobTerminal(job.status)
   const timedOut = deadlinePassed && !terminal
 
-  if (terminal && !settledRef.current) {
+  useEffect(() => {
+    if (job != null && !isJobTerminal(job.status)) sawNonTerminalRef.current = true
+  }, [job])
+
+  useEffect(() => {
+    if (!terminal || settledRef.current || !sawNonTerminalRef.current) return
     settledRef.current = true
-    for (const key of onSettledInvalidate) {
+    for (const key of invalidateKeysRef.current) {
       queryClient.invalidateQueries({ queryKey: key })
     }
-  }
+  }, [terminal, queryClient])
 
   let phase: JobPhase = 'loading'
   if (job != null) {

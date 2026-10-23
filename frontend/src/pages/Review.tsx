@@ -18,6 +18,7 @@ import { saveJobId } from '../hooks/useJob'
 import { recentQuizKey } from '../hooks/usePersistedDraft'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorNotice } from '../components/ErrorNotice'
+import { SkeletonRows } from '../components/Skeleton'
 
 
 /** evidence_summary 是后端的计数字典（total_evidence/low_score_evidence/...），泛化成键值行 */
@@ -164,7 +165,7 @@ export function ReviewPage() {
             <h2 className="text-[15px] font-semibold">掌握度估计</h2>
             <span className="text-[12.5px] text-ink3">已测验升序 · 未测验 ≠ 薄弱</span>
           </div>
-          {mastery.isLoading && <p className="px-5 pb-4 text-[13px] text-ink3">加载中…</p>}
+          {mastery.isLoading && <SkeletonRows rows={4} className="px-5 pb-4" />}
           {mastery.isError && (
             <div className="px-5 pb-4">
               <ErrorNotice error={mastery.error} />
@@ -213,7 +214,7 @@ export function ReviewPage() {
             <h2 className="text-[15px] font-semibold">错题本（知识缺口）</h2>
             <span className="text-[12.5px] text-ink3">由测验记录得出，非自评</span>
           </div>
-          {wrongbook.isLoading && <p className="px-5 pb-4 text-[13px] text-ink3">加载中…</p>}
+          {wrongbook.isLoading && <SkeletonRows rows={3} className="px-5 pb-4" />}
           {wrongbook.isError && (
             <div className="px-5 pb-4">
               <ErrorNotice error={wrongbook.error} />

@@ -65,7 +65,9 @@ export function MaterialsPage() {
     const files = Array.from(e.target.files ?? [])
     e.target.value = ''
     if (files.length === 0 || !courseId) return
-    const maxBytes = settings.data?.max_upload_bytes ?? 0
+    // settings 未就绪/失败时不做客户端大小预检（?? Infinity），交给服务端 FILE_TOO_LARGE 判定；
+    // 缺省 0 会把所有文件拦下并谎报「超出上限（0 MB）」
+    const maxBytes = settings.data?.max_upload_bytes ?? Number.POSITIVE_INFINITY
 
     for (const file of files) {
       const invalid = validateUploadFile(file, maxBytes)
@@ -117,6 +119,12 @@ export function MaterialsPage() {
           上传课件
         </button>
       </div>
+
+      {settings.isError && (
+        <p className="mb-3 text-[12.5px] text-warning">
+          未能读取设置（上传大小限制未知）：文件将直接上传，由服务端校验大小。
+        </p>
+      )}
 
       {deleteError != null && (
         <div className="mb-3">

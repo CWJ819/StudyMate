@@ -1,5 +1,6 @@
 // 测验：出题（范围=叶子节点默认全选）→ building 轮询 → 作答（草稿持久化）
-// → 幂等提交（首点生成 key，失败重试复用）→ 结果页（只信提交响应，刷新仍在）
+// → 幂等提交（首点生成 key 并冻结答案快照，失败重试复用同键同答案）
+// → 结果页（只信提交响应与冻结快照，刷新仍在）
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
 import { useEffect, useMemo, useState } from 'react'
@@ -14,6 +15,7 @@ import {
   type QuizSubmission,
 } from '../api/endpoints'
 import { collectLeaves } from '../lib/tree'
+import { randomUuid } from '../lib/uuid'
 import { ApiError } from '../api/client'
 import { gradingMethodLabel, quizStatus } from '../api/status'
 import {
@@ -206,6 +208,7 @@ function AnswerView({
   onDraftChange,
   onSubmit,
   submitting,
+  locked,
   submitError,
 }: {
   quiz: QuizDetail
@@ -213,9 +216,12 @@ function AnswerView({
   onDraftChange: (answers: AnswerMap) => void
   onSubmit: () => void
   submitting: boolean
+  /** 已发起过提交：答案随幂等键冻结，作答控件只读（重试必须同键同答案） */
+  locked: boolean
   submitError: unknown
 }) {
   const answers = draft.answers
+  const inputsDisabled = submitting || locked
   const answeredCount = quiz.questions.filter((q) => {
     const a = answers[q.question_id]
     if (q.question_type === 'short_answer') return (a?.text ?? '') !== ''
@@ -285,8 +291,9 @@ function AnswerView({
                     onDraftChange({ ...answers, [q.question_id]: { text: e.target.value } })
                   }
                   rows={3}
+                  disabled={inputsDisabled}
                   aria-label={`Q${q.ordinal} 作答`}
-                  className="mt-2 w-full max-w-3xl rounded-md border border-border2 bg-quote-bg px-3 py-2 text-[13.5px] leading-[1.7] text-ink outline-none focus:border-accent"
+                  className="mt-2 w-full max-w-3xl rounded-md border border-border2 bg-quote-bg px-3 py-2 text-[13.5px] leading-[1.7] text-ink outline-none focus:border-accent disabled:cursor-not-allowed disabled:opacity-60"
                   placeholder="用自己的话回答，批改由模型完成"
                 />
               ) : (
@@ -299,7 +306,8 @@ function AnswerView({
                         type="button"
                         onClick={() => setChoice(q, opt.id, q.question_type === 'multiple_choice')}
                         aria-pressed={picked}
-                        className={`flex items-start gap-2 rounded-md border px-3 py-2 text-left text-[13.5px] ${
+                        disabled={inputsDisabled}
+                        className={`flex items-start gap-2 rounded-md border px-3 py-2 text-left text-[13.5px] disabled:cursor-not-allowed disabled:opacity-60 ${
                           picked
                             ? 'border-accent bg-accent-bg/70 text-ink'
                             : 'border-border2 bg-surface text-ink2 hover:border-ink3'
@@ -326,7 +334,7 @@ function AnswerView({
   )
 }
 
-// ---- 结果视图（只信提交响应 + 本地草稿里的“你的答案”）----
+// ---- 结果视图（只信提交响应 + 提交时冻结的答案快照）----
 
 function ResultView({
   quiz,
@@ -510,12 +518,12 @@ function QuizSession({
   })
 
   const onSubmitClick = () => {
-    let key = draft.idempotencyKey
-    if (key == null) {
-      key = crypto.randomUUID()
-      setDraft((prev) => ({ ...prev, idempotencyKey: key }))
-    }
-    submit.mutate({ idempotencyKey: key, answers: draft.answers })
+    const key = draft.idempotencyKey ?? randomUuid()
+    // 首次提交即冻结答案快照：重试必须复用同键同答案（后端对同键不同答案返回 409），
+    // 结果页也只展示这份快照——批改窗口内改动草稿不影响已提交内容的呈现
+    const answers = draft.submittedAnswers ?? draft.answers
+    setDraft((prev) => ({ ...prev, idempotencyKey: key, submittedAnswers: answers }))
+    submit.mutate({ idempotencyKey: key, answers })
   }
 
   if (quiz.isError) {
@@ -576,12 +584,17 @@ function QuizSession({
           onDraftChange={(answers) => setDraft((prev) => ({ ...prev, answers }))}
           onSubmit={onSubmitClick}
           submitting={submit.isPending}
+          locked={draft.submittedAnswers != null}
           submitError={submitError}
         />
       )}
 
       {draft.submission != null && (
-        <ResultView quiz={quiz.data} submission={draft.submission} answers={draft.answers} />
+        <ResultView
+          quiz={quiz.data}
+          submission={draft.submission}
+          answers={draft.submittedAnswers ?? draft.answers}
+        />
       )}
 
       {quiz.data.status === 'submitted' && draft.submission == null && (

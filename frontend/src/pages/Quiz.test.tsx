@@ -99,6 +99,57 @@ test('503 提交失败：保留答案，重试复用同一幂等键，成功后�
   expect(keys[0]).toBe(keys[1])
 })
 
+test('提交快照：提交期间锁定作答控件，结果页只显示已提交答案（事后改草稿不影响）', async () => {
+  localStorage.setItem(RECENT_KEY, 'qz1')
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  server.use(
+    http.post('*/api/quizzes/qz1/submit', async () => {
+      await gate
+      return HttpResponse.json(quizSubmission)
+    }),
+  )
+
+  const view = renderQuiz()
+  expect(await screen.findByText(/每经过一个 RTT/)).toBeTruthy()
+
+  // 简答（Q4）填写后提交
+  fireEvent.change(screen.getByLabelText('Q4 作答'), {
+    target: { value: '窗口取 min(rwnd, cwnd)' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: '提交答卷' }))
+
+  // 提交进行中：按钮变“提交中…”，作答控件已锁定（活草稿没有编辑机会）
+  expect(await screen.findByRole('button', { name: '提交中…' })).toBeTruthy()
+  expect((screen.getByLabelText('Q4 作答') as HTMLTextAreaElement).disabled).toBe(true)
+  expect(
+    (screen.getByRole('button', { name: /^指数增长$/ }) as HTMLButtonElement).disabled,
+  ).toBe(true)
+
+  release()
+  expect(await screen.findByText(/待批改 1/)).toBeTruthy()
+  expect(screen.getByText('窗口取 min(rwnd, cwnd)')).toBeTruthy()
+
+  // 模拟“提交后草稿被改动”的分叉：手改 answers，submittedAnswers 保持快照
+  const draftKey = 'studymate:quiz-draft:qz1'
+  const raw = JSON.parse(localStorage.getItem(draftKey)!) as {
+    answers: Record<string, { text?: string }>
+    submittedAnswers: Record<string, { text?: string }>
+  }
+  expect(raw.submittedAnswers.q4!.text).toBe('窗口取 min(rwnd, cwnd)')
+  raw.answers.q4 = { text: '提交后被篡改的答案' }
+  localStorage.setItem(draftKey, JSON.stringify(raw))
+
+  view.unmount()
+  renderQuiz()
+  expect(await screen.findByText(/待批改 1/)).toBeTruthy()
+  // 结果页只显示冻结快照，不显示被篡改的活草稿
+  expect(screen.getByText('窗口取 min(rwnd, cwnd)')).toBeTruthy()
+  expect(screen.queryByText('提交后被篡改的答案')).toBeNull()
+})
+
 test('刷新后结果仍在：草稿含 submission 时直接渲染结果页（不依赖重新提交）', async () => {
   localStorage.setItem(RECENT_KEY, 'qz1')
   localStorage.setItem(
@@ -131,10 +182,16 @@ test('出题：默认全选叶子时省略 ids（后端缺省=全部，避开 50
       )
     }),
   )
+  let qz2Calls = 0
   server.use(
-    http.get('*/api/quizzes/qz2', () =>
-      HttpResponse.json({ ...quizOpen, quiz_id: 'qz2', status: 'building' }),
-    ),
+    http.get('*/api/quizzes/qz2', () => {
+      qz2Calls += 1
+      return HttpResponse.json(
+        qz2Calls === 1
+          ? { ...quizOpen, quiz_id: 'qz2', status: 'building', questions: [] }
+          : { ...quizOpen, quiz_id: 'qz2' },
+      )
+    }),
   )
 
   renderQuiz()
@@ -154,6 +211,9 @@ test('出题：默认全选叶子时省略 ids（后端缺省=全部，避开 50
   expect(generated!.question_types).toHaveLength(3)
   expect(generated!.question_count).toBe(10)
   expect(localStorage.getItem(RECENT_KEY)).toBe('qz2')
+
+  // job-ok 成功（全局 handler）→ 失效 quiz 查询 → building 转 open，题目真实渲染
+  expect(await screen.findByText(/每经过一个 RTT/, {}, { timeout: 4000 })).toBeTruthy()
 })
 
 test('出题：取消勾选一个叶子后，请求只带剩余叶子 id', async () => {

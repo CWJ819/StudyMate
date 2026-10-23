@@ -424,7 +424,7 @@ export const quizOpen: QuizDetail = {
 export const quizSubmission: QuizSubmission = {
   submission_id: 'sub1',
   quiz_id: 'qz1',
-  status: 'graded',
+  status: 'submitted',
   total_score: 5,
   max_score: 10,
   question_results: [
@@ -470,7 +470,7 @@ export const wrongbookGaps: KnowledgeGap[] = [
     node_version_id: 'nv2',
     title: '慢启动与拥塞避免',
     gap_type: 'low_score',
-    status: 'open',
+    status: 'suspected',
     confidence: 0.8,
     evidence_count: 3,
     evidence_summary: {
@@ -488,7 +488,7 @@ export const wrongbookGaps: KnowledgeGap[] = [
     node_version_id: 'nv3',
     title: '可靠传输：GBN 与 SR',
     gap_type: 'some_future_type',
-    status: 'open',
+    status: 'suspected',
     confidence: 0.5,
     evidence_count: 1,
     evidence_summary: {},

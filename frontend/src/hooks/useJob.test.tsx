@@ -20,6 +20,17 @@ function createWrapper() {
   }
 }
 
+function createSpyWrapper() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  const spy = vi.spyOn(client, 'invalidateQueries')
+  function Wrapper({ children }: PropsWithChildren) {
+    return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  }
+  return { Wrapper, spy }
+}
+
 function useSequentialJobHandler(responses: Array<Record<string, unknown>>) {
   let call = 0
   server.use(
@@ -100,6 +111,46 @@ test('failed：保留 error_code', async () => {
   })
   expect(result.current.phase).toBe('failed')
   expect(result.current.job?.error_code).toBe('LLM_TIMEOUT')
+})
+
+test('挂载时 job 已是终态（localStorage 恢复的历史 job）：不触发缓存失效', async () => {
+  useSequentialJobHandler([makeJob({ status: 'succeeded' })])
+  const { Wrapper, spy } = createSpyWrapper()
+  const { result } = renderHook(
+    () => useJob('job-old', { onSettledInvalidate: [['knowledge', 'c1']] }),
+    { wrapper: Wrapper },
+  )
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(200)
+  })
+  expect(result.current.phase).toBe('succeeded')
+  expect(spy).not.toHaveBeenCalled()
+})
+
+test('非终态→终态真实跃迁：按 onSettledInvalidate 失效一次', async () => {
+  useSequentialJobHandler([
+    makeJob({ status: 'running' }),
+    makeJob({ status: 'succeeded' }),
+  ])
+  const { Wrapper, spy } = createSpyWrapper()
+  const { result } = renderHook(
+    () => useJob('job-live', { onSettledInvalidate: [['knowledge', 'c1']] }),
+    { wrapper: Wrapper },
+  )
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(200)
+  })
+  expect(result.current.phase).toBe('polling')
+  expect(spy).not.toHaveBeenCalled()
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1200)
+  })
+  expect(result.current.phase).toBe('succeeded')
+  expect(spy).toHaveBeenCalledTimes(1)
+  expect(spy).toHaveBeenCalledWith({ queryKey: ['knowledge', 'c1'] })
 })
 
 test('超时：超过 timeoutMs 仍在 running → 提示仍在处理并停止自动轮询', async () => {

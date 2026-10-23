@@ -28,6 +28,10 @@ const TABS: Array<{ key: TabKey; label: string; suffix: string }> = [
   { key: 'plan', label: '复习计划', suffix: '/plan' },
 ]
 
+/** 检索结果默认渲染上限（与 Knowledge/Review 的渐进展开同款模式）：
+ * 大课程搜高频字可命中上千条，一次性渲染会阻塞主线程数秒 */
+const SEARCH_BATCH = 20
+
 interface AppShellProps extends PropsWithChildren {
   /** 有课程上下文时 crumb 与 tab 变成真实路由；无则只显示「我的课程」入口 */
   course?: Course | null
@@ -84,6 +88,7 @@ export function AppShell({ course, active, children }: AppShellProps) {
   const [q, setQ] = useState('')
   const [submitted, setSubmitted] = useState('')
   const [open, setOpen] = useState(false)
+  const [showAllHits, setShowAllHits] = useState(false)
   const searchBoxRef = useRef<HTMLDivElement>(null)
 
   // 检索是全局的：并行查所有课程，命中带上所属课程；结果在搜索框下方就地展开，页面不跳转
@@ -126,10 +131,13 @@ export function AppShell({ course, active, children }: AppShellProps) {
     const query = q.trim()
     if (query === '') return
     setSubmitted(query)
+    setShowAllHits(false)
     setOpen(true)
   }
 
   const hits: CourseHit[] = search.data?.results ?? []
+  const visibleHits = showAllHits ? hits : hits.slice(0, SEARCH_BATCH)
+  const hiddenHits = hits.length - visibleHits.length
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -187,7 +195,7 @@ export function AppShell({ course, active, children }: AppShellProps) {
                     「{submitted}」没有命中任何课件片段。检索是子串匹配，试试更短的词。
                   </p>
                 )}
-                {hits.map((r) => (
+                {visibleHits.map((r) => (
                   <div key={r.chunk_id} className="border-t border-border px-3 py-2">
                     <div className="flex items-baseline gap-2 text-[12px] text-ink3">
                       <span className="flex-none rounded bg-accent-bg px-1.5 py-0.5 text-[11px] text-accent">
@@ -202,6 +210,15 @@ export function AppShell({ course, active, children }: AppShellProps) {
                     <p className="mt-1 whitespace-pre-wrap text-[13px] leading-[1.65] text-ink">{r.text}</p>
                   </div>
                 ))}
+                {hiddenHits > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllHits(true)}
+                    className="w-full border-t border-border px-3 py-2 text-left text-[12.5px] text-accent hover:bg-bg"
+                  >
+                    展开其余 {hiddenHits} 条 ▾
+                  </button>
+                )}
               </div>
             )}
           </div>

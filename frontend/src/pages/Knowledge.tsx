@@ -26,6 +26,7 @@ import { frameworkStatus, isJobTerminal, jobStatusLabel } from '../api/status'
 import { loadJobId, saveJobId, useJob } from '../hooks/useJob'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorNotice } from '../components/ErrorNotice'
+import { SkeletonRows } from '../components/Skeleton'
 
 /** pptx 的“页”显示为幻灯片（plan §5） */
 function pageWord(filename: string): string {
@@ -664,6 +665,9 @@ function HighlightsPanel({
   const highlights = useQuery({
     queryKey: ['knowledge-highlights', courseId, order, limit],
     queryFn: () => getKnowledgeHighlights(courseId, { order, limit }),
+    // 四视图 tab 切换会重挂载面板：30s 内命中缓存不重复拉取；
+    // 数据变化走显式失效（构建 job 终态失效全部六个 key；锁定/解锁失效 decisions+locks）
+    staleTime: 30_000,
   })
   return (
     <section className="rounded-lg border border-border bg-surface">
@@ -702,14 +706,18 @@ function HighlightsPanel({
           </select>
         </div>
       </div>
-      {highlights.isLoading && <p className="px-4 py-4 text-[13px] text-ink3">加载中…</p>}
+      {highlights.isLoading && <SkeletonRows rows={5} className="px-4 py-4" />}
       {highlights.isError && (
         <div className="px-4 py-4">
           <ErrorNotice error={highlights.error} />
         </div>
       )}
       {highlights.data && highlights.data.items.length === 0 && (
-        <p className="px-4 py-4 text-[13px] text-ink3">当前版本还没有可排序的知识点。</p>
+        <div className="px-4 py-4">
+          <EmptyState title="当前版本还没有可排序的知识点">
+            构建完成后，这里按读取时评分列出重难点；分数是工程估计值，不是教材语义重要性。
+          </EmptyState>
+        </div>
       )}
       {highlights.data && highlights.data.items.length > 0 && (
         <div className="divide-y divide-border">
@@ -787,6 +795,7 @@ function GraphPanel({ courseId, onPick }: { courseId: string; onPick: (id: strin
   const graph = useQuery({
     queryKey: ['knowledge-graph', courseId],
     queryFn: () => getKnowledgeGraph(courseId),
+    staleTime: 30_000,
   })
   const [type, setType] = useState<string>('all')
   const [openEvidence, setOpenEvidence] = useState<Set<string>>(new Set())
@@ -835,16 +844,20 @@ function GraphPanel({ courseId, onPick }: { courseId: string; onPick: (id: strin
           ))}
         </div>
       </div>
-      {graph.isLoading && <p className="px-4 py-4 text-[13px] text-ink3">加载中…</p>}
+      {graph.isLoading && <SkeletonRows rows={4} className="px-4 py-4" />}
       {graph.isError && (
         <div className="px-4 py-4">
           <ErrorNotice error={graph.error} />
         </div>
       )}
       {graph.data && edges.length === 0 && (
-        <p className="px-4 py-4 text-[13px] text-ink3">
-          {graph.data.edges.length === 0 ? '当前版本还没有关系边。' : '该类型下没有关系边。'}
-        </p>
+        <div className="px-4 py-4">
+          <EmptyState
+            title={graph.data.edges.length === 0 ? '当前版本还没有关系边' : '该类型下没有关系边'}
+          >
+            关系是构建时同一次抽取窗口内的模型判断，不是课程事实；可以换个类型筛选看看。
+          </EmptyState>
+        </div>
       )}
       <div className="divide-y divide-border">
         {edges.map((edge, index) => {
@@ -929,10 +942,12 @@ function MergePanel({ courseId }: { courseId: string }) {
   const decisions = useQuery({
     queryKey: ['knowledge-merge-decisions', courseId],
     queryFn: () => listKnowledgeMergeDecisions(courseId),
+    staleTime: 30_000,
   })
   const locks = useQuery({
     queryKey: ['knowledge-alias-locks', courseId],
     queryFn: () => listKnowledgeAliasLocks(courseId),
+    staleTime: 30_000,
   })
   const [message, setMessage] = useState<string | null>(null)
   const addLock = useMutation({
@@ -966,14 +981,18 @@ function MergePanel({ courseId }: { courseId: string }) {
           Stage C 把跨文档、跨 section 的同概念标题合并为一个知识点；相似度与方法是确定性规则的结果，不是语义判断。
         </p>
       </div>
-      {decisions.isLoading && <p className="px-4 py-4 text-[13px] text-ink3">加载中…</p>}
+      {decisions.isLoading && <SkeletonRows rows={3} className="px-4 py-4" />}
       {decisions.isError && (
         <div className="px-4 py-4">
           <ErrorNotice error={decisions.error} />
         </div>
       )}
       {decisions.data && decisions.data.decisions.length === 0 && (
-        <p className="px-4 py-4 text-[13px] text-ink3">当前版本没有跨文档合并。</p>
+        <div className="px-4 py-4">
+          <EmptyState title="当前版本没有跨文档合并">
+            多份课件里同一概念的不同标题会在构建时合并成一个知识点，真正发生合并的簇才列在这里。
+          </EmptyState>
+        </div>
       )}
       {message && <p className="mx-4 my-2 rounded bg-accent-bg px-3 py-1.5 text-[12px] text-accent">{message}</p>}
       <div className="divide-y divide-border">
@@ -1052,12 +1071,16 @@ export function KnowledgePage() {
     queryFn: () => getKnowledge(courseId!),
     enabled: courseId !== undefined,
     retry: false,
+    // 页面/tab 切换重挂载时 30s 内用缓存（评分树可达数百 KB）；
+    // 重建走显式失效（build onSuccess + 构建 job 终态 onSettledInvalidate）
+    staleTime: 30_000,
   })
   const scored = useQuery({
     queryKey: ['knowledge-scored', courseId],
     queryFn: () => getKnowledgeTree(courseId!),
     enabled: courseId !== undefined,
     retry: false,
+    staleTime: 30_000,
   })
   const notBuilt =
     (framework.isError && framework.error instanceof ApiError && framework.error.code === 'RESOURCE_NOT_FOUND') ||
@@ -1300,7 +1323,7 @@ export function KnowledgePage() {
       )}
 
       {otherError != null && <ErrorNotice error={otherError} />}
-      {framework.isLoading && <p className="text-[13px] text-ink3">加载中…</p>}
+      {(framework.isLoading || scored.isLoading) && <SkeletonRows rows={6} className="mb-4" />}
 
       <div className="mb-4 flex gap-1 border-b border-border" role="tablist" aria-label="知识视图">
         {(
@@ -1432,12 +1455,18 @@ export function KnowledgePage() {
         </div>
       )}
 
+      {view === 'tree' && tree.length === 0 && !framework.isLoading && !scored.isLoading && (
+        <EmptyState title="当前版本没有知识点">
+          框架已生效但没有可显示的节点，属异常情况；可以点「重新构建」再试。
+        </EmptyState>
+      )}
+
       {showVersions && (
         <section className="mt-6 overflow-hidden rounded-lg border border-border bg-surface">
           <div className="px-5 pb-2 pt-4">
             <h2 className="text-[15px] font-semibold">版本列表</h2>
           </div>
-          {versions.isLoading && <p className="px-5 pb-4 text-[13px] text-ink3">加载中…</p>}
+          {versions.isLoading && <SkeletonRows rows={2} className="px-5 pb-4" />}
           {versions.isError && (
             <div className="px-5 pb-4">
               <ErrorNotice error={versions.error} />

@@ -49,6 +49,8 @@ export interface QuizDraft {
   /** 第一次点“提交”时生成；失败重试复用（plan §4.3） */
   idempotencyKey: string | null
   answers: Record<string, { selected_option_ids?: string[]; text?: string }>
+  /** 首次提交时冻结的答案快照：重试必须同键同答案，结果页只显示这份，不受活草稿编辑影响 */
+  submittedAnswers?: Record<string, { selected_option_ids?: string[]; text?: string }>
   /** 提交成功后保存响应；刷新后仍能看结果 */
   submission?: QuizSubmission
 }
