@@ -6,6 +6,7 @@ import { http, HttpResponse } from 'msw'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { server } from '../test/server'
 import { frameworkActive, masteryStates, planDetailActive } from '../test/fixtures'
+import { deepestText } from '../test/matchers'
 import { DashboardPage } from './Dashboard'
 
 function renderDashboard() {
@@ -48,7 +49,7 @@ test('倒计时与今日任务取 active 计划：今天只有 t1/t2，勾选完
   expect(await screen.findByText('Review 慢启动与拥塞避免')).toBeTruthy()
   expect(screen.getByText('Practice 慢启动与拥塞避免')).toBeTruthy()
   expect(screen.queryByText('Review 可靠传输：GBN 与 SR')).toBeNull()
-  expect(screen.getByText(/合计 60 分钟 · 已完成 0 项/)).toBeTruthy()
+  expect(screen.getByText(deepestText(/合计 60 分钟 · 已完成 0 项/))).toBeTruthy()
   expect(screen.getByText('继续')).toBeTruthy() // t2 进行中 → 继续
   expect(screen.getByText('开始')).toBeTruthy() // t1 待开始 → 开始
 

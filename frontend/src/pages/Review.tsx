@@ -32,7 +32,7 @@ function GapEvidence({ summary }: { summary: Record<string, unknown> }) {
   const entries = Object.entries(summary ?? {}).filter(([k]) => k !== 'last_attempt_id')
   if (entries.length === 0) return null
   return (
-    <p className="mt-0.5 text-[12.5px] text-ink2">
+    <p className="mt-0.5 text-aux text-ink2">
       {entries
         .map(([k, v]) => `${labels[k] ?? k} ${typeof v === 'number' ? v : String(v)}`)
         .join(' · ')}
@@ -51,9 +51,9 @@ function MasteryRow({
 }) {
   const tested = estimate != null
   return (
-    <div className="grid grid-cols-[minmax(120px,220px)_1fr_150px] items-center gap-3 border-t border-border px-5 py-2 first:border-t-0">
+    <div className="grid animate-fade-in grid-cols-[minmax(120px,220px)_1fr_150px] items-center gap-3 border-t border-border px-5 py-2 first:border-t-0">
       <span
-        className={`truncate text-[13px] ${tested ? 'text-ink' : 'text-ink3'}`}
+        className={`truncate text-aux ${tested ? 'text-ink' : 'text-ink3'}`}
         title={title ?? undefined}
       >
         {title ?? '（未命名）'}
@@ -66,7 +66,7 @@ function MasteryRow({
           />
         )}
       </span>
-      <span className={`text-right font-mono text-[12px] ${tested ? 'text-ink2' : 'text-ink3'}`}>
+      <span className={`text-right font-mono text-meta tabular-nums ${tested ? 'text-ink2' : 'text-ink3'}`}>
         {tested ? `${estimate.toFixed(2)} · 依据 ${evidence} 次作答` : '未测验'}
       </span>
     </div>
@@ -158,12 +158,12 @@ export function ReviewPage() {
   return (
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_420px] items-start gap-6">
       <div className="min-w-0">
-        <h1 className="mb-3 text-[22px] font-bold">复习</h1>
+        <h1 className="mb-3 text-page font-semibold">复习</h1>
 
         <section className="overflow-hidden rounded-lg border border-border bg-surface">
           <div className="flex items-baseline gap-3 px-5 pb-2 pt-4">
-            <h2 className="text-[15px] font-semibold">掌握度估计</h2>
-            <span className="text-[12.5px] text-ink3">已测验升序 · 未测验 ≠ 薄弱</span>
+            <h2 className="text-title font-semibold">掌握度估计</h2>
+            <span className="text-aux text-ink3">已测验升序 · 未测验 ≠ 薄弱</span>
           </div>
           {mastery.isLoading && <SkeletonRows rows={4} className="px-5 pb-4" />}
           {mastery.isError && (
@@ -183,9 +183,15 @@ export function ReviewPage() {
             <button
               type="button"
               onClick={() => setShowAllTested((v) => !v)}
-              className="w-full border-t border-border px-5 py-2 text-left text-[12.5px] text-accent hover:bg-bg"
+              className="w-full border-t border-border px-5 py-2 text-left text-aux text-accent row-hover"
             >
-              {showAllTested ? '收起 ▴' : `展开其余 ${hiddenTested} 条已测验 ▾`}
+              {showAllTested ? (
+                '收起 ▴'
+              ) : (
+                <>
+                  展开其余 <span className="font-mono tabular-nums">{hiddenTested}</span> 条已测验 ▾
+                </>
+              )}
             </button>
           )}
           {untestedLeaves.length > 0 && (
@@ -193,26 +199,31 @@ export function ReviewPage() {
               type="button"
               onClick={() => setShowUntested((v) => !v)}
               aria-expanded={showUntested}
-              className="w-full border-t border-border px-5 py-2 text-left text-[12.5px] text-ink3 hover:bg-bg"
+              className="w-full border-t border-border px-5 py-2 text-left text-aux text-ink3 row-hover"
             >
-              {showUntested
-                ? '收起未测验 ▴'
-                : `未测验 ${untestedLeaves.length} 个（不代表薄弱）· 展开 ▾`}
+              {showUntested ? (
+                '收起未测验 ▴'
+              ) : (
+                <>
+                  未测验 <span className="font-mono tabular-nums">{untestedLeaves.length}</span>{' '}
+                  个（不代表薄弱）· 展开 ▾
+                </>
+              )}
             </button>
           )}
           {showUntested &&
             untestedLeaves.map((l) => (
               <MasteryRow key={l.knowledge_node_id} title={l.title} estimate={null} evidence={0} />
             ))}
-          <p className="border-t border-dashed border-border px-5 py-2 text-[11.5px] leading-relaxed text-ink3">
+          <p className="border-t border-dashed border-border px-5 py-2 text-meta leading-relaxed text-ink3">
             估计值 = 作答记录的统计推断，不是精确测量。
           </p>
         </section>
 
         <section className="mt-6 overflow-hidden rounded-lg border border-border bg-surface">
           <div className="flex items-baseline gap-3 px-5 pb-2 pt-4">
-            <h2 className="text-[15px] font-semibold">错题本（知识缺口）</h2>
-            <span className="text-[12.5px] text-ink3">由测验记录得出，非自评</span>
+            <h2 className="text-title font-semibold">错题本（知识缺口）</h2>
+            <span className="text-aux text-ink3">由测验记录得出，非自评</span>
           </div>
           {wrongbook.isLoading && <SkeletonRows rows={3} className="px-5 pb-4" />}
           {wrongbook.isError && (
@@ -221,19 +232,19 @@ export function ReviewPage() {
             </div>
           )}
           {!wrongbook.isLoading && gaps.length === 0 && (
-            <p className="border-t border-border px-5 py-5 text-[13px] text-ink3">
+            <p className="border-t border-border px-5 py-5 text-aux text-ink3">
               还没有知识缺口记录——完成一次测验后，这里会列出薄弱知识点及其原因。
             </p>
           )}
           {gaps.map((gap) => (
-            <div key={gap.gap_id} className="border-t border-border px-5 py-3">
+            <div key={gap.gap_id} className="animate-fade-in border-t border-border px-5 py-3">
               <div className="flex flex-wrap items-baseline gap-2">
-                <span className="text-[14px] font-semibold">{gap.title}</span>
-                <span className="rounded bg-untested-bg px-1.5 py-0.5 text-[11.5px] text-ink3">
+                <span className="text-body font-semibold">{gap.title}</span>
+                <span className="rounded bg-untested-bg px-1.5 py-0.5 text-meta text-ink3">
                   {gapTypeLabel(gap.gap_type)}
                 </span>
                 {gap.evidence_count > 0 && (
-                  <span className="font-mono text-[11.5px] text-ink3">
+                  <span className="font-mono text-meta text-ink3">
                     依据 {gap.evidence_count} 次
                   </span>
                 )}
@@ -248,12 +259,12 @@ export function ReviewPage() {
 
       <aside className="min-w-0">
         <section className="rounded-lg border border-border bg-surface px-5 py-4">
-          <h2 className="text-[15px] font-semibold">练一轮薄弱点</h2>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-ink3">
+          <h2 className="text-title font-semibold">练一轮薄弱点</h2>
+          <p className="mt-1 text-aux leading-relaxed text-ink3">
             按策略挑选知识点（重点补薄弱、留一部分探索未测），直接生成一份针对性测验。
           </p>
           <div className="mt-3 grid gap-3">
-            <label className="text-[13px] text-ink2">
+            <label className="text-aux text-ink2">
               目标知识点数（1–50）
               <input
                 type="number"
@@ -261,11 +272,12 @@ export function ReviewPage() {
                 max={50}
                 value={limit}
                 onChange={(e) => setLimit(Math.min(50, Math.max(1, Number(e.target.value) || 1)))}
-                className="ml-2 w-16 rounded-md border border-border2 bg-bg px-2 py-1 text-sm text-ink"
+                className="ml-2 w-16 rounded-md border border-border2 bg-bg px-2 py-1 text-body text-ink"
               />
             </label>
-            <label className="text-[13px] text-ink2">
-              探索比例 {ratio.toFixed(2)}（0=全薄弱，1=全未测）
+            <label className="text-aux text-ink2">
+              探索比例 <span className="font-mono tabular-nums">{ratio.toFixed(2)}</span>
+              （0=全薄弱，1=全未测）
               <input
                 type="range"
                 min={0}
@@ -281,7 +293,7 @@ export function ReviewPage() {
               type="button"
               onClick={() => startReviewQuiz.mutate()}
               disabled={startReviewQuiz.isPending}
-              className="rounded-md bg-accent px-3.5 py-1.5 text-[13px] font-medium text-white disabled:opacity-50"
+              className="btn btn-primary"
             >
               {startReviewQuiz.isPending ? '生成中…' : '生成复习测验'}
             </button>

@@ -37,12 +37,12 @@ export function Drawer({ open, title, onClose, children }: PropsWithChildren<Pro
         className="absolute inset-y-0 right-0 flex w-[440px] max-w-[92vw] flex-col border-l border-border bg-surface"
       >
         <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
-          <div className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-ink">{title}</div>
+          <div className="min-w-0 flex-1 truncate text-body font-semibold text-ink">{title}</div>
           <button
             ref={closeRef}
             type="button"
             onClick={onClose}
-            className="rounded border border-border2 px-2 py-0.5 text-xs text-ink2 hover:text-ink"
+            className="transition-colors duration-150 rounded border border-border2 px-2 py-0.5 text-meta text-ink2 hover:text-ink"
           >
             关闭
           </button>

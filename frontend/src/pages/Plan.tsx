@@ -175,64 +175,69 @@ function GenerateForm({
   return (
     <form onSubmit={submit} className="min-w-0 rounded-lg border border-border bg-surface">
       <div className="flex items-baseline gap-3 px-5 pb-2 pt-4">
-        <h2 className="text-[15px] font-semibold">生成新计划</h2>
-        <span className="text-[12.5px] text-ink3">生成后旧版本自动停用</span>
+        <h2 className="text-title font-semibold">生成新计划</h2>
+        <span className="text-aux text-ink3">生成后旧版本自动停用</span>
       </div>
       <div className="space-y-3 border-t border-border px-5 py-4">
         <label className="block">
-          <span className="mb-1 block text-[13px] text-ink2">考试日期</span>
+          <span className="mb-1 block text-aux text-ink2">考试日期</span>
           <input
             type="date"
             value={examDate}
             min={todayISO()}
             onChange={(e) => setExamDate(e.target.value)}
-            className="h-[34px] w-full rounded-md border border-border2 bg-bg px-2.5 text-[13px] text-ink"
+            className="h-[34px] w-full rounded-md border border-border2 bg-bg px-2.5 text-aux text-ink"
           />
         </label>
         <div className="grid grid-cols-2 gap-3">
           <label className="block min-w-0">
-            <span className="mb-1 block text-[13px] text-ink2">每日分钟数（15–720）</span>
+            <span className="mb-1 block text-aux text-ink2">每日分钟数（15–720）</span>
             <input
               type="number"
               value={dailyMinutes}
               min={15}
               max={720}
               onChange={(e) => setDailyMinutes(Number(e.target.value))}
-              className="h-[34px] w-full rounded-md border border-border2 bg-bg px-2.5 text-[13px] text-ink"
+              className="h-[34px] w-full rounded-md border border-border2 bg-bg px-2.5 text-aux text-ink"
             />
           </label>
           <label className="block min-w-0">
-            <span className="mb-1 block text-[13px] text-ink2">目标分数（0–100）</span>
+            <span className="mb-1 block text-aux text-ink2">目标分数（0–100）</span>
             <input
               type="number"
               value={targetScore}
               min={0}
               max={100}
               onChange={(e) => setTargetScore(Number(e.target.value))}
-              className="h-[34px] w-full rounded-md border border-border2 bg-bg px-2.5 text-[13px] text-ink"
+              className="h-[34px] w-full rounded-md border border-border2 bg-bg px-2.5 text-aux text-ink"
             />
           </label>
         </div>
         {/* fieldset 默认 min-inline-size: min-content，不压成 0 会被最长标题撑破卡片 */}
         <fieldset className="min-w-0">
-          <legend className="mb-1.5 text-[13px] text-ink2">
-            复习范围（叶子节点，共 {leaves.length} 个）
+          <legend className="mb-1.5 text-aux text-ink2">
+            复习范围（叶子节点，共 <span className="font-mono tabular-nums">{leaves.length}</span> 个）
           </legend>
-          <div className="mb-2 flex flex-wrap items-center gap-2 text-[12px] text-ink3">
+          <div className="mb-2 flex flex-wrap items-center gap-2 text-meta text-ink3">
             <span>
-              已选 {selected.size} 个 · 按 8–12 分钟/叶估算约 {estimatedMin}–{estimatedMax} 分钟
+              已选 <span className="font-mono tabular-nums">{selected.size}</span> 个 · 按 8–12
+              分钟/叶估算约{' '}
+              <span className="font-mono tabular-nums">
+                {estimatedMin}–{estimatedMax}
+              </span>{' '}
+              分钟
             </span>
             <button
               type="button"
               onClick={() => setSelected(new Set(suggestedIds))}
-              className="rounded border border-border2 bg-surface px-2 py-0.5 text-[12px] text-accent hover:border-accent"
+              className="transition-colors duration-150 rounded border border-border2 bg-surface px-2 py-0.5 text-meta text-accent hover:border-accent"
             >
-              按时间预算选 {suggestedCount} 个
+              按时间预算选 <span className="font-mono tabular-nums">{suggestedCount}</span> 个
             </button>
             <button
               type="button"
               onClick={() => setSelected(new Set(leaves.map((l) => l.knowledge_node_id)))}
-              className="rounded border border-border2 bg-surface px-2 py-0.5 text-[12px] text-ink2 hover:text-ink"
+              className="transition-colors duration-150 rounded border border-border2 bg-surface px-2 py-0.5 text-meta text-ink2 hover:text-ink"
             >
               全选
             </button>
@@ -241,7 +246,7 @@ function GenerateForm({
             {leaves.map((leaf) => (
               <label
                 key={leaf.knowledge_node_id}
-                className="flex min-w-0 items-center gap-2 text-[13px]"
+                className="flex min-w-0 items-center gap-2 text-aux"
               >
                 <input
                   type="checkbox"
@@ -262,7 +267,7 @@ function GenerateForm({
           </div>
         </fieldset>
         {(formError || generate.isError) && (
-          <div role="alert" className="rounded-md border border-error/40 bg-error-bg px-3 py-2 text-[13px]">
+          <div role="alert" className="rounded-md border border-error/40 bg-error-bg px-3 py-2 text-aux">
             {formError ?? (generate.error instanceof ApiError ? generate.error.displayMessage : String(generate.error))}
             {capacityHint && <p className="mt-1 text-ink2">{capacityHint}</p>}
           </div>
@@ -271,7 +276,7 @@ function GenerateForm({
           <button
             type="submit"
             disabled={generate.isPending}
-            className="rounded-md bg-accent px-3.5 py-1.5 text-[13px] font-medium text-white hover:opacity-90 disabled:opacity-50"
+            className="btn btn-primary"
           >
             {generate.isPending ? '生成中…' : '生成计划'}
           </button>
@@ -279,7 +284,7 @@ function GenerateForm({
             <button
               type="button"
               onClick={onCancel}
-              className="rounded-md border border-border2 bg-surface px-3 py-1.5 text-[13px] text-ink2 hover:text-ink"
+              className="transition-colors duration-150 rounded-md border border-border2 bg-surface px-3 py-1.5 text-aux text-ink2 hover:text-ink"
             >
               收起
             </button>
@@ -303,7 +308,7 @@ function VersionList({
 }) {
   return (
     <section className="overflow-hidden rounded-lg border border-border bg-surface">
-      <div className="px-5 pb-2 pt-4 text-[15px] font-semibold">历史版本</div>
+      <div className="px-5 pb-2 pt-4 text-title font-semibold">历史版本</div>
       {plans.map((p) => {
         const meta = planStatus(p.status)
         return (
@@ -312,19 +317,18 @@ function VersionList({
             type="button"
             onClick={() => onSelect(p.id)}
             aria-current={p.id === selectedId}
-            className={`block w-full border-t border-border px-5 py-2.5 text-left hover:bg-bg ${
-              p.id === selectedId ? 'bg-accent-bg/60' : ''
-            }`}
+            className={`block w-full border-t border-border px-5 py-2.5 text-left row-hover ${ p.id === selectedId ? 'bg-accent-bg/60' : '' }`}
           >
-            <div className="flex items-center gap-2 text-[13.5px]">
+            <div className="flex items-center gap-2 text-body">
               <span className="font-semibold">
                 v{p.version_number}
-                {p.status === 'active' && <span className="ml-1.5 text-[11.5px] font-normal text-success">进行中</span>}
+                {p.status === 'active' && <span className="ml-1.5 text-meta font-normal text-success">进行中</span>}
               </span>
-              <span className="ml-auto font-mono text-xs text-ink2">{p.exam_date}</span>
+              <span className="ml-auto font-mono text-meta text-ink2">{p.exam_date}</span>
             </div>
-            <div className="mt-0.5 text-[12px] text-ink3">
-              每日 {p.daily_minutes} 分钟 · {p.task_count} 项任务 · {meta.label}
+            <div className="mt-0.5 text-meta text-ink3">
+              每日 <span className="font-mono tabular-nums">{p.daily_minutes}</span> 分钟 ·{' '}
+              <span className="font-mono tabular-nums">{p.task_count}</span> 项任务 · {meta.label}
             </div>
           </button>
         )
@@ -362,9 +366,7 @@ function TaskRow({
   return (
     <div
       data-task-id={task.id}
-      className={`flex items-center gap-3 border-t border-border px-5 py-2.5 ${
-        task.status === 'in_progress' ? 'bg-accent-bg/40' : ''
-      }`}
+      className={`flex animate-fade-in items-center gap-3 border-t border-border px-5 py-2.5 ${ task.status === 'in_progress' ? 'bg-accent-bg/40' : 'row-hover' }`}
     >
       <input
         type="checkbox"
@@ -377,20 +379,20 @@ function TaskRow({
       />
       <div className="min-w-0 flex-1">
         <div
-          className={`truncate text-[14px] font-semibold ${done ? 'font-normal text-ink3' : ''}`}
+          className={`truncate text-body font-semibold ${done ? 'font-normal text-ink3' : ''}`}
           title={task.title}
         >
           {task.title}
         </div>
-        <div className="mt-0.5 truncate text-[12px] text-ink3" title={targetNames}>
+        <div className="mt-0.5 truncate text-meta text-ink3" title={targetNames}>
           {taskTypeLabel(task.task_type)}
           {targetNames ? ` · ${targetNames}` : ''}
         </div>
       </div>
-      <span className="w-14 flex-none text-right font-mono text-[12.5px] text-ink2">
+      <span className="w-14 flex-none text-right font-mono text-aux text-ink2">
         {task.estimated_minutes} 分钟
       </span>
-      <span className="flex-none rounded bg-bg px-2 py-0.5 text-[11.5px] text-ink2">
+      <span className="flex-none rounded bg-bg px-2 py-0.5 text-meta text-ink2">
         {meta.label}
       </span>
       {!readonly &&
@@ -400,7 +402,7 @@ function TaskRow({
             type="button"
             disabled={busy}
             onClick={() => onTransition(task.id, to)}
-            className="flex-none rounded border border-border2 px-2 py-0.5 text-[12px] text-accent hover:border-accent disabled:opacity-50"
+            className="transition-colors duration-150 flex-none rounded border border-border2 px-2 py-0.5 text-meta text-accent hover:border-accent disabled:opacity-50"
           >
             {taskTransitionLabel(to)}
           </button>
@@ -451,25 +453,27 @@ function PlanDetailCard({
   return (
     <section className="overflow-hidden rounded-lg border border-border bg-surface">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border px-5 pb-3 pt-4">
-        <h2 className="text-[15px] font-semibold">v{plan.version_number} 计划</h2>
+        <h2 className="text-title font-semibold">v{plan.version_number} 计划</h2>
         <span
-          className={`rounded px-2 py-0.5 text-[11.5px] ${
-            readonly ? 'bg-bg text-ink3' : 'bg-success-bg text-success'
-          }`}
+          className={`rounded px-2 py-0.5 text-meta ${ readonly ? 'bg-bg text-ink3' : 'bg-success-bg text-success' }`}
         >
           {planStatus(plan.status).label}
         </span>
-        <span className="text-[12.5px] text-ink2">
+        <span className="text-aux text-ink2">
           考试日 <b className="font-mono">{plan.exam_date}</b> · {daysLabel(days)}
         </span>
-        <span className="text-[12.5px] text-ink2">
-          每日 {plan.daily_minutes} 分钟 · 目标 {plan.target_score} 分 · 已完成 {doneCount}/
-          {plan.tasks.length} 项
+        <span className="text-aux text-ink2">
+          每日 <span className="font-mono tabular-nums">{plan.daily_minutes}</span> 分钟 · 目标{' '}
+          <span className="font-mono tabular-nums">{plan.target_score}</span> 分 · 已完成{' '}
+          <span className="font-mono tabular-nums">
+            {doneCount}/{plan.tasks.length}
+          </span>{' '}
+          项
         </span>
       </div>
 
       {readonly && (
-        <p className="border-b border-border bg-bg px-5 py-2 text-[12.5px] text-ink3">
+        <p className="border-b border-border bg-bg px-5 py-2 text-aux text-ink3">
           此版本已停用（生成新版本后自动归档），仅供查看。
         </p>
       )}
@@ -481,15 +485,15 @@ function PlanDetailCard({
         return (
           <div key={date} data-date-group={date}>
             <div className="flex items-baseline gap-3 border-t border-border px-5 pb-1.5 pt-3 first:border-t-0">
-              <h3 className="text-[13.5px] font-semibold">
+              <h3 className="text-body font-semibold">
                 {formatDateCN(date)}
                 {date === todayISO() && (
-                  <span className="ml-1.5 rounded bg-accent-bg px-1.5 py-0.5 text-[11px] font-normal text-accent">
+                  <span className="ml-1.5 rounded bg-accent-bg px-1.5 py-0.5 text-micro font-normal text-accent">
                     今天
                   </span>
                 )}
               </h3>
-              <span className="font-mono text-[12px] text-ink2">
+              <span className="font-mono text-meta text-ink2 tabular-nums">
                 合计 {totalMinutes} / {plan.daily_minutes} 分钟
               </span>
               <span className="h-1.5 max-w-40 flex-1 overflow-hidden rounded bg-untested-bg">
@@ -589,12 +593,12 @@ export function PlanPage() {
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_380px] items-start gap-6">
       <div className="min-w-0">
         <div className="mb-3 flex items-center gap-3">
-          <h1 className="text-[22px] font-bold">复习计划</h1>
+          <h1 className="text-page font-semibold">复习计划</h1>
           {!formOpen && (
             <button
               type="button"
               onClick={() => setFormOpen(true)}
-              className="rounded-md border border-border2 bg-surface px-3 py-1 text-[13px] text-accent hover:border-accent"
+              className="transition-colors duration-150 rounded-md border border-border2 bg-surface px-3 py-1 text-aux text-accent hover:border-accent"
             >
               生成新计划
             </button>
@@ -622,7 +626,7 @@ export function PlanPage() {
           />
         )}
 
-        {detail.isLoading && <p className="text-[13px] text-ink3">计划加载中…</p>}
+        {detail.isLoading && <p className="text-aux text-ink3">计划加载中…</p>}
 
         {plans.data && planList.length === 0 && !formOpen && (
           <EmptyState title="还没有复习计划">
@@ -644,7 +648,7 @@ export function PlanPage() {
             onCancel={planList.length > 0 ? () => setFormOpen(false) : undefined}
           />
         )}
-        {plans.isLoading && <p className="text-[13px] text-ink3">版本加载中…</p>}
+        {plans.isLoading && <p className="text-aux text-ink3">版本加载中…</p>}
         {plans.isError && <ErrorNotice error={plans.error} />}
         {planList.length > 0 && (
           <VersionList plans={planList} selectedId={selectedId} onSelect={setSelectedId} />

@@ -24,7 +24,7 @@ interface UploadEntry {
 function StatusDot({ status }: { status: string }) {
   const meta = materialStatus(status)
   return (
-    <span className="flex items-center gap-1.5 text-[12.5px]">
+    <span className="flex items-center gap-1.5 text-aux">
       <span className={`inline-block size-2 flex-none rounded-full ${meta.dot}`} />
       {isPending(status) && <span className="animate-pulse text-ink2">{meta.label}…</span>}
       {!isPending(status) && <span className="text-ink2">{meta.label}</span>}
@@ -97,8 +97,8 @@ export function MaterialsPage() {
     <div>
       <div className="mb-3 flex items-end justify-between">
         <div>
-          <h1 className="text-[22px] font-bold">资料</h1>
-          <p className="mt-0.5 text-[13px] text-ink2">
+          <h1 className="text-page font-semibold">资料</h1>
+          <p className="mt-0.5 text-aux text-ink2">
             {list.length} 份材料 · 支持 PDF / PPTX 课件 · 解析后可搜索原文
           </p>
         </div>
@@ -114,14 +114,14 @@ export function MaterialsPage() {
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="rounded-md bg-accent px-3.5 py-1.5 text-[13px] font-medium text-white"
+          className="btn btn-primary"
         >
           上传课件
         </button>
       </div>
 
       {settings.isError && (
-        <p className="mb-3 text-[12.5px] text-warning">
+        <p className="mb-3 text-aux text-warning">
           未能读取设置（上传大小限制未知）：文件将直接上传，由服务端校验大小。
         </p>
       )}
@@ -135,7 +135,7 @@ export function MaterialsPage() {
       {uploads.length > 0 && (
         <div className="mb-3 grid gap-1.5 rounded-lg border border-border bg-surface px-5 py-3">
           {uploads.map((u, i) => (
-            <div key={`${u.name}-${i}`} className="flex items-center gap-2 text-[13px]">
+            <div key={`${u.name}-${i}`} className="flex items-center gap-2 text-aux">
               <span className="min-w-0 flex-1 truncate text-ink2">{u.name}</span>
               {u.state === 'uploading' && <span className="text-ink3">上传中…</span>}
               {u.state === 'ok' && (
@@ -149,7 +149,7 @@ export function MaterialsPage() {
 
       {materials.isError && <ErrorNotice error={materials.error} />}
 
-      {materials.isLoading && <p className="text-[13px] text-ink3">加载中…</p>}
+      {materials.isLoading && <p className="text-aux text-ink3">加载中…</p>}
 
       {!materials.isLoading && list.length === 0 && (
         <EmptyState title="这门课还没有资料">
@@ -162,16 +162,16 @@ export function MaterialsPage() {
           {list.map((m) => (
             <div
               key={m.id}
-              className="group flex items-center gap-4 border-t border-border px-5 py-3 first:border-t-0 hover:bg-bg focus-within:bg-bg"
+              className="group flex items-center gap-4 border-t border-border px-5 py-3 first:border-t-0 row-hover focus-within:bg-bg"
             >
               <div className="min-w-0 flex-1">
                 <Link
                   to={`/courses/${courseId}/materials/${m.id}`}
-                  className="truncate text-[14px] font-semibold text-ink no-underline hover:text-accent"
+                  className="transition-colors duration-150 truncate text-body font-semibold text-ink no-underline hover:text-accent"
                 >
                   {m.filename}
                 </Link>
-                <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12.5px] text-ink3">
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-aux text-ink3">
                   <span>{formatBytes(m.size_bytes)}</span>
                   {m.page_count != null && m.page_count > 0 && <span>{m.page_count} 页</span>}
                   {m.chunk_count > 0 && <span>{m.chunk_count} 个片段</span>}
@@ -186,7 +186,7 @@ export function MaterialsPage() {
                 </div>
               </div>
               <StatusDot status={m.status} />
-              <span className="flex flex-none gap-3 text-xs text-ink3 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+              <span className="flex flex-none gap-3 text-meta text-ink3 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                 <button type="button" className="text-error" onClick={() => setDeleting(m)}>
                   删除
                 </button>

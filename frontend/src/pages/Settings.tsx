@@ -14,8 +14,8 @@ import { settingsReturnTo } from '../lib/navigation'
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-baseline gap-4 border-t border-border px-5 py-2.5 first:border-t-0">
-      <span className="w-36 flex-none text-[13px] text-ink2">{label}</span>
-      <span className="min-w-0 flex-1 break-all font-mono text-[13px] text-ink">{children}</span>
+      <span className="w-36 flex-none text-aux text-ink2">{label}</span>
+      <span className="min-w-0 flex-1 break-all font-mono text-aux text-ink">{children}</span>
     </div>
   )
 }
@@ -23,7 +23,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="overflow-hidden rounded-lg border border-border bg-surface">
-      <h2 className="px-5 pb-2 pt-4 text-[15px] font-semibold">{title}</h2>
+      <h2 className="px-5 pb-2 pt-4 text-title font-semibold">{title}</h2>
       <div className="pb-2">{children}</div>
     </section>
   )
@@ -85,27 +85,27 @@ function ModelCard({ settings }: { settings: Settings }) {
     <Card title="模型服务">
       <form onSubmit={submit} className="space-y-3 border-t border-border px-5 py-4">
         <label className="block">
-          <span className="mb-1 block text-[13px] text-ink2">服务地址（OpenAI 兼容 base URL）</span>
+          <span className="mb-1 block text-aux text-ink2">服务地址（OpenAI 兼容 base URL）</span>
           <input
             type="text"
             value={shownBase}
             onChange={(e) => setBaseUrl(e.target.value)}
             placeholder="https://api.deepseek.com"
-            className="h-[34px] w-full rounded-md border border-border2 bg-bg px-2.5 font-mono text-[13px] text-ink"
+            className="h-[34px] w-full rounded-md border border-border2 bg-bg px-2.5 font-mono text-aux text-ink"
           />
         </label>
         <label className="block">
-          <span className="mb-1 block text-[13px] text-ink2">模型名</span>
+          <span className="mb-1 block text-aux text-ink2">模型名</span>
           <input
             type="text"
             value={shownModel}
             onChange={(e) => setModel(e.target.value)}
             placeholder="deepseek-chat"
-            className="h-[34px] w-full rounded-md border border-border2 bg-bg px-2.5 font-mono text-[13px] text-ink"
+            className="h-[34px] w-full rounded-md border border-border2 bg-bg px-2.5 font-mono text-aux text-ink"
           />
         </label>
         <label className="block">
-          <span className="mb-1 block text-[13px] text-ink2">API Key（可选，保存在本机）</span>
+          <span className="mb-1 block text-aux text-ink2">API Key（可选，保存在本机）</span>
           <div className="flex items-center gap-2">
             <input
               type={showApiKey ? 'text' : 'password'}
@@ -114,25 +114,25 @@ function ModelCard({ settings }: { settings: Settings }) {
               placeholder={settings.llm_auth_configured ? '已配置；留空则不修改' : 'sk-...'}
               autoComplete="new-password"
               spellCheck={false}
-              className="h-[34px] min-w-0 flex-1 rounded-md border border-border2 bg-bg px-2.5 font-mono text-[13px] text-ink"
+              className="h-[34px] min-w-0 flex-1 rounded-md border border-border2 bg-bg px-2.5 font-mono text-aux text-ink"
             />
             <button
               type="button"
               onClick={() => setShowApiKey((value) => !value)}
-              className="h-[34px] flex-none rounded-md border border-border2 px-3 text-[13px] text-ink2 hover:bg-bg"
+              className="h-[34px] flex-none rounded-md border border-border2 px-3 text-aux text-ink2 row-hover"
             >
               {showApiKey ? '隐藏' : '显示'}
             </button>
           </div>
         </label>
         {shownBase !== '' && !baseLooksValid && (
-          <p className="text-[12.5px] text-error">服务地址需以 http:// 、https:// 或 mock:// 开头</p>
+          <p className="text-aux text-error">服务地址需以 http:// 、https:// 或 mock:// 开头</p>
         )}
         <div className="flex items-center gap-3">
           <button
             type="submit"
             disabled={!dirty || !trimmedBase || !trimmedModel || !baseLooksValid || busy}
-            className="rounded-md bg-accent px-3.5 py-1.5 text-[13px] font-medium text-white hover:opacity-90 disabled:opacity-50"
+            className="btn btn-primary"
           >
             {save.isPending ? '保存中…' : '保存'}
           </button>
@@ -141,21 +141,21 @@ function ModelCard({ settings }: { settings: Settings }) {
               type="button"
               onClick={() => setConfirmClearKey(true)}
               disabled={busy}
-              className="rounded-md border border-border2 px-3.5 py-1.5 text-[13px] text-ink2 hover:bg-bg disabled:opacity-50"
+              className="rounded-md border border-border2 px-3.5 py-1.5 text-aux text-ink2 row-hover disabled:opacity-50"
             >
               {clearKey.isPending ? '清除中…' : '清除本机 Key'}
             </button>
           )}
           {save.isSuccess && !dirty && (
-            <span className="text-[12.5px] text-success">已保存，下一次出题/材料解析即使用新配置</span>
+            <span className="text-aux text-success">已保存，下一次出题/材料解析即使用新配置</span>
           )}
           {clearKey.isSuccess && !keyIsLocal && (
-            <span className="text-[12.5px] text-success">已清除本机保存的 Key</span>
+            <span className="text-aux text-success">已清除本机保存的 Key</span>
           )}
         </div>
         {save.isError && <ErrorNotice error={save.error} />}
         {clearKey.isError && <ErrorNotice error={clearKey.error} />}
-        <p className="text-[12.5px] leading-relaxed text-ink3">
+        <p className="text-aux leading-relaxed text-ink3">
           Key 只写入本机数据目录的 <code className="font-mono">local_secrets.json</code>
           （与数据库同目录），不写日志，也不会被{' '}
           <code className="font-mono">GET /api/settings</code> 返回；模型请求只会发给你在上方填写的服务地址。
@@ -203,18 +203,18 @@ export function SettingsPage() {
     <AppShell>
     <div className="mx-auto max-w-[760px]">
       <div className="mb-3 flex items-baseline gap-3">
-        <h1 className="text-[22px] font-bold">设置</h1>
-        <Link to={returnTo} className="text-[13px] text-accent">
+        <h1 className="text-page font-semibold">设置</h1>
+        <Link to={returnTo} className="text-aux text-accent">
           {hasOrigin ? '← 返回上一页' : '← 返回我的课程'}
         </Link>
       </div>
 
       <div className="flex flex-col gap-4">
-        {settings.isLoading && <p className="text-[13px] text-ink3">加载中…</p>}
+        {settings.isLoading && <p className="text-aux text-ink3">加载中…</p>}
         {settings.isError && <ErrorNotice error={settings.error} />}
 
         {demo && (
-          <div className="rounded-lg border border-warning-border bg-warning-bg px-5 py-3 text-[13px] leading-relaxed">
+          <div className="rounded-lg border border-warning-border bg-warning-bg px-5 py-3 text-aux leading-relaxed">
             <b className="font-semibold text-warning">当前为演示模式</b>
             （llm_base_url 以 <code className="font-mono">mock://</code> 开头）：材料解析、出题与批改全部由内置假模型即时生成，
             不消耗 API 配额，页面顶部会显示演示横幅。要切换到真实模型，在下方「模型服务」里修改服务地址、模型名并填入
@@ -237,7 +237,7 @@ export function SettingsPage() {
         )}
 
         <Card title="服务健康">
-          {health.isLoading && <p className="px-5 pb-3 text-[13px] text-ink3">检查中…</p>}
+          {health.isLoading && <p className="px-5 pb-3 text-aux text-ink3">检查中…</p>}
           {health.isError && (
             <div className="px-5 pb-3">
               <ErrorNotice error={health.error} />
@@ -256,7 +256,7 @@ export function SettingsPage() {
           )}
         </Card>
 
-        <p className="px-1 text-[12.5px] leading-relaxed text-ink3">
+        <p className="px-1 text-aux leading-relaxed text-ink3">
           数据库连接串与存储路径属于服务器配置，不在页面上展示。
         </p>
       </div>

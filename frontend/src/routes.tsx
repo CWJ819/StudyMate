@@ -37,7 +37,7 @@ function CourseLayout() {
   if (course.isError) {
     return (
       <AppShell>
-        <p className="rounded-md border border-error/40 bg-error-bg px-4 py-3 text-[14px] text-ink">
+        <p className="rounded-md border border-error/40 bg-error-bg px-4 py-3 text-body text-ink">
           课程不存在或已删除。<a href="#/" className="text-accent">返回我的课程</a>
         </p>
       </AppShell>

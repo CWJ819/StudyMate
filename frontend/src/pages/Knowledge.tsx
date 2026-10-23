@@ -100,7 +100,7 @@ function SourceItem({ source }: { source: KnowledgeSource }) {
     <div>
       <button
         type="button"
-        className="flex w-fit items-center gap-1.5 text-left text-[13px] text-accent hover:underline"
+        className="flex w-fit items-center gap-1.5 text-left text-aux text-accent hover:underline"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-controls={panelId}
@@ -111,17 +111,17 @@ function SourceItem({ source }: { source: KnowledgeSource }) {
         <span>
           {source.filename} · 第 {source.page_number} {pageWord(source.filename)}
         </span>
-        <span className="flex-none text-[11.5px] text-ink3">{open ? '收起原文' : '展开原文'}</span>
+        <span className="flex-none text-meta text-ink3">{open ? '收起原文' : '展开原文'}</span>
       </button>
       {open && (
         <div
           id={panelId}
-          className="ml-5 mt-1.5 rounded-md border border-border bg-quote-bg px-3.5 py-2.5"
+          className="ml-5 mt-1.5 animate-fade-in rounded-md border border-border bg-quote-bg px-3.5 py-2.5"
         >
-          {chunk.isLoading && <p className="text-[13px] text-ink3">加载中…</p>}
+          {chunk.isLoading && <p className="text-aux text-ink3">加载中…</p>}
           {chunk.isError && <ErrorNotice error={chunk.error} />}
           {chunk.data && (
-            <p className="whitespace-pre-wrap text-[13.5px] leading-[1.7] text-ink">
+            <p className="whitespace-pre-wrap text-body leading-[1.7] text-ink">
               {chunk.data.text}
             </p>
           )}
@@ -186,9 +186,9 @@ function findPath(
 }
 
 /** 掌握度叠加（估计值·依据次数，未测验灰）；树行与平铺兜底行共用 */
-function MasteryBadge({ m }: { m?: MasteryState }) {  if (!m) return <span className="flex-none text-[11px] text-ink3">未测验</span>
+function MasteryBadge({ m }: { m?: MasteryState }) {  if (!m) return <span className="flex-none text-micro text-ink3">未测验</span>
   return (
-    <span className="flex flex-none items-center gap-1 font-mono text-[11.5px] text-ink2">
+    <span className="flex flex-none items-center gap-1 font-mono text-meta text-ink2">
       <span className="inline-block h-1.5 w-10 overflow-hidden rounded-sm bg-untested-bg">
         <span
           className="block h-full bg-accent"
@@ -242,11 +242,7 @@ function FlatLeafRow({
   const source = node.sources[0]
   return (
     <div
-      className={`flex cursor-pointer items-center gap-1.5 border-l-2 py-[3px] pr-3 text-[12.5px] ${
-        selectedId === node.knowledge_node_id
-          ? 'border-accent bg-accent-bg/60 font-medium'
-          : 'border-transparent hover:bg-bg'
-      }`}
+      className={`flex cursor-pointer items-center gap-1.5 border-l-2 py-[3px] pr-3 text-aux ${ selectedId === node.knowledge_node_id ? 'border-accent bg-accent-bg/60 font-medium' : 'border-transparent row-hover' }`}
       style={{ paddingLeft: '26px' }}
       onClick={() => onSelect(node.knowledge_node_id)}
       role="treeitem"
@@ -254,12 +250,12 @@ function FlatLeafRow({
     >
       <span className="min-w-0 flex-1 truncate" title={node.title}>
         {node.section_label && !labelDuplicatesTitle(node.section_label, node.title) && (
-          <span className="mr-1 font-mono text-[11px] text-ink3">{node.section_label}</span>
+          <span className="mr-1 font-mono text-micro text-ink3">{node.section_label}</span>
         )}
         <span className="align-baseline">{node.title}</span>
       </span>
       {source && (
-        <span className="flex-none font-mono text-[10.5px] text-ink3">P{source.page_number}</span>
+        <span className="flex-none font-mono text-micro text-ink3">P{source.page_number}</span>
       )}
       <MasteryBadge m={m} />
     </div>
@@ -295,9 +291,9 @@ function FlatGroupBlock({
         type="button"
         onClick={onToggle}
         aria-expanded={open}
-        className="flex w-full items-center gap-1.5 border-l-2 border-transparent px-3 py-1.5 text-left text-[13px] font-semibold text-ink hover:bg-bg"
+        className="flex w-full items-center gap-1.5 border-l-2 border-transparent px-3 py-1.5 text-left text-aux font-semibold text-ink row-hover"
       >
-        <span aria-hidden="true" className="w-3.5 flex-none text-xs text-ink3">
+        <span aria-hidden="true" className="w-3.5 flex-none text-meta text-ink3">
           {open ? '▾' : '▸'}
         </span>
         <span className="min-w-0 flex-1 truncate" title={group.filename}>
@@ -306,7 +302,7 @@ function FlatGroupBlock({
           </span>
           {group.filename}
         </span>
-        <span className="flex-none font-mono text-[11px] text-ink3">
+        <span className="flex-none font-mono text-micro text-ink3">
           {group.leaves.length} 个{tested > 0 ? ` · 已测 ${tested}` : ''}
         </span>
       </button>
@@ -325,7 +321,7 @@ function FlatGroupBlock({
             <button
               type="button"
               onClick={onShowAll}
-              className="block w-full border-l-2 border-transparent py-1 pr-3 text-left text-[11.5px] text-accent hover:bg-bg"
+              className="block w-full border-l-2 border-transparent py-1 pr-3 text-left text-meta text-accent row-hover"
               style={{ paddingLeft: '42px' }}
             >
               展开其余 {rest} 条 ▾
@@ -341,7 +337,7 @@ function FlatGroupBlock({
 function ScoreBar({ value, label = '重要度' }: { value: number; label?: string }) {
   return (
     <span
-      className="flex flex-none items-center gap-1 font-mono text-[10.5px] text-ink3"
+      className="flex flex-none items-center gap-1 font-mono text-micro text-ink3"
       title={`${label}（估计值） ${value.toFixed(2)}`}
     >
       <span className="inline-block h-1 w-7 overflow-hidden rounded-sm bg-untested-bg">
@@ -388,11 +384,7 @@ function TreeRow({
   return (
     <div>
       <div
-        className={`flex cursor-pointer items-center gap-1.5 border-l-2 py-1 pr-3 text-[13.5px] ${
-          selectedId === node.knowledge_node_id
-            ? 'border-accent bg-accent-bg/60 font-medium'
-            : 'border-transparent hover:bg-bg'
-        }`}
+        className={`flex cursor-pointer items-center gap-1.5 border-l-2 py-1 pr-3 text-body ${ selectedId === node.knowledge_node_id ? 'border-accent bg-accent-bg/60 font-medium' : 'border-transparent row-hover' }`}
         style={{ paddingLeft: `${depth * 18 + 8}px` }}
         onClick={() => onSelect(node.knowledge_node_id)}
         role="treeitem"
@@ -402,7 +394,7 @@ function TreeRow({
         {hasChildren ? (
           <button
             type="button"
-            className="w-4 flex-none text-xs text-ink3 hover:text-ink"
+            className="transition-colors duration-150 w-4 flex-none text-meta text-ink3 hover:text-ink"
             onClick={(e) => {
               e.stopPropagation()
               onToggle(node.knowledge_node_id)
@@ -412,11 +404,11 @@ function TreeRow({
             {isOpen ? '▾' : '▸'}
           </button>
         ) : (
-          <span className="w-4 flex-none text-center text-[10px] text-ink3">·</span>
+          <span className="w-4 flex-none text-center text-micro text-ink3">·</span>
         )}
         <span className="min-w-0 flex-1 truncate" title={node.title}>
           {node.section_label && !labelDuplicatesTitle(node.section_label, node.title) && (
-            <span className="mr-1 font-mono text-[12px] text-ink3">{node.section_label}</span>
+            <span className="mr-1 font-mono text-meta text-ink3">{node.section_label}</span>
           )}
           <span className="align-baseline">{node.title}</span>
         </span>
@@ -424,20 +416,20 @@ function TreeRow({
           <ScoreBar value={node.importance} />
         ) : (
           <span
-            className="flex-none rounded-full bg-accent-bg px-1.5 py-0.5 font-mono text-[10.5px] text-accent"
+            className="flex-none rounded-full bg-accent-bg px-1.5 py-0.5 font-mono text-micro text-accent"
             title={`后代最高重要度（估计值） ${node.importance.toFixed(2)}`}
           >
             重要度 {node.importance.toFixed(2)}
           </span>
         )}
         {node.is_leaf && node.sources[0] && (
-          <span className="flex-none font-mono text-[10.5px] text-ink3">
+          <span className="flex-none font-mono text-micro text-ink3">
             P{node.sources[0].page_number}
           </span>
         )}
         {node.is_leaf && <MasteryBadge m={m} />}
         {hasChildren && (
-          <span className="flex-none font-mono text-[11px] text-ink3">
+          <span className="flex-none font-mono text-micro text-ink3">
             {children.length} 个{tested > 0 ? ` · 已测 ${tested}` : ''}
           </span>
         )}
@@ -462,7 +454,7 @@ function TreeRow({
             <button
               type="button"
               onClick={() => onToggleFull(node.knowledge_node_id)}
-              className="block border-l-2 border-transparent py-1 pr-3 text-left text-[11.5px] text-accent hover:bg-bg"
+              className="block border-l-2 border-transparent py-1 pr-3 text-left text-meta text-accent row-hover"
               style={{ paddingLeft: `${depth * 18 + 26}px` }}
             >
               展开其余 {rest} 条 ▾
@@ -491,10 +483,10 @@ function ContainerSummary({
   return (
     <div className="mb-4 rounded-lg border border-border bg-bg px-4 py-3">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="min-w-0 truncate text-[17px] font-bold" title={node.title}>
+        <h2 className="min-w-0 truncate text-title font-semibold" title={node.title}>
           {node.title}
         </h2>
-        <span className="flex-none font-mono text-[11.5px] text-ink3">
+        <span className="flex-none font-mono text-meta text-ink3">
           {sections.length} 个小节 · {countLeaves(node)} 个知识点
           {tested > 0 ? ` · 已测 ${tested}` : ''}
         </span>
@@ -506,12 +498,12 @@ function ContainerSummary({
               key={child.knowledge_node_id}
               type="button"
               onClick={() => onSelect(child.knowledge_node_id)}
-              className="flex items-center gap-2 rounded px-2 py-1 text-left text-[12.5px] text-ink2 hover:bg-surface"
+              className="transition-colors duration-150 flex items-center gap-2 rounded px-2 py-1 text-left text-aux text-ink2 hover:bg-surface"
             >
               <span className="min-w-0 flex-1 truncate" title={child.title}>
                 {child.title}
               </span>
-              <span className="flex-none font-mono text-[11px] text-ink3">
+              <span className="flex-none font-mono text-micro text-ink3">
                 {countLeaves(child)} 个 · 已测 {countTested(child, mastery)}
               </span>
             </button>
@@ -519,7 +511,7 @@ function ContainerSummary({
         </div>
       )}
       {directLeaves > 0 && (
-        <p className="mt-1.5 text-[11.5px] text-ink3">
+        <p className="mt-1.5 text-meta text-ink3">
           另有 {directLeaves} 个知识点直接挂在章下，展开左侧树即可查看。
         </p>
       )}
@@ -541,7 +533,7 @@ function NodeDetail({
     queryFn: () => getKnowledgeNode(nodeId),
   })
   if (detail.isError) return <ErrorNotice error={detail.error} />
-  if (detail.isLoading || !detail.data) return <p className="text-[13px] text-ink3">加载中…</p>
+  if (detail.isLoading || !detail.data) return <p className="text-aux text-ink3">加载中…</p>
   const d = detail.data
   const reasons = contributionReasons(score?.components, IMPORTANCE_WEIGHTS)
   return (
@@ -549,18 +541,18 @@ function NodeDetail({
       {!hideHeading && (
         <>
           {d.section_label && !labelDuplicatesTitle(d.section_label, d.title) && (
-            <div className="text-[12px] font-mono text-ink3">{d.section_label}</div>
+            <div className="text-meta font-mono text-ink3">{d.section_label}</div>
           )}
-          <h2 className="mt-0.5 text-[18px] font-bold">{d.title}</h2>
+          <h2 className="mt-0.5 text-title font-semibold">{d.title}</h2>
         </>
       )}
       {d.content && (
-        <p className="mt-2 whitespace-pre-wrap rounded-md bg-quote-bg px-4 py-3 text-[13.5px] leading-[1.7] text-ink">
+        <p className="mt-2 whitespace-pre-wrap rounded-md bg-quote-bg px-4 py-3 text-body leading-[1.7] text-ink">
           {d.content}
         </p>
       )}
       {d.aliases && d.aliases.length > 0 && (
-        <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11.5px] text-ink3">
+        <div className="mt-3 flex flex-wrap items-center gap-1.5 text-meta text-ink3">
           <span>别名</span>
           {d.aliases.map((alias) => (
             <span
@@ -574,12 +566,12 @@ function NodeDetail({
       )}
       {score && (
         <div className="mt-4 rounded-md border border-border bg-bg px-3.5 py-3">
-          <h3 className="text-[13px] font-semibold text-ink2">学习优先级（估计值）</h3>
+          <h3 className="text-aux font-semibold text-ink2">学习优先级（估计值）</h3>
           <div className="mt-2 grid grid-cols-2 gap-3">
             <div>
-              <div className="text-[11.5px] text-ink3">重要度</div>
+              <div className="text-meta text-ink3">重要度</div>
               <div className="flex items-center gap-2">
-                <span className="font-mono text-[20px] font-bold text-accent">
+                <span className="font-mono text-stat font-bold text-accent">
                   {score.importance.toFixed(2)}
                 </span>
                 <span className="h-1.5 w-16 overflow-hidden rounded-sm bg-untested-bg">
@@ -591,9 +583,9 @@ function NodeDetail({
               </div>
             </div>
             <div>
-              <div className="text-[11.5px] text-ink3">难度</div>
+              <div className="text-meta text-ink3">难度</div>
               <div className="flex items-center gap-2">
-                <span className="font-mono text-[20px] font-bold text-ink">
+                <span className="font-mono text-stat font-bold text-ink">
                   {score.difficulty.toFixed(2)}
                 </span>
                 <span className="h-1.5 w-16 overflow-hidden rounded-sm bg-untested-bg">
@@ -610,7 +602,7 @@ function NodeDetail({
               {reasons.map((reason) => (
                 <span
                   key={reason.key}
-                  className="rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] text-ink3"
+                  className="rounded-full border border-border bg-surface px-2 py-0.5 text-micro text-ink3"
                   title={`${reason.label} · 原值 ${reason.value.toFixed(2)} · 归一化 — · 贡献 ${reason.weighted.toFixed(3)}`}
                 >
                   {reason.label} 贡献 {reason.weighted.toFixed(3)}
@@ -618,14 +610,14 @@ function NodeDetail({
               ))}
             </div>
           )}
-          <p className="mt-2 text-[11px] text-ink3">
+          <p className="mt-2 text-micro text-ink3">
             分数为工程估计值，依据抽取出处与关系证据，不代表教材语义重要性。
           </p>
         </div>
       )}
       {d.sources.length > 0 && (
         <div className="mt-4">
-          <h3 className="text-[13px] font-semibold text-ink2">出处（{d.sources.length}）</h3>
+          <h3 className="text-aux font-semibold text-ink2">出处（{d.sources.length}）</h3>
           <div className="mt-1 grid gap-1">
             {d.sources.map((s, i) => (
               <SourceItem key={`${s.chunk_id}-${i}`} source={s} />
@@ -635,15 +627,15 @@ function NodeDetail({
       )}
       {d.relations.length > 0 && (
         <div className="mt-4">
-          <h3 className="text-[13px] font-semibold text-ink2">关联</h3>
-          <div className="mt-1 grid gap-1 text-[13px] text-ink2">
+          <h3 className="text-aux font-semibold text-ink2">关联</h3>
+          <div className="mt-1 grid gap-1 text-aux text-ink2">
             {d.relations.map((r, i) => (
               <div key={i}>
-                <span className="mr-1.5 rounded bg-untested-bg px-1.5 py-0.5 text-[11.5px] text-ink3">
+                <span className="mr-1.5 rounded bg-untested-bg px-1.5 py-0.5 text-meta text-ink3">
                   {r.relation_type}
                 </span>
                 {r.target_title}
-                <span className="ml-1 text-[11.5px] text-ink3">置信 {r.confidence.toFixed(2)}</span>
+                <span className="ml-1 text-meta text-ink3">置信 {r.confidence.toFixed(2)}</span>
               </div>
             ))}
           </div>
@@ -673,8 +665,8 @@ function HighlightsPanel({
     <section className="rounded-lg border border-border bg-surface">
       <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3">
         <div>
-          <h2 className="text-[15px] font-semibold">重难点</h2>
-          <p className="mt-0.5 text-[11.5px] text-ink3">按读取时评分排序；分数是工程估计值，不是教材语义重要性。</p>
+          <h2 className="text-title font-semibold">重难点</h2>
+          <p className="mt-0.5 text-meta text-ink3">按读取时评分排序；分数是工程估计值，不是教材语义重要性。</p>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <div className="flex rounded-md border border-border p-0.5" role="group" aria-label="排序">
@@ -684,9 +676,7 @@ function HighlightsPanel({
                 type="button"
                 aria-pressed={order === value}
                 onClick={() => setOrder(value)}
-                className={`rounded px-2 py-1 text-[11.5px] ${
-                  order === value ? 'bg-accent-bg text-accent' : 'text-ink3 hover:text-ink'
-                }`}
+                className={`transition-colors duration-150 rounded px-2 py-1 text-meta ${ order === value ? 'bg-accent-bg text-accent' : 'text-ink3 hover:text-ink' }`}
               >
                 {value === 'importance' ? '重要度' : value === 'difficulty' ? '难度' : '掌握缺口'}
               </button>
@@ -696,7 +686,7 @@ function HighlightsPanel({
             aria-label="显示数量"
             value={limit}
             onChange={(event) => setLimit(Number(event.target.value))}
-            className="rounded-md border border-border bg-surface px-2 py-1 text-[11.5px] text-ink2"
+            className="rounded-md border border-border bg-surface px-2 py-1 text-meta text-ink2"
           >
             {[10, 20, 50].map((value) => (
               <option key={value} value={value}>
@@ -720,25 +710,25 @@ function HighlightsPanel({
         </div>
       )}
       {highlights.data && highlights.data.items.length > 0 && (
-        <div className="divide-y divide-border">
+        <div className="divide-y divide-border animate-fade-in">
           {highlights.data.items.map((item, index) => {
             const gap = item.importance * (1 - (item.mastery_estimate ?? 0))
             const reasons = item.reasons ?? []
             return (
-              <div key={item.knowledge_node_id} className="flex items-start gap-3 px-4 py-2.5 text-[13px]">
-                <span className="w-6 flex-none pt-0.5 text-right font-mono text-[11.5px] text-ink3">
+              <div key={item.knowledge_node_id} className="flex items-start gap-3 px-4 py-2.5 text-aux">
+                <span className="w-6 flex-none pt-0.5 text-right font-mono text-meta text-ink3">
                   {index + 1}
                 </span>
                 <div className="min-w-0 flex-1">
                   <button
                     type="button"
                     onClick={() => onPick(item.knowledge_node_id)}
-                    className="block max-w-full truncate text-left font-medium text-ink hover:text-accent"
+                    className="transition-colors duration-150 block max-w-full truncate text-left font-medium text-ink hover:text-accent"
                     title={item.title}
                   >
                     {item.title}
                   </button>
-                  <div className="mt-0.5 truncate text-[11px] text-ink3" title={item.section_path.join(' > ')}>
+                  <div className="mt-0.5 truncate text-micro text-ink3" title={item.section_path.join(' > ')}>
                     {item.section_path.join(' > ')}
                   </div>
                 </div>
@@ -746,19 +736,19 @@ function HighlightsPanel({
                   <ScoreBar value={item.importance} label="重要度" />
                   <ScoreBar value={item.difficulty} label="难度" />
                   {item.untested || item.mastery_estimate == null ? (
-                    <span className="flex-none rounded-full bg-untested-bg px-2 py-0.5 text-[11px] text-ink3">
+                    <span className="flex-none rounded-full bg-untested-bg px-2 py-0.5 text-micro text-ink3">
                       未测验
                     </span>
                   ) : (
                     <span
-                      className="flex-none rounded-full bg-surface px-2 py-0.5 font-mono text-[11px] text-ink2"
+                      className="flex-none rounded-full bg-surface px-2 py-0.5 font-mono text-micro text-ink2"
                       title={`掌握度 ${item.mastery_estimate.toFixed(2)} · 证据 ${item.evidence_count} 条`}
                     >
                       缺口 {gap.toFixed(2)} · 证据 {item.evidence_count}
                     </span>
                   )}
                   <span
-                    className="flex-none cursor-help text-[11px] text-ink3"
+                    className="flex-none cursor-help text-micro text-ink3"
                     title={reasons
                       .map(
                         (reason) =>
@@ -775,7 +765,7 @@ function HighlightsPanel({
         </div>
       )}
       {highlights.data && (
-        <div className="border-t border-border px-4 py-3 text-[11.5px] leading-relaxed text-ink3">
+        <div className="border-t border-border px-4 py-3 text-meta leading-relaxed text-ink3">
           重要度权重：
           {Object.entries(highlights.data.basis.weights.importance)
             .map(([key, value]) => `${COMPONENT_LABELS[key] ?? key} ${value}`)
@@ -814,8 +804,8 @@ function GraphPanel({ courseId, onPick }: { courseId: string; onPick: (id: strin
   return (
     <section className="rounded-lg border border-border bg-surface">
       <div className="border-b border-border px-4 py-3">
-        <h2 className="text-[15px] font-semibold">关系图</h2>
-        <p className="mt-0.5 text-[11.5px] text-ink3">
+        <h2 className="text-title font-semibold">关系图</h2>
+        <p className="mt-0.5 text-meta text-ink3">
           只展示构建时产出的关系边；关系来自同一次抽取，只连接同一窗口内的叶子。
         </p>
         <div className="mt-2.5 flex flex-wrap gap-1.5">
@@ -823,9 +813,7 @@ function GraphPanel({ courseId, onPick }: { courseId: string; onPick: (id: strin
             type="button"
             aria-pressed={type === 'all'}
             onClick={() => setType('all')}
-            className={`rounded-full border px-2.5 py-1 text-[11.5px] ${
-              type === 'all' ? 'border-accent bg-accent-bg text-accent' : 'border-border text-ink2'
-            }`}
+            className={`rounded-full border px-2.5 py-1 text-meta ${ type === 'all' ? 'border-accent bg-accent-bg text-accent' : 'border-border text-ink2' }`}
           >
             全部 {graph.data?.edges.length ?? 0}
           </button>
@@ -835,9 +823,7 @@ function GraphPanel({ courseId, onPick }: { courseId: string; onPick: (id: strin
               type="button"
               aria-pressed={type === value}
               onClick={() => setType(value)}
-              className={`rounded-full border px-2.5 py-1 text-[11.5px] ${
-                type === value ? 'border-accent bg-accent-bg text-accent' : 'border-border text-ink2'
-              }`}
+              className={`rounded-full border px-2.5 py-1 text-meta ${ type === value ? 'border-accent bg-accent-bg text-accent' : 'border-border text-ink2' }`}
             >
               {RELATION_TYPE_LABELS[value]} {typeCounts.get(value) ?? 0}
             </button>
@@ -859,37 +845,37 @@ function GraphPanel({ courseId, onPick }: { courseId: string; onPick: (id: strin
           </EmptyState>
         </div>
       )}
-      <div className="divide-y divide-border">
+      <div className="divide-y divide-border animate-fade-in">
         {edges.map((edge, index) => {
           const source = nodeMap.get(edge.source)
           const target = nodeMap.get(edge.target)
           const key = `${edge.source}-${edge.target}-${edge.relation_type}-${index}`
           const evidenceOpen = openEvidence.has(key)
           return (
-            <div key={key} className="px-4 py-2.5 text-[12.5px]">
+            <div key={key} className="px-4 py-2.5 text-aux">
               <div className="flex flex-wrap items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => onPick(edge.source)}
-                  className="max-w-[220px] truncate rounded-full border border-border bg-bg px-2 py-0.5 text-ink2 hover:text-accent"
+                  className="transition-colors duration-150 max-w-[220px] truncate rounded-full border border-border bg-bg px-2 py-0.5 text-ink2 hover:text-accent"
                   title={source?.title ?? edge.source}
                 >
                   {source?.title ?? edge.source}
                 </button>
                 <span className="text-ink3">→</span>
-                <span className="rounded bg-untested-bg px-1.5 py-0.5 text-[10.5px] text-ink3">
+                <span className="rounded bg-untested-bg px-1.5 py-0.5 text-micro text-ink3">
                   {RELATION_TYPE_LABELS[edge.relation_type] ?? edge.relation_type}
                 </span>
                 <span className="text-ink3">→</span>
                 <button
                   type="button"
                   onClick={() => onPick(edge.target)}
-                  className="max-w-[220px] truncate rounded-full border border-border bg-bg px-2 py-0.5 text-ink2 hover:text-accent"
+                  className="transition-colors duration-150 max-w-[220px] truncate rounded-full border border-border bg-bg px-2 py-0.5 text-ink2 hover:text-accent"
                   title={target?.title ?? edge.target}
                 >
                   {target?.title ?? edge.target}
                 </button>
-                <span className="ml-auto flex items-center gap-1 font-mono text-[10.5px] text-ink3">
+                <span className="ml-auto flex items-center gap-1 font-mono text-micro text-ink3">
                   置信
                   <span className="inline-block h-1 w-10 overflow-hidden rounded-sm bg-untested-bg">
                     <span
@@ -904,7 +890,7 @@ function GraphPanel({ courseId, onPick }: { courseId: string; onPick: (id: strin
                 <div className="mt-1 pl-1">
                   <button
                     type="button"
-                    className="text-[11px] text-accent hover:underline"
+                    className="text-micro text-accent hover:underline"
                     aria-expanded={evidenceOpen}
                     onClick={() =>
                       setOpenEvidence((prev) => {
@@ -918,7 +904,7 @@ function GraphPanel({ courseId, onPick }: { courseId: string; onPick: (id: strin
                     {evidenceOpen ? '收起依据' : '展开依据'}
                   </button>
                   {evidenceOpen && (
-                    <p className="mt-1 whitespace-pre-wrap rounded bg-quote-bg px-2.5 py-1.5 text-[12px] leading-relaxed text-ink2">
+                    <p className="mt-1 whitespace-pre-wrap rounded bg-quote-bg px-2.5 py-1.5 text-meta leading-relaxed text-ink2">
                       {edge.evidence}
                     </p>
                   )}
@@ -929,7 +915,7 @@ function GraphPanel({ courseId, onPick }: { courseId: string; onPick: (id: strin
         })}
       </div>
       {graph.data && (
-        <div className="border-t border-border px-4 py-2.5 text-[11.5px] text-ink3">
+        <div className="border-t border-border px-4 py-2.5 text-meta text-ink3">
           {graph.data.nodes.length} 个节点 · {graph.data.edges.length} 条关系边（已按 node id 与三元组去重）
         </div>
       )}
@@ -976,8 +962,8 @@ function MergePanel({ courseId }: { courseId: string }) {
   return (
     <section className="rounded-lg border border-border bg-surface">
       <div className="border-b border-border px-4 py-3">
-        <h2 className="text-[15px] font-semibold">整合记录</h2>
-        <p className="mt-0.5 text-[11.5px] text-ink3">
+        <h2 className="text-title font-semibold">整合记录</h2>
+        <p className="mt-0.5 text-meta text-ink3">
           Stage C 把跨文档、跨 section 的同概念标题合并为一个知识点；相似度与方法是确定性规则的结果，不是语义判断。
         </p>
       </div>
@@ -994,11 +980,11 @@ function MergePanel({ courseId }: { courseId: string }) {
           </EmptyState>
         </div>
       )}
-      {message && <p className="mx-4 my-2 rounded bg-accent-bg px-3 py-1.5 text-[12px] text-accent">{message}</p>}
-      <div className="divide-y divide-border">
+      {message && <p className="mx-4 my-2 rounded bg-accent-bg px-3 py-1.5 text-meta text-accent">{message}</p>}
+      <div className="divide-y divide-border animate-fade-in">
         {(decisions.data?.decisions ?? []).map((decision) => (
-          <div key={decision.id} className="flex flex-wrap items-center gap-2 px-4 py-2.5 text-[12.5px]">
-            <span className="rounded bg-untested-bg px-1.5 py-0.5 text-[10.5px] text-ink3">
+          <div key={decision.id} className="flex flex-wrap items-center gap-2 px-4 py-2.5 text-aux">
+            <span className="rounded bg-untested-bg px-1.5 py-0.5 text-micro text-ink3">
               {decision.method === 'exact' ? '精确' : '相似'}
             </span>
             <span className="font-medium text-ink">{decision.canonical_title}</span>
@@ -1006,17 +992,18 @@ function MergePanel({ courseId }: { courseId: string }) {
               <span className="text-ink3">← {decision.aliases.join(' / ')}</span>
             )}
             {decision.similarity != null && (
-              <span className="font-mono text-[11px] text-ink3">相似度 {decision.similarity.toFixed(2)}</span>
+              <span className="font-mono text-micro text-ink3">相似度 {decision.similarity.toFixed(2)}</span>
             )}
-            <span className="text-[11px] text-ink3">
-              {decision.members.length} 个成员 · {decision.distinct_documents} 份文档
+            <span className="text-micro text-ink3">
+              <span className="font-mono tabular-nums">{decision.members.length}</span> 个成员 ·{' '}
+              <span className="font-mono tabular-nums">{decision.distinct_documents}</span> 份文档
             </span>
             {decision.aliases.length > 0 && (
               <button
                 type="button"
                 disabled={addLock.isPending}
                 onClick={() => addLock.mutate(decision)}
-                className="ml-auto rounded border border-border2 px-2 py-0.5 text-[11.5px] text-ink2 hover:text-ink disabled:opacity-50"
+                className="transition-colors duration-150 ml-auto rounded border border-border2 px-2 py-0.5 text-meta text-ink2 hover:text-ink disabled:opacity-50"
               >
                 禁止再合并
               </button>
@@ -1026,10 +1013,10 @@ function MergePanel({ courseId }: { courseId: string }) {
       </div>
       {(locks.data?.length ?? 0) > 0 && (
         <div className="border-t border-border px-4 py-3">
-          <h3 className="text-[12px] font-semibold text-ink2">已锁定的标题对</h3>
+          <h3 className="text-meta font-semibold text-ink2">已锁定的标题对</h3>
           <div className="mt-1.5 grid gap-1">
             {(locks.data ?? []).map((lock) => (
-              <div key={`${lock.title_a}-${lock.title_b}`} className="flex items-center gap-2 text-[12px] text-ink2">
+              <div key={`${lock.title_a}-${lock.title_b}`} className="flex items-center gap-2 text-meta text-ink2">
                 <span className="truncate">{lock.title_a}</span>
                 <span className="text-ink3">↔</span>
                 <span className="truncate">{lock.title_b}</span>
@@ -1037,7 +1024,7 @@ function MergePanel({ courseId }: { courseId: string }) {
                   type="button"
                   disabled={removeLock.isPending}
                   onClick={() => removeLock.mutate(lock)}
-                  className="ml-auto text-[11.5px] text-accent hover:underline disabled:opacity-50"
+                  className="ml-auto text-meta text-accent hover:underline disabled:opacity-50"
                 >
                   解锁
                 </button>
@@ -1215,8 +1202,8 @@ export function KnowledgePage() {
     return (
       <div>
         <div className="mb-3">
-          <h1 className="text-[22px] font-bold">知识框架</h1>
-          <p className="mt-0.5 text-[13px] text-ink2">上传资料后构建，作为测验出题与掌握度统计的结构底座</p>
+          <h1 className="text-page font-semibold">知识框架</h1>
+          <p className="mt-0.5 text-aux text-ink2">上传资料后构建，作为测验出题与掌握度统计的结构底座</p>
         </div>
         {buildError != null && (
           <div className="mb-3">
@@ -1224,7 +1211,7 @@ export function KnowledgePage() {
           </div>
         )}
         {building && (
-          <div className="mb-3 flex items-center gap-2.5 rounded-lg border border-accent/40 bg-accent-bg/60 px-4 py-2.5 text-[13px] text-ink">
+          <div className="mb-3 flex items-center gap-2.5 rounded-lg border border-accent/40 bg-accent-bg/60 px-4 py-2.5 text-aux text-ink">
             <span className="inline-block size-2 animate-pulse rounded-full bg-accent" />
             {buildJob.phase === 'retry_wait' ? '构建任务重试中…' : '框架构建中，完成后自动刷新…'}
             {buildJob.job && (
@@ -1241,7 +1228,7 @@ export function KnowledgePage() {
               type="button"
               onClick={() => build.mutate()}
               disabled={build.isPending || building}
-              className="rounded-md bg-accent px-3.5 py-1.5 text-[13px] font-medium text-white disabled:opacity-50"
+              className="btn btn-primary"
             >
               {build.isPending || building ? '构建中…' : '构建知识框架'}
             </button>
@@ -1257,8 +1244,8 @@ export function KnowledgePage() {
     <div>
       <div className="mb-3 flex items-end justify-between">
         <div>
-          <h1 className="text-[22px] font-bold">知识框架</h1>
-          <p className="mt-0.5 flex items-center gap-2 text-[13px] text-ink2">
+          <h1 className="text-page font-semibold">知识框架</h1>
+          <p className="mt-0.5 flex items-center gap-2 text-aux text-ink2">
             {framework.data && (
               <>
                 <span>v{framework.data.version_number}</span>
@@ -1275,7 +1262,7 @@ export function KnowledgePage() {
           <button
             type="button"
             onClick={() => setShowVersions((v) => !v)}
-            className="rounded-md border border-border2 px-3 py-1.5 text-[13px] text-ink2 hover:text-ink"
+            className="btn btn-secondary btn-sm"
           >
             版本列表
           </button>
@@ -1283,7 +1270,7 @@ export function KnowledgePage() {
             type="button"
             onClick={() => build.mutate()}
             disabled={build.isPending || building}
-            className="rounded-md bg-accent px-3.5 py-1.5 text-[13px] font-medium text-white disabled:opacity-50"
+            className="btn btn-primary"
           >
             重新构建
           </button>
@@ -1297,7 +1284,7 @@ export function KnowledgePage() {
       )}
 
       {building && (
-        <div className="mb-3 flex items-center gap-2.5 rounded-lg border border-accent/40 bg-accent-bg/60 px-4 py-2.5 text-[13px] text-ink">
+        <div className="mb-3 flex items-center gap-2.5 rounded-lg border border-accent/40 bg-accent-bg/60 px-4 py-2.5 text-aux text-ink">
           <span className="inline-block size-2 animate-pulse rounded-full bg-accent" />
           {buildJob.phase === 'retry_wait' ? '构建任务重试中…' : '框架构建中，完成后自动刷新…'}
           {buildJob.job && (
@@ -1309,7 +1296,7 @@ export function KnowledgePage() {
       )}
 
       {buildJob.phase === 'timeout' && (
-        <div className="mb-3 rounded-md border border-warning-border bg-warning-bg px-4 py-2 text-[13px] text-ink">
+        <div className="mb-3 rounded-md border border-warning-border bg-warning-bg px-4 py-2 text-aux text-ink">
           构建仍在处理（已超过 5 分钟），稍后回来刷新查看；也可点「重新构建」。
         </div>
       )}
@@ -1340,11 +1327,7 @@ export function KnowledgePage() {
             role="tab"
             aria-selected={view === value}
             onClick={() => setView(value)}
-            className={`-mb-px border-b-2 px-3 py-2 text-[13px] ${
-              view === value
-                ? 'border-accent font-medium text-accent'
-                : 'border-transparent text-ink2 hover:text-ink'
-            }`}
+            className={`transition-colors duration-150 -mb-px border-b-2 px-3 py-2 text-aux ${ view === value ? 'border-accent font-medium text-accent' : 'border-transparent text-ink2 hover:text-ink' }`}
           >
             {label}
           </button>
@@ -1376,23 +1359,23 @@ export function KnowledgePage() {
       {view === 'merge' && courseId && <MergePanel courseId={courseId} />}
 
       {view === 'tree' && tree.length > 0 && (
-        <div className="grid grid-cols-[340px_1fr] gap-6">
+        <div className="grid animate-fade-in grid-cols-[340px_1fr] gap-6">
           <section className="h-fit rounded-lg border border-border bg-surface" role="tree" aria-label="知识框架树">
             <div className="flex items-center gap-2 border-b border-border px-3 py-1.5">
-              <span className="mr-auto text-[11.5px] text-ink3">
+              <span className="mr-auto text-meta text-ink3">
                 {flatGroups != null ? `按资料分组 · ${flatGroups.length} 组` : '层级结构'}
               </span>
               <button
                 type="button"
                 onClick={expandAll}
-                className="rounded border border-border2 px-2 py-0.5 text-[11.5px] text-ink2 hover:text-ink"
+                className="transition-colors duration-150 rounded border border-border2 px-2 py-0.5 text-meta text-ink2 hover:text-ink"
               >
                 全部展开
               </button>
               <button
                 type="button"
                 onClick={collapseAll}
-                className="rounded border border-border2 px-2 py-0.5 text-[11.5px] text-ink2 hover:text-ink"
+                className="transition-colors duration-150 rounded border border-border2 px-2 py-0.5 text-meta text-ink2 hover:text-ink"
               >
                 全部收起
               </button>
@@ -1434,7 +1417,7 @@ export function KnowledgePage() {
                 />
               ))
             )}
-            <p className="mt-2 border-t border-dashed border-border px-3 pt-2 text-[11.5px] leading-relaxed text-ink3">
+            <p className="mt-2 border-t border-dashed border-border px-3 pt-2 text-meta leading-relaxed text-ink3">
               估计值 = 作答记录的统计推断；未测验 ≠ 薄弱。
             </p>
           </section>
@@ -1449,7 +1432,7 @@ export function KnowledgePage() {
                 <NodeDetail nodeId={selectedId} score={selectedNode ?? undefined} />
               )
             ) : (
-              <p className="text-[13px] text-ink3">在左侧选择一个知识点查看详情与出处。</p>
+              <p className="text-aux text-ink3">在左侧选择一个知识点查看详情与出处。</p>
             )}
           </section>
         </div>
@@ -1464,7 +1447,7 @@ export function KnowledgePage() {
       {showVersions && (
         <section className="mt-6 overflow-hidden rounded-lg border border-border bg-surface">
           <div className="px-5 pb-2 pt-4">
-            <h2 className="text-[15px] font-semibold">版本列表</h2>
+            <h2 className="text-title font-semibold">版本列表</h2>
           </div>
           {versions.isLoading && <SkeletonRows rows={2} className="px-5 pb-4" />}
           {versions.isError && (
@@ -1475,7 +1458,7 @@ export function KnowledgePage() {
           {(versions.data ?? []).map((v) => {
             const vm = frameworkStatus(v.status)
             return (
-              <div key={v.id} className="flex items-center gap-4 border-t border-border px-5 py-2.5 text-[13px]">
+              <div key={v.id} className="flex animate-fade-in items-center gap-4 border-t border-border px-5 py-2.5 text-aux">
                 <span className="w-16 flex-none font-mono">v{v.version_number}</span>
                 <span className="flex flex-none items-center gap-1.5 text-ink2">
                   <span className={`inline-block size-2 rounded-full ${vm.dot}`} />

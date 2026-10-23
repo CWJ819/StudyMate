@@ -49,7 +49,7 @@ function CountdownCard({ courseId }: { courseId: string }) {
 
   if (plans.isLoading) {
     return (
-      <div className="rounded-lg border border-border bg-surface px-5 py-4 text-[13px] text-ink3">
+      <div className="rounded-lg border border-border bg-surface px-5 py-4 text-aux text-ink3">
         计划加载中…
       </div>
     )
@@ -59,8 +59,8 @@ function CountdownCard({ courseId }: { courseId: string }) {
   if (!active) {
     return (
       <div className="flex min-w-[280px] items-center gap-3.5 rounded-lg border border-border border-l-4 border-l-accent bg-surface px-5 py-3">
-        <span className="text-[26px] font-extrabold leading-none text-ink3">—</span>
-        <p className="text-[12.5px] leading-snug text-ink2">
+        <span className="text-display font-extrabold leading-none text-ink3">—</span>
+        <p className="text-aux leading-snug text-ink2">
           还没有复习计划。
           <Link to={`/courses/${courseId}/plan`} className="text-accent">
             设置考试日并生成计划 →
@@ -76,15 +76,16 @@ function CountdownCard({ courseId }: { courseId: string }) {
       className="flex min-w-[280px] items-center gap-3.5 rounded-lg border border-border border-l-4 border-l-accent bg-surface px-5 py-3"
       aria-label={`距考试还有 ${days} 天`}
     >
-      <div className="text-[44px] font-extrabold leading-none tracking-tight">
+      <div className="text-display font-extrabold leading-none tracking-tight">
         {days}
-        <small className="ml-0.5 text-[15px] font-semibold">天</small>
+        <small className="ml-0.5 text-title font-semibold">天</small>
       </div>
-      <p className="text-[12.5px] leading-snug text-ink2">
+      <p className="text-aux leading-snug text-ink2">
         距考试{days === 0 ? '就是今天' : days > 0 ? `还有 ${days} 天` : '已过'}
         <br />
-        {formatDateLong(active.exam_date)} · 每日 {active.daily_minutes} 分钟 · 目标{' '}
-        {active.target_score} 分
+        {formatDateLong(active.exam_date)} · 每日{' '}
+        <span className="font-mono tabular-nums">{active.daily_minutes}</span> 分钟 · 目标{' '}
+        <span className="font-mono tabular-nums">{active.target_score}</span> 分
       </p>
     </div>
   )
@@ -123,13 +124,14 @@ function TodayTasksCard({ courseId }: { courseId: string }) {
   return (
     <section className="overflow-hidden rounded-lg border border-border bg-surface">
       <div className="flex items-baseline gap-3 px-5 pb-2 pt-4">
-        <h2 className="text-[15px] font-semibold">今日任务</h2>
-        <span className="text-[12.5px] text-ink2">
-          {formatDateCN(today)} · 合计 {totalMinutes} 分钟 · 已完成 {doneCount} 项
+        <h2 className="text-title font-semibold">今日任务</h2>
+        <span className="text-aux text-ink2">
+          {formatDateCN(today)} · 合计 <span className="font-mono tabular-nums">{totalMinutes}</span>{' '}
+          分钟 · 已完成 <span className="font-mono tabular-nums">{doneCount}</span> 项
         </span>
         <Link
           to={`/courses/${courseId}/plan`}
-          className="ml-auto flex-none text-[12.5px] text-accent"
+          className="ml-auto flex-none text-aux text-accent"
         >
           查看复习计划 →
         </Link>
@@ -150,7 +152,7 @@ function TodayTasksCard({ courseId }: { courseId: string }) {
       {detail.isLoading && <SkeletonRows rows={2} className="border-t border-border px-5 py-3.5" />}
 
       {!detail.isLoading && tasks.length === 0 && (
-        <p className="border-t border-border px-5 py-4 text-[13px] text-ink3">
+        <p className="border-t border-border px-5 py-4 text-aux text-ink3">
           {active == null
             ? '还没有复习计划，今天没有安排任务。'
             : '今天没有安排任务。'}
@@ -171,9 +173,7 @@ function TodayTasksCard({ courseId }: { courseId: string }) {
           <div
             key={task.id}
             data-task-id={task.id}
-            className={`flex items-center gap-3 border-t border-border px-5 py-2.5 ${
-              task.status === 'in_progress' ? 'bg-accent-bg/40 shadow-[inset_3px_0_0_var(--color-accent)]' : ''
-            }`}
+            className={`flex animate-fade-in items-center gap-3 border-t border-border px-5 py-2.5 ${ task.status === 'in_progress' ? 'bg-accent-bg/40 shadow-[inset_3px_0_0_var(--color-accent)]' : 'row-hover' }`}
           >
             <input
               type="checkbox"
@@ -186,34 +186,28 @@ function TodayTasksCard({ courseId }: { courseId: string }) {
             />
             <div className="min-w-0 flex-1">
               <div
-                className={`truncate text-[14px] font-semibold ${done ? 'font-normal text-ink3' : ''}`}
+                className={`truncate text-body font-semibold ${done ? 'font-normal text-ink3' : ''}`}
                 title={task.title}
               >
                 {task.title}
               </div>
-              <div className="mt-0.5 truncate text-[12px] text-ink3" title={target}>
+              <div className="mt-0.5 truncate text-meta text-ink3" title={target}>
                 {taskTypeLabel(task.task_type)}
                 {target ? ` · ${target}` : ''}
               </div>
             </div>
-            <span className="w-14 flex-none text-right font-mono text-[12.5px] text-ink2">
+            <span className="w-14 flex-none text-right font-mono text-aux text-ink2">
               {task.estimated_minutes} 分钟
             </span>
             <span
-              className={`flex-none rounded px-2 py-0.5 text-[11.5px] ${
-                task.status === 'in_progress'
-                  ? 'bg-accent-bg text-accent'
-                  : done
-                    ? 'bg-success-bg text-success'
-                    : 'bg-untested-bg text-ink3'
-              }`}
+              className={`flex-none rounded px-2 py-0.5 text-meta ${ task.status === 'in_progress' ? 'bg-accent-bg text-accent' : done ? 'bg-success-bg text-success' : 'bg-untested-bg text-ink3' }`}
             >
               {meta.label}
             </span>
             {go && (
               <Link
                 to={`/courses/${courseId}/${task.task_type === 'practice' ? 'quiz' : 'review'}`}
-                className="ml-1 flex-none text-[12.5px] text-accent"
+                className="ml-1 flex-none text-aux text-accent"
               >
                 {go}
               </Link>
@@ -245,9 +239,9 @@ function WeakPointsCard({
   return (
     <section className="overflow-hidden rounded-lg border border-border bg-surface">
       <div className="flex items-baseline gap-3 px-5 pb-2 pt-4">
-        <h2 className="text-[15px] font-semibold">最近薄弱点</h2>
-        <span className="text-[12.5px] text-ink3">由测验记录得出，非自评</span>
-        <Link to={`/courses/${courseId}/review`} className="ml-auto text-[12.5px] text-accent">
+        <h2 className="text-title font-semibold">最近薄弱点</h2>
+        <span className="text-aux text-ink3">由测验记录得出，非自评</span>
+        <Link to={`/courses/${courseId}/review`} className="ml-auto text-aux text-accent">
           查看复习 / 错题本 →
         </Link>
       </div>
@@ -260,7 +254,7 @@ function WeakPointsCard({
         </div>
       )}
       {wrongbook.data && gaps.length === 0 && (
-        <p className="border-t border-border px-5 py-4 text-[13px] text-ink3">
+        <p className="border-t border-border px-5 py-4 text-aux text-ink3">
           暂无薄弱点记录 —— 提交测验后，这里会列出最近答错的知识点。
         </p>
       )}
@@ -271,27 +265,27 @@ function WeakPointsCard({
             key={`${gap.knowledge_node_id}-${gap.gap_type}`}
             type="button"
             onClick={() => onFocus(gap.knowledge_node_id)}
-            className="block w-full border-t border-border px-5 py-2.5 text-left hover:bg-bg"
+            className="block w-full animate-fade-in border-t border-border px-5 py-2.5 text-left row-hover"
           >
             <div className="flex min-w-0 items-baseline gap-2.5">
               <span
-                className="min-w-0 break-words text-[14px] font-semibold"
+                className="min-w-0 break-words text-body font-semibold"
                 title={gap.title ?? gap.knowledge_node_id}
               >
                 {gap.title ?? gap.knowledge_node_id}
               </span>
-              <span className="flex-none text-[12.5px] text-ink2">
+              <span className="flex-none text-aux text-ink2">
                 {m ? (
                   <>
-                    估计 <b className="text-ink">{m.mastery_estimate.toFixed(2)}</b> · 依据{' '}
-                    {m.evidence_count} 次作答
+                    估计 <b className="font-mono tabular-nums text-ink">{m.mastery_estimate.toFixed(2)}</b>{' '}
+                    · 依据 <span className="font-mono tabular-nums">{m.evidence_count}</span> 次作答
                   </>
                 ) : (
                   '暂无掌握度记录'
                 )}
               </span>
             </div>
-            <p className="mt-0.5 line-clamp-2 text-[12.5px] leading-snug text-ink2">
+            <p className="mt-0.5 line-clamp-2 text-aux leading-snug text-ink2">
               {gapTypeLabel(gap.gap_type)}
               {evidenceLine(gap) ? ` · ${evidenceLine(gap)}` : ''}
             </p>
@@ -364,8 +358,8 @@ function MasteryCard({
   return (
     <section className="min-w-0 overflow-hidden rounded-lg border border-border bg-surface">
       <div className="flex items-baseline gap-3 px-5 pb-1.5 pt-4">
-        <h2 className="text-[15px] font-semibold">掌握度估计</h2>
-        <span className="text-[12.5px] text-ink3">已测验按估计值升序</span>
+        <h2 className="text-title font-semibold">掌握度估计</h2>
+        <span className="text-aux text-ink3">已测验按估计值升序</span>
       </div>
 
       {mastery.isLoading && (
@@ -378,7 +372,7 @@ function MasteryCard({
       )}
 
       {(mastery.data != null || knowledge.data != null) && (
-        <div className="px-5 pb-3 pt-1.5">
+        <div className="animate-fade-in px-5 pb-3 pt-1.5">
           {testedVisible.map((m) => {
             const focused = focusNodeId === m.knowledge_node_id
             return (
@@ -391,18 +385,16 @@ function MasteryCard({
                 }}
                 onClick={() => onFocus(focused ? null : m.knowledge_node_id)}
                 aria-pressed={focused}
-                className={`grid w-full grid-cols-[116px_1fr_136px] items-center gap-2.5 rounded px-1 py-1.5 text-left ${
-                  focused ? 'bg-accent-bg' : 'hover:bg-bg'
-                }`}
+                className={`grid w-full animate-fade-in grid-cols-[116px_1fr_136px] items-center gap-2.5 rounded px-1 py-1.5 text-left ${ focused ? 'bg-accent-bg' : 'row-hover' }`}
               >
-                <span className="truncate text-right text-[12.5px]">{m.title ?? m.knowledge_node_id}</span>
+                <span className="truncate text-right text-aux">{m.title ?? m.knowledge_node_id}</span>
                 <span className="relative h-3 overflow-hidden rounded-sm bg-untested-bg">
                   <span
                     className="absolute inset-y-0 left-0 rounded-sm bg-accent"
                     style={{ width: `${Math.round(m.mastery_estimate * 100)}%` }}
                   />
                 </span>
-                <span className="whitespace-nowrap font-mono text-xs text-ink2 tabular-nums">
+                <span className="whitespace-nowrap font-mono text-meta text-ink2 tabular-nums">
                   估计 {m.mastery_estimate.toFixed(2)} · {m.evidence_count} 次
                 </span>
               </button>
@@ -412,9 +404,15 @@ function MasteryCard({
             <button
               type="button"
               onClick={() => setShowAllTested((v) => !v)}
-              className="w-full rounded px-1 py-1.5 text-left text-[12.5px] text-accent hover:bg-bg"
+              className="w-full rounded px-1 py-1.5 text-left text-aux text-accent row-hover"
             >
-              {showAllTested ? '收起 ▴' : `展开其余 ${hiddenTested} 条已测验 ▾`}
+              {showAllTested ? (
+                '收起 ▴'
+              ) : (
+                <>
+                  展开其余 <span className="font-mono tabular-nums">{hiddenTested}</span> 条已测验 ▾
+                </>
+              )}
             </button>
           )}
           {untestedLeaves.length > 0 && (
@@ -422,11 +420,16 @@ function MasteryCard({
               type="button"
               onClick={() => setShowUntested((v) => !v)}
               aria-expanded={showUntested}
-              className="w-full rounded px-1 py-1.5 text-left text-[12.5px] text-ink3 hover:bg-bg"
+              className="w-full rounded px-1 py-1.5 text-left text-aux text-ink3 row-hover"
             >
-              {showUntested
-                ? '收起未测验 ▴'
-                : `未测验 ${untestedLeaves.length} 个（不代表薄弱）· 展开 ▾`}
+              {showUntested ? (
+                '收起未测验 ▴'
+              ) : (
+                <>
+                  未测验 <span className="font-mono tabular-nums">{untestedLeaves.length}</span>{' '}
+                  个（不代表薄弱）· 展开 ▾
+                </>
+              )}
             </button>
           )}
           {showUntested &&
@@ -442,20 +445,18 @@ function MasteryCard({
                 }}
                 onClick={() => onFocus(focused ? null : leaf.knowledge_node_id)}
                 aria-pressed={focused}
-                className={`grid w-full grid-cols-[116px_1fr_136px] items-center gap-2.5 rounded px-1 py-1.5 text-left text-ink3 ${
-                  focused ? 'bg-accent-bg' : 'hover:bg-bg'
-                }`}
+                className={`grid w-full animate-fade-in grid-cols-[116px_1fr_136px] items-center gap-2.5 rounded px-1 py-1.5 text-left text-ink3 ${ focused ? 'bg-accent-bg' : 'row-hover' }`}
               >
-                <span className="truncate text-right text-[12.5px]">{leaf.title}</span>
+                <span className="truncate text-right text-aux">{leaf.title}</span>
                 <span className="h-3 rounded-sm bg-untested-bg" />
-                <span className="whitespace-nowrap text-xs">未测验</span>
+                <span className="whitespace-nowrap text-meta">未测验</span>
               </button>
             )
           })}
         </div>
       )}
 
-      <p className="border-t border-dashed border-border px-5 py-3 text-[11.5px] leading-relaxed text-ink3">
+      <p className="border-t border-dashed border-border px-5 py-3 text-meta leading-relaxed text-ink3">
         估计是系统根据<b className="font-semibold text-ink2">作答记录</b>做出的推断，不是精确测量，会随新作答变化。
         <br />
         <b className="font-semibold text-ink2">未测验</b>表示尚无作答记录，不代表薄弱。
@@ -535,8 +536,8 @@ export function DashboardPage() {
     <div>
       <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-[22px] font-bold">{course.data?.name ?? '…'}</h1>
-          <p className="mt-1 text-[13px] text-ink2">{segments.join(' · ')}</p>
+          <h1 className="text-page font-semibold">{course.data?.name ?? '…'}</h1>
+          <p className="mt-1 text-aux text-ink2">{segments.join(' · ')}</p>
         </div>
         <CountdownCard courseId={courseId!} />
       </div>

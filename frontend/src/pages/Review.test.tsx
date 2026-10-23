@@ -7,6 +7,7 @@ import { server } from '../test/server'
 import { masteryStates, quizOpen } from '../test/fixtures'
 import { ReviewPage } from './Review'
 import { QuizPage } from './Quiz'
+import { deepestText } from '../test/matchers'
 
 function renderReview() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -43,7 +44,7 @@ test('掌握度列表：已测验按估计升序，未测验默认折叠成计�
   // 0.42 在 0.80 前；kn3（叶子、无记录）默认折叠
   expect(await screen.findByText(/0\.42 · 依据 3 次作答/)).toBeTruthy()
   expect(screen.getByText(/0\.80 · 依据 5 次作答/)).toBeTruthy()
-  expect(screen.getByText(/未测验 1 个（不代表薄弱）· 展开/)).toBeTruthy()
+  expect(screen.getByText(deepestText(/未测验 1 个（不代表薄弱）· 展开/))).toBeTruthy()
   expect(screen.queryByText('未测验', { exact: true })).toBeNull()
   // 顺序：0.42 行出现在 0.80 行之前
   const all = document.body.textContent ?? ''

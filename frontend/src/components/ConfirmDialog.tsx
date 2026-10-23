@@ -51,21 +51,21 @@ export function ConfirmDialog({
         aria-label={title}
         className="relative w-[420px] max-w-[92vw] rounded-lg border border-border bg-surface p-5"
       >
-        <h2 className="text-[15px] font-semibold text-ink">{title}</h2>
-        <div className="mt-2 text-[13px] leading-relaxed text-ink2">{children}</div>
+        <h2 className="text-title font-semibold text-ink">{title}</h2>
+        <div className="mt-2 text-aux leading-relaxed text-ink2">{children}</div>
         <div className="mt-4 flex justify-end gap-2">
           <button
             ref={cancelRef}
             type="button"
             onClick={onCancel}
-            className="rounded-md border border-border2 px-3 py-1 text-[13px] text-ink2 hover:text-ink"
+            className="btn btn-secondary btn-sm"
           >
             取消
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="rounded-md border border-error bg-error-bg px-3 py-1 text-[13px] font-medium text-error hover:bg-error hover:text-white"
+            className="btn btn-danger btn-sm"
           >
             {confirmText}
           </button>

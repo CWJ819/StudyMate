@@ -5,6 +5,7 @@ import { http, HttpResponse } from 'msw'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { server } from '../test/server'
 import { quizOpen, quizSubmission } from '../test/fixtures'
+import { deepestText } from '../test/matchers'
 import { QuizPage } from './Quiz'
 
 const RECENT_KEY = 'studymate:recent-quiz:c1'
@@ -44,7 +45,7 @@ test('提交体形状：单选/多选发 selected_option_ids（空白发 []）�
   fireEvent.click(screen.getByRole('button', { name: /^拥塞避免$/ }))
   fireEvent.click(screen.getByRole('button', { name: '提交答卷' }))
 
-  expect(await screen.findByText(/待批改 1/)).toBeTruthy()
+  expect(await screen.findByText(deepestText(/待批改 1/))).toBeTruthy()
   expect(submitted!.idempotency_key).toBeTruthy()
   const answers = submitted!.answers!
   expect(answers.find((a) => a.question_id === 'q1')!.selected_option_ids).toEqual(['q1o1'])
@@ -94,7 +95,7 @@ test('503 提交失败：保留答案，重试复用同一幂等键，成功后�
   )
 
   fireEvent.click(screen.getByRole('button', { name: '重试' }))
-  expect(await screen.findByText(/待批改 1/)).toBeTruthy()
+  expect(await screen.findByText(deepestText(/待批改 1/))).toBeTruthy()
   expect(keys).toHaveLength(2)
   expect(keys[0]).toBe(keys[1])
 })
@@ -129,7 +130,7 @@ test('提交快照：提交期间锁定作答控件，结果页只显示已提�
   ).toBe(true)
 
   release()
-  expect(await screen.findByText(/待批改 1/)).toBeTruthy()
+  expect(await screen.findByText(deepestText(/待批改 1/))).toBeTruthy()
   expect(screen.getByText('窗口取 min(rwnd, cwnd)')).toBeTruthy()
 
   // 模拟“提交后草稿被改动”的分叉：手改 answers，submittedAnswers 保持快照
@@ -144,7 +145,7 @@ test('提交快照：提交期间锁定作答控件，结果页只显示已提�
 
   view.unmount()
   renderQuiz()
-  expect(await screen.findByText(/待批改 1/)).toBeTruthy()
+  expect(await screen.findByText(deepestText(/待批改 1/))).toBeTruthy()
   // 结果页只显示冻结快照，不显示被篡改的活草稿
   expect(screen.getByText('窗口取 min(rwnd, cwnd)')).toBeTruthy()
   expect(screen.queryByText('提交后被篡改的答案')).toBeNull()
@@ -162,7 +163,7 @@ test('刷新后结果仍在：草稿含 submission 时直接渲染结果页（�
   )
 
   renderQuiz()
-  expect(await screen.findByText(/待批改 1/)).toBeTruthy()
+  expect(await screen.findByText(deepestText(/待批改 1/))).toBeTruthy()
   // 答错的 Q2 默认展开（反馈可见），答对的 Q1 默认折叠
   expect(screen.getByText(/漏选了快重传/)).toBeTruthy()
   expect(screen.getAllByText('批改反馈').length).toBeGreaterThanOrEqual(2)

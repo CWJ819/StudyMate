@@ -68,19 +68,19 @@ function CourseForm({
       className="mb-4 rounded-lg border border-border bg-surface px-5 py-4"
       aria-label={initial ? '编辑课程' : '新建课程'}
     >
-      <h2 className="text-[15px] font-semibold">{initial ? '编辑课程' : '新建课程'}</h2>
+      <h2 className="text-title font-semibold">{initial ? '编辑课程' : '新建课程'}</h2>
       <div className="mt-3 grid max-w-xl gap-3">
-        <label className="grid gap-1 text-[13px] text-ink2">
+        <label className="grid gap-1 text-aux text-ink2">
           课程名 *
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={100}
             placeholder="如：计算机网络·运输层"
-            className="h-9 rounded-md border border-border2 bg-bg px-3 text-sm text-ink outline-none focus:border-accent"
+            className="h-9 rounded-md border border-border2 bg-bg px-3 text-body text-ink outline-none focus:border-accent"
           />
         </label>
-        <label className="grid gap-1 text-[13px] text-ink2">
+        <label className="grid gap-1 text-aux text-ink2">
           描述
           <textarea
             value={description}
@@ -88,22 +88,22 @@ function CourseForm({
             rows={2}
             maxLength={500}
             placeholder="考试时间、教材、备注（可选）"
-            className="rounded-md border border-border2 bg-bg px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+            className="rounded-md border border-border2 bg-bg px-3 py-2 text-body text-ink outline-none focus:border-accent"
           />
         </label>
-        {fieldError && <p className="text-[13px] text-error">{fieldError}</p>}
+        {fieldError && <p className="text-aux text-error">{fieldError}</p>}
         <div className="flex gap-2">
           <button
             type="submit"
             disabled={save.isPending}
-            className="rounded-md bg-accent px-3.5 py-1.5 text-[13px] font-medium text-white disabled:opacity-50"
+            className="btn btn-primary"
           >
             {save.isPending ? '保存中…' : '保存'}
           </button>
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-md border border-border2 px-3.5 py-1.5 text-[13px] text-ink2 hover:text-ink"
+            className="btn btn-secondary"
           >
             取消
           </button>
@@ -136,12 +136,12 @@ export function CoursesPage() {
   return (
     <AppShell>
       <div className="mb-3 flex items-center justify-between">
-        <h1 className="text-[22px] font-bold">课程列表</h1>
+        <h1 className="text-page font-semibold">课程列表</h1>
         {!creating && !editing && (
           <button
             type="button"
             onClick={() => setCreating(true)}
-            className="rounded-md bg-accent px-3.5 py-1.5 text-[13px] font-medium text-white"
+            className="btn btn-primary"
           >
             + 新建课程
           </button>
@@ -163,7 +163,7 @@ export function CoursesPage() {
         <CourseForm initial={editing} onDone={() => setEditing(null)} onCancel={() => setEditing(null)} />
       )}
 
-      {courses.isLoading && <p className="text-[13px] text-ink3">加载中…</p>}
+      {courses.isLoading && <p className="text-aux text-ink3">加载中…</p>}
 
       {!courses.isLoading && list.length === 0 && (
         <EmptyState
@@ -172,7 +172,7 @@ export function CoursesPage() {
             <button
               type="button"
               onClick={() => setCreating(true)}
-              className="rounded-md bg-accent px-3.5 py-1.5 text-[13px] font-medium text-white"
+              className="btn btn-primary"
             >
               创建第一门课
             </button>
@@ -187,21 +187,21 @@ export function CoursesPage() {
           {list.map((course) => (
             <div
               key={course.id}
-              className="group flex items-center gap-4 border-t border-border px-5 py-3 first:border-t-0 hover:bg-bg focus-within:bg-bg"
+              className="group flex items-center gap-4 border-t border-border px-5 py-3 first:border-t-0 row-hover focus-within:bg-bg"
             >
               <div className="min-w-0 flex-1">
                 <Link
                   to={`/courses/${course.id}`}
-                  className="text-[14.5px] font-semibold text-ink no-underline hover:text-accent"
+                  className="transition-colors duration-150 text-body font-semibold text-ink no-underline hover:text-accent"
                 >
                   {course.name}
                 </Link>
-                <div className="mt-0.5 truncate text-[12.5px] text-ink3">
+                <div className="mt-0.5 truncate text-aux text-ink3">
                   {course.description || '无描述'}
                 </div>
               </div>
-              <span className="flex-none text-xs text-ink3">更新 {formatDate(course.updated_at)}</span>
-              <span className="flex flex-none gap-3 text-xs text-ink3 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+              <span className="flex-none text-meta text-ink3">更新 {formatDate(course.updated_at)}</span>
+              <span className="flex flex-none gap-3 text-meta text-ink3 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                 <button type="button" className="text-accent" onClick={() => setEditing(course)}>
                   编辑
                 </button>

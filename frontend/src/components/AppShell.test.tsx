@@ -6,6 +6,7 @@ import { http, HttpResponse } from 'msw'
 import { MemoryRouter, useLocation } from 'react-router'
 import type { PropsWithChildren } from 'react'
 import { server } from '../test/server'
+import { deepestText } from '../test/matchers'
 import { AppShell } from './AppShell'
 
 function withQueryClient(ui: PropsWithChildren['children'], initialEntry = '/') {
@@ -45,7 +46,7 @@ test('全局检索：无需课程上下文，结果就地展开并逐条标注�
   fireEvent.change(input, { target: { value: '慢启动' } })
   fireEvent.submit(input.closest('form')!)
 
-  expect(await screen.findByText('2 条命中')).toBeTruthy()
+  expect(await screen.findByText(deepestText(/^2 条命中$/))).toBeTruthy()
   // 每条命中都带课程标签
   expect(screen.getAllByText('计算机网络·运输层')).toHaveLength(2)
   // 命中片段直接展示完整原文，不需要再点“查看上下文”
@@ -71,7 +72,7 @@ test('检索截断：命中超过 20 条默认只渲染前 20，点「展开其�
   fireEvent.change(input, { target: { value: '慢启动' } })
   fireEvent.submit(input.closest('form')!)
 
-  expect(await screen.findByText('25 条命中')).toBeTruthy()
+  expect(await screen.findByText(deepestText(/^25 条命中$/))).toBeTruthy()
   // 默认只渲染前 20 条（一次性渲染上千条会阻塞主线程）
   expect(screen.getByText('慢启动命中片段 20')).toBeTruthy()
   expect(screen.queryByText('慢启动命中片段 21')).toBeNull()

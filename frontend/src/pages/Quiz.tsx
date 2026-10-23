@@ -110,15 +110,15 @@ function GenerateForm({
       }}
       aria-label="出题设置"
     >
-      <h2 className="text-[15px] font-semibold">出题设置</h2>
+      <h2 className="text-title font-semibold">出题设置</h2>
       <div className="mt-3 grid gap-3">
         <fieldset className="min-w-0">
-          <legend className="mb-1 text-[13px] text-ink2">范围（叶子知识点，默认全选）</legend>
+          <legend className="mb-1 text-aux text-ink2">范围（叶子知识点，默认全选）</legend>
           <div className="grid max-w-2xl grid-cols-2 gap-1">
             {leaves.map((leaf) => (
               <label
                 key={leaf.knowledge_node_id}
-                className="flex min-w-0 items-center gap-1.5 text-[13px]"
+                className="flex min-w-0 items-center gap-1.5 text-aux"
               >
                 <input
                   type="checkbox"
@@ -132,7 +132,7 @@ function GenerateForm({
           </div>
         </fieldset>
         <div className="flex max-w-xl flex-wrap items-end gap-4">
-          <label className="text-[13px] text-ink2">
+          <label className="text-aux text-ink2">
             题量（1–20）
             <input
               type="number"
@@ -140,10 +140,10 @@ function GenerateForm({
               max={20}
               value={count}
               onChange={(e) => setCount(Math.min(20, Math.max(1, Number(e.target.value) || 1)))}
-              className="ml-2 w-16 rounded-md border border-border2 bg-bg px-2 py-1 text-sm text-ink"
+              className="ml-2 w-16 rounded-md border border-border2 bg-bg px-2 py-1 text-body text-ink"
             />
           </label>
-          <fieldset className="text-[13px] text-ink2">
+          <fieldset className="text-aux text-ink2">
             <legend className="mb-1">题型</legend>
             {QUESTION_TYPES.map((t) => (
               <label key={t.value} className="mr-3 inline-flex items-center gap-1">
@@ -156,12 +156,12 @@ function GenerateForm({
               </label>
             ))}
           </fieldset>
-          <label className="text-[13px] text-ink2">
+          <label className="text-aux text-ink2">
             难度
             <select
               value={difficulty}
               onChange={(e) => setDifficulty(e.target.value)}
-              className="ml-2 rounded-md border border-border2 bg-bg px-2 py-1 text-sm text-ink"
+              className="ml-2 rounded-md border border-border2 bg-bg px-2 py-1 text-body text-ink"
             >
               <option value="low">低</option>
               <option value="medium">中</option>
@@ -169,19 +169,19 @@ function GenerateForm({
             </select>
           </label>
         </div>
-        {formError && <p className="text-[13px] text-error">{formError}</p>}
+        {formError && <p className="text-aux text-error">{formError}</p>}
         <div className="flex gap-2">
           <button
             type="submit"
             disabled={generate.isPending}
-            className="rounded-md bg-accent px-3.5 py-1.5 text-[13px] font-medium text-white disabled:opacity-50"
+            className="btn btn-primary"
           >
             {generate.isPending ? '提交中…' : '生成测验'}
           </button>
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-md border border-border2 px-3.5 py-1.5 text-[13px] text-ink2 hover:text-ink"
+            className="btn btn-secondary"
           >
             取消
           </button>
@@ -243,7 +243,7 @@ function AnswerView({
   return (
     <section className="overflow-hidden rounded-lg border border-border bg-surface">
       <div className="flex flex-wrap items-center gap-3 border-b border-border px-5 py-3">
-        <span className="text-[13px] text-ink2">
+        <span className="text-aux text-ink2">
           已答 <b className="text-ink">{answeredCount}</b> / {quiz.questions.length} 题
           <span className="ml-2 text-ink3">（未答也允许提交，按未作答计分）</span>
         </span>
@@ -251,7 +251,7 @@ function AnswerView({
           type="button"
           onClick={onSubmit}
           disabled={submitting}
-          className="ml-auto rounded-md bg-accent px-3.5 py-1.5 text-[13px] font-medium text-white disabled:opacity-50"
+          className="ml-auto btn btn-primary"
         >
           {submitting ? '提交中…' : '提交答卷'}
         </button>
@@ -261,7 +261,7 @@ function AnswerView({
         <div className="border-b border-border px-5 py-3">
           <ErrorNotice error={submitError} onRetry={onSubmit} />
           {submitError instanceof ApiError && submitError.retryable && (
-            <p className="mt-1 text-[12.5px] text-ink3">答案已在本地保留，重试会复用同一提交键，不会重复计分。</p>
+            <p className="mt-1 text-aux text-ink3">答案已在本地保留，重试会复用同一提交键，不会重复计分。</p>
           )}
         </div>
       )}
@@ -274,8 +274,8 @@ function AnswerView({
           return (
             <div key={q.question_id} className="border-t border-border px-5 py-4 first:border-t-0">
               <div className="flex items-baseline gap-2">
-                <span className="font-mono text-[12.5px] text-ink3">Q{q.ordinal}</span>
-                <span className="rounded bg-untested-bg px-1.5 py-0.5 text-[11.5px] text-ink3">
+                <span className="font-mono text-aux text-ink3">Q{q.ordinal}</span>
+                <span className="rounded bg-untested-bg px-1.5 py-0.5 text-meta text-ink3">
                   {q.question_type === 'single_choice'
                     ? '单选'
                     : q.question_type === 'multiple_choice'
@@ -283,7 +283,7 @@ function AnswerView({
                       : '简答'}
                 </span>
               </div>
-              <p className="mt-1 whitespace-pre-wrap text-[14px] leading-[1.7] text-ink">{q.stem}</p>
+              <p className="mt-1 whitespace-pre-wrap text-body leading-[1.7] text-ink">{q.stem}</p>
               {q.question_type === 'short_answer' ? (
                 <textarea
                   value={answerText(current)}
@@ -293,7 +293,7 @@ function AnswerView({
                   rows={3}
                   disabled={inputsDisabled}
                   aria-label={`Q${q.ordinal} 作答`}
-                  className="mt-2 w-full max-w-3xl rounded-md border border-border2 bg-quote-bg px-3 py-2 text-[13.5px] leading-[1.7] text-ink outline-none focus:border-accent disabled:cursor-not-allowed disabled:opacity-60"
+                  className="mt-2 w-full max-w-3xl rounded-md border border-border2 bg-quote-bg px-3 py-2 text-body leading-[1.7] text-ink outline-none focus:border-accent disabled:cursor-not-allowed disabled:opacity-60"
                   placeholder="用自己的话回答，批改由模型完成"
                 />
               ) : (
@@ -307,17 +307,11 @@ function AnswerView({
                         onClick={() => setChoice(q, opt.id, q.question_type === 'multiple_choice')}
                         aria-pressed={picked}
                         disabled={inputsDisabled}
-                        className={`flex items-start gap-2 rounded-md border px-3 py-2 text-left text-[13.5px] disabled:cursor-not-allowed disabled:opacity-60 ${
-                          picked
-                            ? 'border-accent bg-accent-bg/70 text-ink'
-                            : 'border-border2 bg-surface text-ink2 hover:border-ink3'
-                        }`}
+                        className={`transition-colors duration-150 flex items-start gap-2 rounded-md border px-3 py-2 text-left text-body disabled:cursor-not-allowed disabled:opacity-60 ${ picked ? 'border-accent bg-accent-bg/70 text-ink' : 'border-border2 bg-surface text-ink2 hover:border-ink3' }`}
                       >
                         <span
                           aria-hidden="true"
-                          className={`mt-0.5 flex size-4 flex-none items-center justify-center border text-[10px] ${
-                            q.question_type === 'multiple_choice' ? 'rounded-[3px]' : 'rounded-full'
-                          } ${picked ? 'border-accent bg-accent text-white' : 'border-border2 text-transparent'}`}
+                          className={`mt-0.5 flex size-4 flex-none items-center justify-center border text-micro ${ q.question_type === 'multiple_choice' ? 'rounded-[3px]' : 'rounded-full' } ${picked ? 'border-accent bg-accent text-white' : 'border-border2 text-transparent'}`}
                         >
                           ✓
                         </span>
@@ -370,14 +364,25 @@ function ResultView({
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-5 rounded-lg border border-border bg-surface px-5 py-3">
-        <span className="text-[15px]">
-          总分 <b className="font-mono">{submission.total_score}</b>
-          <span className="text-ink3"> / {submission.max_score}</span>
+        <span className="text-title">
+          总分 <b className="font-mono tabular-nums">{submission.total_score}</b>
+          <span className="text-ink3">
+            {' '}
+            / <span className="font-mono tabular-nums">{submission.max_score}</span>
+          </span>
         </span>
-        <span className="text-[13px] text-success">答对 {right}</span>
-        <span className="text-[13px] text-error">答错 {wrong}</span>
-        <span className="text-[13px] text-warning">部分得分 {partial}</span>
-        <span className="text-[13px] text-ink3">待批改 {pending}</span>
+        <span className="text-aux text-success">
+          答对 <span className="font-mono tabular-nums">{right}</span>
+        </span>
+        <span className="text-aux text-error">
+          答错 <span className="font-mono tabular-nums">{wrong}</span>
+        </span>
+        <span className="text-aux text-warning">
+          部分得分 <span className="font-mono tabular-nums">{partial}</span>
+        </span>
+        <span className="text-aux text-ink3">
+          待批改 <span className="font-mono tabular-nums">{pending}</span>
+        </span>
       </div>
 
       <section className="overflow-hidden rounded-lg border border-border bg-surface">
@@ -386,7 +391,7 @@ function ResultView({
           const open = expanded.has(r.question_id)
           const answer = answers[r.question_id]
           return (
-            <div key={r.question_id} className="border-t border-border first:border-t-0">
+            <div key={r.question_id} className="animate-fade-in border-t border-border first:border-t-0">
               <button
                 type="button"
                 aria-expanded={open}
@@ -398,55 +403,63 @@ function ResultView({
                     return next
                   })
                 }
-                className="flex w-full items-center gap-2.5 px-5 py-2.5 text-left hover:bg-bg"
+                className="flex w-full items-center gap-2.5 px-5 py-2.5 text-left row-hover"
               >
-                <span className="font-mono text-[12.5px] text-ink3">Q{q?.ordinal ?? i + 1}</span>
-                <span className="text-[13px] font-medium">{statusChip(r)}</span>
-                <span className="text-[12.5px] text-ink3">
-                  得分 <b className="font-mono text-ink2">{r.score}</b>/{r.max_score}
+                <span className="font-mono text-aux text-ink3">Q{q?.ordinal ?? i + 1}</span>
+                <span className="text-aux font-medium">{statusChip(r)}</span>
+                <span className="text-aux text-ink3">
+                  得分 <b className="font-mono tabular-nums text-ink2">{r.score}/{r.max_score}</b>
                 </span>
-                <span className="ml-auto flex-none text-[12px] text-ink3">{open ? '收起 ▴' : '展开 ▴'}</span>
+                <span className="ml-auto flex-none text-meta text-ink3">{open ? '收起 ▴' : '展开 ▾'}</span>
               </button>
-              {open && q && (
-                <div className="px-5 pb-4">
-                  <p className="whitespace-pre-wrap text-[14px] leading-[1.7] text-ink">{q.stem}</p>
-                  <div className="mt-3 rounded-md border border-border bg-bg px-3.5 py-2.5">
-                    <div className="text-[12px] text-ink3">你的答案</div>
-                    {q.question_type === 'short_answer' ? (
-                      <p className="mt-0.5 whitespace-pre-wrap text-[13.5px] text-ink">
-                        {(answer?.text ?? '').trim() || '（未作答）'}
-                      </p>
-                    ) : (
-                      <ul className="mt-0.5 grid gap-0.5">
-                        {(answer?.selected_option_ids ?? []).length === 0 && (
-                          <li className="text-[13.5px] text-ink3">（未作答）</li>
+              <div
+                className={`grid transition-[grid-template-rows] duration-150 ease-out ${
+                  open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                }`}
+              >
+                <div className="overflow-hidden">
+                  {q && (
+                    <div className="px-5 pb-4">
+                      <p className="whitespace-pre-wrap text-body leading-[1.7] text-ink">{q.stem}</p>
+                      <div className="mt-3 rounded-md border border-border bg-bg px-3.5 py-2.5">
+                        <div className="text-meta text-ink3">你的答案</div>
+                        {q.question_type === 'short_answer' ? (
+                          <p className="mt-0.5 whitespace-pre-wrap text-body text-ink">
+                            {(answer?.text ?? '').trim() || '（未作答）'}
+                          </p>
+                        ) : (
+                          <ul className="mt-0.5 grid gap-0.5">
+                            {(answer?.selected_option_ids ?? []).length === 0 && (
+                              <li className="text-body text-ink3">（未作答）</li>
+                            )}
+                            {(answer?.selected_option_ids ?? []).map((id) => (
+                              <li key={id} className="whitespace-pre-wrap text-body text-ink">
+                                · {q.options.find((o) => o.id === id)?.text ?? id}
+                              </li>
+                            ))}
+                          </ul>
                         )}
-                        {(answer?.selected_option_ids ?? []).map((id) => (
-                          <li key={id} className="whitespace-pre-wrap text-[13.5px] text-ink">
-                            · {q.options.find((o) => o.id === id)?.text ?? id}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                  <p className="mt-2 text-[12.5px] text-ink3">
-                    判分方式：{gradingMethodLabel(r.grading_method)}；正确答案不随接口下发，请对照课件核对。
-                  </p>
-                  {r.feedback_text && (
-                    <div className="mt-2 rounded-md bg-quote-bg px-3.5 py-2.5">
-                      <div className="text-[12px] text-ink3">批改反馈</div>
-                      <p className="mt-0.5 whitespace-pre-wrap text-[13.5px] leading-[1.7] text-ink">
-                        {r.feedback_text}
+                      </div>
+                      <p className="mt-2 text-aux text-ink3">
+                        判分方式：{gradingMethodLabel(r.grading_method)}；正确答案不随接口下发，请对照课件核对。
                       </p>
+                      {r.feedback_text && (
+                        <div className="mt-2 rounded-md bg-quote-bg px-3.5 py-2.5">
+                          <div className="text-meta text-ink3">批改反馈</div>
+                          <p className="mt-0.5 whitespace-pre-wrap text-body leading-[1.7] text-ink">
+                            {r.feedback_text}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-              )}
+              </div>
             </div>
           )
         })}
       </section>
-      <p className="mt-2 text-[12px] text-ink3">
+      <p className="mt-2 text-meta text-ink3">
         结果保存在本地，刷新后仍在；每份测验只能提交一次，想再练请重新出题。
       </p>
     </div>
@@ -530,19 +543,19 @@ function QuizSession({
     return (
       <div>
         <ErrorNotice error={quiz.error} />
-        <button type="button" onClick={onNewQuiz} className="mt-3 text-[13px] text-accent">
+        <button type="button" onClick={onNewQuiz} className="mt-3 text-aux text-accent">
           重新出题
         </button>
       </div>
     )
   }
-  if (quiz.isLoading || !quiz.data) return <p className="text-[13px] text-ink3">加载中…</p>
+  if (quiz.isLoading || !quiz.data) return <p className="text-aux text-ink3">加载中…</p>
 
   const status = quizStatus(quiz.data.status)
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center gap-2.5 text-[13px] text-ink2">
+      <div className="mb-3 flex flex-wrap items-center gap-2.5 text-aux text-ink2">
         <span className="flex items-center gap-1.5">
           <span className={`inline-block size-2 rounded-full ${status.dot}`} />
           {status.label}
@@ -557,7 +570,7 @@ function QuizSession({
       </div>
 
       {quiz.data.status === 'building' && (
-        <div className="flex items-center gap-2.5 rounded-lg border border-accent/40 bg-accent-bg/60 px-4 py-3 text-[13px] text-ink">
+        <div className="flex items-center gap-2.5 rounded-lg border border-accent/40 bg-accent-bg/60 px-4 py-3 text-aux text-ink">
           <span className="inline-block size-2 animate-pulse rounded-full bg-accent" />
           正在根据所选知识点出题，完成后自动刷新…
           {job.job && (
@@ -571,7 +584,7 @@ function QuizSession({
           <ErrorNotice
             error={new ApiError(500, job.job?.error_code ?? 'QUIZ_GENERATION_FAILED', '出题失败')}
           />
-          <button type="button" onClick={onNewQuiz} className="mt-2 text-[13px] text-accent">
+          <button type="button" onClick={onNewQuiz} className="mt-2 text-aux text-accent">
             重新出题
           </button>
         </div>
@@ -598,7 +611,7 @@ function QuizSession({
       )}
 
       {quiz.data.status === 'submitted' && draft.submission == null && (
-        <div className="rounded-lg border border-border bg-surface px-5 py-4 text-[13.5px] text-ink2">
+        <div className="rounded-lg border border-border bg-surface px-5 py-4 text-body text-ink2">
           这份测验已提交，但本地没有保存结果（可能换了浏览器或清了缓存）。
           <button type="button" onClick={onNewQuiz} className="ml-2 text-accent">
             重新出题
@@ -657,13 +670,13 @@ export function QuizPage() {
     <div>
       <div className="mb-3 flex items-end justify-between">
         <div>
-          <h1 className="text-[22px] font-bold">测验</h1>
-          <p className="mt-0.5 text-[13px] text-ink2">出题 → 作答 → 自动批改 → 掌握度与错题本更新</p>
+          <h1 className="text-page font-semibold">测验</h1>
+          <p className="mt-0.5 text-aux text-ink2">出题 → 作答 → 自动批改 → 掌握度与错题本更新</p>
         </div>
         <button
           type="button"
           onClick={() => setShowForm((v) => !v)}
-          className="rounded-md bg-accent px-3.5 py-1.5 text-[13px] font-medium text-white"
+          className="btn btn-primary"
         >
           {showForm ? '收起表单' : '+ 新出题'}
         </button>
@@ -689,7 +702,7 @@ export function QuizPage() {
       )}
 
       {leaves.length === 0 && !framework.isLoading && !framework.isError && (
-        <p className="text-[13px] text-ink3">知识框架没有叶子节点，无法出题。</p>
+        <p className="text-aux text-ink3">知识框架没有叶子节点，无法出题。</p>
       )}
 
       {recentQuizId != null && courseId != null ? (

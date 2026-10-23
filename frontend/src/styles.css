@@ -10,6 +10,7 @@
   --color-ink2: #57606a;
   --color-ink3: #8c959f;
   --color-accent: #0969da;
+  --color-accent-deep: #085bc4;
   --color-accent-bg: #ddf0ff;
   --color-success: #1a7f37;
   --color-success-bg: #dafbe1;
@@ -23,6 +24,49 @@
   --color-quote-bg: #f6f8fa;
   --font-sans: "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", "PingFang SC", sans-serif;
   --font-mono: Consolas, Menlo, "Courier New", monospace;
+
+  /* 字阶：micro 元信息角标 / meta 辅助元信息 / aux 次要正文 / body 正文 / title 区块标题 / page 页标题 / stat 等宽大数字 */
+  --text-micro: 11px;
+  --text-meta: 12px;
+  --text-aux: 13px;
+  --text-body: 14px;
+  --text-title: 16px;
+  --text-page: 22px;
+  --text-stat: 20px;
+  --text-display: 44px;
+
+  --animate-drop-in: drop-in 140ms ease-out both;
+  --animate-slide-down: slide-down 160ms ease-out both;
+  --animate-fade-in: fade-in 160ms ease-out both;
+
+  @keyframes drop-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes slide-down {
+    from {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
 }
 
 body {
@@ -32,4 +76,46 @@ body {
   font-size: 14px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+}
+
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-md px-3.5 text-aux font-medium select-none transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-sm {
+    @apply h-8 px-2.5 text-meta;
+  }
+  .btn-primary {
+    @apply bg-accent text-white hover:bg-accent-deep;
+  }
+  .btn-secondary {
+    @apply border border-border2 bg-surface text-ink2 hover:bg-quote-bg hover:text-ink;
+  }
+  .btn-danger {
+    @apply border border-error bg-error-bg text-error hover:bg-error hover:text-white;
+  }
+  .btn-link {
+    @apply cursor-pointer text-aux text-accent hover:underline;
+  }
+  .row-hover {
+    @apply transition-colors duration-150 hover:bg-quote-bg;
+  }
 }

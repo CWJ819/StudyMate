@@ -12,11 +12,11 @@ export function ErrorNotice({ error, onRetry }: Props) {
   return (
     <div
       role="alert"
-      className="flex flex-wrap items-center gap-2 rounded-md border border-error/40 bg-error-bg px-3 py-2 text-[13px] text-ink"
+      className="flex flex-wrap items-center gap-2 rounded-md border border-error/40 bg-error-bg px-3 py-2 text-aux text-ink"
     >
       <span>{message}</span>
       {apiError?.requestId && (
-        <span className="font-mono text-xs text-ink3">
+        <span className="font-mono text-meta text-ink3">
           请求编号 {apiError.requestId}
           <button
             type="button"
@@ -30,7 +30,7 @@ export function ErrorNotice({ error, onRetry }: Props) {
       {apiError?.retryable && onRetry && (
         <button
           type="button"
-          className="ml-auto rounded border border-border2 bg-surface px-2 py-0.5 text-xs text-ink2 hover:text-ink"
+          className="transition-colors duration-150 ml-auto rounded border border-border2 bg-surface px-2 py-0.5 text-meta text-ink2 hover:text-ink"
           onClick={onRetry}
         >
           重试
