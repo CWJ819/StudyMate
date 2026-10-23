@@ -580,7 +580,7 @@ export const planDetailActive: StudyPlanDetail = {
   daily_minutes: 60,
   target_score: 85,
   status: 'active',
-  constraints: { algorithm_version: 'study-plan-v1' },
+  constraints: { algorithm_version: 'study-plan-v2' },
   created_at: '2026-01-03T10:00:00Z',
   tasks: planTasksActive,
 }

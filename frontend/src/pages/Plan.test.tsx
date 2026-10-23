@@ -62,6 +62,31 @@ test('生成表单：全选叶子时省略 knowledge_node_ids（后端缺省=全
   })
 })
 
+test('生成表单：预算紧张时「按时间预算选」只提交可覆盖的叶子', async () => {
+  let body: Record<string, unknown> | null = null
+  const created = { ...planDetailActive, id: 'pl3', version_number: 4, tasks: [] }
+  server.use(
+    http.post('*/api/courses/c1/plan', async ({ request }) => {
+      body = (await request.json()) as Record<string, unknown>
+      return HttpResponse.json(created, { status: 201 })
+    }),
+    http.get('*/api/plans/pl3', () => HttpResponse.json(created)),
+  )
+
+  renderPlan()
+  await screen.findByText('v2 计划', {}, { timeout: 3000 })
+  fireEvent.click(screen.getByRole('button', { name: '生成新计划' }))
+  fireEvent.change(screen.getByLabelText(/考试日期/), { target: { value: todayISO() } })
+  fireEvent.change(screen.getByLabelText(/每日分钟数/), { target: { value: '15' } })
+  fireEvent.click(screen.getByRole('button', { name: /按时间预算选/ }))
+  fireEvent.click(screen.getByRole('button', { name: '生成计划' }))
+
+  await screen.findByText('v4 计划', {}, { timeout: 3000 })
+  const nodeIds = (body as { knowledge_node_ids?: string[] } | null)?.knowledge_node_ids
+  expect(Array.isArray(nodeIds)).toBe(true)
+  expect(nodeIds?.length).toBe(1)
+})
+
 test('容量不足（PLAN_CAPACITY_EXCEEDED）：显示需要/可用分钟数', async () => {
   server.use(
     http.post('*/api/courses/c1/plan', () =>

@@ -1,7 +1,8 @@
 import asyncio
 from collections import defaultdict
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import fitz
 import pytest
@@ -9,6 +10,9 @@ from httpx import ASGITransport, AsyncClient
 
 from app.core.config import reset_settings_cache
 from app.main import app
+from app.services.plan_service import PlanService
+
+LOCAL_TZ = ZoneInfo("Asia/Shanghai")
 
 
 def _create_pdf(path: Path, page_texts: list[str]) -> None:
@@ -69,7 +73,7 @@ async def test_study_plan_generation_versions_time_limit_and_task_status(
 
     pdf_path = tmp_path / "lesson.pdf"
     _create_pdf(pdf_path, ["Integration by parts transforms products of functions."])
-    exam_date = datetime.now(UTC).date() + timedelta(days=7)
+    exam_date = datetime.now(LOCAL_TZ).date() + timedelta(days=7)
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
@@ -89,7 +93,9 @@ async def test_study_plan_generation_versions_time_limit_and_task_status(
         first_plan = first_response.json()
         assert first_plan["version_number"] == 1
         assert first_plan["status"] == "active"
-        assert len(first_plan["tasks"]) == 2
+        assert len(first_plan["tasks"]) == 1
+        assert first_plan["tasks"][0]["task_type"] == "review"
+        assert first_plan["tasks"][0]["estimated_minutes"] >= 8
 
         daily_totals = defaultdict(int)
         for task in first_plan["tasks"]:
@@ -141,15 +147,31 @@ async def test_study_plan_generation_versions_time_limit_and_task_status(
         assert first_detail_response.status_code == 200
         assert first_detail_response.json()["tasks"][0]["status"] == "completed"
 
+        original_build = PlanService._build_task_specs
+
+        def oversized_specs(self, nodes):  # type: ignore[no-untyped-def]
+            return [
+                {
+                    "title": "Oversized review",
+                    "task_type": "review",
+                    "estimated_minutes": 16,
+                    "priority": 1,
+                    "knowledge_node_id": nodes[0].knowledge_node_id,
+                    "target_role": "primary",
+                }
+            ]
+
+        monkeypatch.setattr(PlanService, "_build_task_specs", oversized_specs)
         capacity_response = await client.post(
             f"/api/courses/{course_id}/plan",
             json={
-                "exam_date": datetime.now(UTC).date().isoformat(),
+                "exam_date": datetime.now(LOCAL_TZ).date().isoformat(),
                 "daily_minutes": 15,
                 "target_score": 90,
             },
         )
         assert capacity_response.status_code == 409
         assert capacity_response.json()["error"]["code"] == "PLAN_CAPACITY_EXCEEDED"
+        monkeypatch.setattr(PlanService, "_build_task_specs", original_build)
 
     reset_settings_cache()

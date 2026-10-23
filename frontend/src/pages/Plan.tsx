@@ -2,7 +2,7 @@
 // 任务状态迁移 pending → in_progress → completed/skipped；终态与非 active 计划只读
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   createPlan,
   getKnowledge,
@@ -30,6 +30,34 @@ import { ErrorNotice } from '../components/ErrorNotice'
 
 // ---- 生成表单 ----
 
+// 后端每叶按正文长度估 8–12 分钟；这里用 12 分钟做预算，并留 15% 缓冲。
+// 目标分越高，默认覆盖范围越接近预算上限（60 分约 60%，85 分以上用满预算）。
+function suggestedLeafCount(
+  leafCount: number,
+  examDate: string,
+  dailyMinutes: number,
+  targetScore: number,
+): number {
+  if (leafCount <= 0) return 0
+  const days = examDate ? Math.max(1, daysUntil(examDate) + 1) : 14
+  const budget = days * dailyMinutes * 0.85
+  const scoreFactor = targetScore >= 85 ? 1 : targetScore >= 60 ? 0.8 : 0.6
+  const count = Math.floor((budget * scoreFactor) / 12)
+  return Math.max(1, Math.min(leafCount, count))
+}
+
+function suggestedLeafIds(
+  leaves: KnowledgeTreeNode[],
+  examDate: string,
+  dailyMinutes: number,
+  targetScore: number,
+): string[] {
+  const count = suggestedLeafCount(leaves.length, examDate, dailyMinutes, targetScore)
+  // 非全选时后端最多接受 100 个 id；超出时先取前 100 个，可手动调整。
+  const limit = count >= leaves.length ? leaves.length : Math.min(count, 100)
+  return leaves.slice(0, limit).map((leaf) => leaf.knowledge_node_id)
+}
+
 function GenerateForm({
   courseId,
   leaves,
@@ -45,9 +73,29 @@ function GenerateForm({
   const [dailyMinutes, setDailyMinutes] = useState(60)
   const [targetScore, setTargetScore] = useState(85)
   const [selected, setSelected] = useState<Set<string>>(
-    () => new Set(leaves.map((l) => l.knowledge_node_id)),
+    () =>
+      new Set(
+        suggestedLeafIds(leaves, addDaysISO(todayISO(), 14), 60, 85),
+      ),
   )
   const [formError, setFormError] = useState<string | null>(null)
+  const didInitSelection = useRef(false)
+
+  // 知识框架异步到达时补一次默认选择（之后尊重用户手动改动，不再覆盖）。
+  useEffect(() => {
+    if (!didInitSelection.current && leaves.length > 0 && selected.size === 0) {
+      didInitSelection.current = true
+      setSelected(new Set(suggestedLeafIds(leaves, examDate, dailyMinutes, targetScore)))
+    }
+  }, [leaves, selected.size, examDate, dailyMinutes, targetScore])
+
+  const suggestedIds = useMemo(
+    () => suggestedLeafIds(leaves, examDate, dailyMinutes, targetScore),
+    [leaves, examDate, dailyMinutes, targetScore],
+  )
+  const suggestedCount = suggestedIds.length
+  const estimatedMin = selected.size * 8
+  const estimatedMax = selected.size * 12
 
   const generate = useMutation({
     mutationFn: () =>
@@ -155,8 +203,27 @@ function GenerateForm({
         {/* fieldset 默认 min-inline-size: min-content，不压成 0 会被最长标题撑破卡片 */}
         <fieldset className="min-w-0">
           <legend className="mb-1.5 text-[13px] text-ink2">
-            复习范围（叶子节点，默认全选 {leaves.length} 个）
+            复习范围（叶子节点，共 {leaves.length} 个）
           </legend>
+          <div className="mb-2 flex flex-wrap items-center gap-2 text-[12px] text-ink3">
+            <span>
+              已选 {selected.size} 个 · 按 8–12 分钟/叶估算约 {estimatedMin}–{estimatedMax} 分钟
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelected(new Set(suggestedIds))}
+              className="rounded border border-border2 bg-surface px-2 py-0.5 text-[12px] text-accent hover:border-accent"
+            >
+              按时间预算选 {suggestedCount} 个
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelected(new Set(leaves.map((l) => l.knowledge_node_id)))}
+              className="rounded border border-border2 bg-surface px-2 py-0.5 text-[12px] text-ink2 hover:text-ink"
+            >
+              全选
+            </button>
+          </div>
           <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border border-border bg-bg p-2.5">
             {leaves.map((leaf) => (
               <label

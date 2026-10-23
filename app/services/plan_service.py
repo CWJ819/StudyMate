@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import UTC, date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from sqlalchemy.orm import Session
 
@@ -45,7 +46,7 @@ class PlanService:
         request: StudyPlanGenerateRequest,
     ) -> StudyPlanDetailResponse:
         self._require_course(session, course_id)
-        today = datetime.now(UTC).date()
+        today = datetime.now(ZoneInfo("Asia/Shanghai")).date()
         if request.exam_date < today:
             raise AppError(
                 code="INVALID_PLAN_CONSTRAINTS",
@@ -77,7 +78,7 @@ class PlanService:
                     details={"knowledge_node_ids": missing},
                 )
 
-        task_specs = self._build_task_specs(nodes, daily_minutes=request.daily_minutes)
+        task_specs = self._build_task_specs(nodes)
         schedule = self._schedule_tasks(
             task_specs,
             start_date=today,
@@ -97,7 +98,7 @@ class PlanService:
             constraints_json={
                 "knowledge_node_ids": request.knowledge_node_ids,
                 "generated_at": datetime.now(UTC).isoformat(),
-                "algorithm_version": "study-plan-v1",
+                "algorithm_version": "study-plan-v2",
             },
         )
         for scheduled_date, spec in schedule:
@@ -173,33 +174,25 @@ class PlanService:
         assert refreshed is not None
         return self._task_response(refreshed)
 
-    def _build_task_specs(
-        self,
-        nodes: list[KnowledgeNodeVersion],
-        *,
-        daily_minutes: int,
-    ) -> list[dict]:
-        estimated_minutes = min(30, max(15, daily_minutes))
+    @staticmethod
+    def _estimate_minutes(node: KnowledgeNodeVersion) -> int:
+        # 读取/复习成本随叶子正文长度增长，但不要按“每日预算”反推单叶时长——
+        # 那会让同一天数下的任务时长随用户输入膨胀，直接制造不可行计划。
+        # 8–12 分钟是工程估计，不是实测学习时长。
+        content_chars = len((node.content or "").strip())
+        return min(12, 8 + content_chars // 400)
+
+    def _build_task_specs(self, nodes: list[KnowledgeNodeVersion]) -> list[dict]:
         specs: list[dict] = []
         for index, node in enumerate(nodes, start=1):
             specs.append(
                 {
-                    "title": f"Review {node.title}",
+                    "title": f"复习 {node.title}",
                     "task_type": "review",
-                    "estimated_minutes": estimated_minutes,
+                    "estimated_minutes": self._estimate_minutes(node),
                     "priority": index,
                     "knowledge_node_id": node.knowledge_node_id,
                     "target_role": "primary",
-                }
-            )
-            specs.append(
-                {
-                    "title": f"Practice {node.title}",
-                    "task_type": "practice",
-                    "estimated_minutes": estimated_minutes,
-                    "priority": index + len(nodes),
-                    "knowledge_node_id": node.knowledge_node_id,
-                    "target_role": "practice",
                 }
             )
         return specs
