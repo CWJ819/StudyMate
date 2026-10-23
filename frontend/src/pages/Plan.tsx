@@ -58,6 +58,19 @@ function suggestedLeafIds(
   return leaves.slice(0, limit).map((leaf) => leaf.knowledge_node_id)
 }
 
+function knowledgePathMap(tree: KnowledgeTreeNode[]): Map<string, string> {
+  const paths = new Map<string, string>()
+  const walk = (nodes: KnowledgeTreeNode[], prefix: string) => {
+    for (const node of nodes) {
+      const path = prefix ? `${prefix} > ${node.title}` : node.title
+      paths.set(node.knowledge_node_id, path)
+      if (node.children?.length) walk(node.children, path)
+    }
+  }
+  walk(tree, '')
+  return paths
+}
+
 function GenerateForm({
   courseId,
   leaves,
@@ -324,11 +337,13 @@ function VersionList({
 
 function TaskRow({
   task,
+  labels,
   readonly,
   onTransition,
   busy,
 }: {
   task: StudyTask
+  labels: Map<string, string>
   readonly: boolean
   onTransition: (taskId: string, to: string) => void
   busy: boolean
@@ -336,7 +351,14 @@ function TaskRow({
   const meta = taskStatus(task.status)
   const terminal = isTaskTerminal(task.status)
   const done = task.status === 'completed'
-  const targetNames = task.targets.map((t) => t.title ?? t.knowledge_node_id).join('、')
+  const targetNames = task.targets
+    .map((target) => {
+      const fromTree = labels.get(target.knowledge_node_id)
+      if (fromTree) return fromTree
+      if (target.title && !target.title.startsWith('v1:')) return target.title
+      return target.knowledge_node_id
+    })
+    .join('、')
   return (
     <div
       data-task-id={task.id}
@@ -397,10 +419,12 @@ function daysLabel(days: number): string {
 
 function PlanDetailCard({
   plan,
+  labels,
   onTransition,
   busyTaskId,
 }: {
   plan: StudyPlanDetail
+  labels: Map<string, string>
   onTransition: (taskId: string, to: string) => void
   busyTaskId: string | null
 }) {
@@ -479,6 +503,7 @@ function PlanDetailCard({
               <TaskRow
                 key={task.id}
                 task={task}
+                labels={labels}
                 readonly={readonly}
                 onTransition={onTransition}
                 busy={busyTaskId === task.id}
@@ -557,6 +582,7 @@ export function PlanPage() {
   }
 
   const leaves = collectLeaves(framework.data?.tree ?? [])
+  const labels = useMemo(() => knowledgePathMap(framework.data?.tree ?? []), [framework.data])
   const planList = plans.data ?? []
 
   return (
@@ -590,6 +616,7 @@ export function PlanPage() {
         {detail.data && (
           <PlanDetailCard
             plan={detail.data}
+            labels={labels}
             onTransition={(taskId, to) => transition.mutate({ taskId, to })}
             busyTaskId={transition.isPending ? transition.variables?.taskId ?? null : null}
           />
