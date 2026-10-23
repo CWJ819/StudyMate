@@ -4,8 +4,9 @@ Stage B 按 section 独立抽取，教材的两份同一章文件会让同一概
 各出现一次。这里在落库前把“同类概念”收成一个 canonical 叶：
 
 1. **精确桶**：标题做 NFKC、casefold、删除全部空白（与大纲合并键同款）；
-2. **模糊合并**：difflib 相似度 ≥ 0.90，或短词（≥3 字符）是长词子串且长词
-   短于 12 字符。短标题不做子串合并，避免 "网络" 吞掉 "计算机网络"。
+2. **模糊合并**：difflib 相似度 ≥ 0.90，且两侧 ASCII 字母数字骨架相同。
+   不做子串合并：线上实测 "物理层" 会吞掉 "物理层机械特性/电气特性/编码违例"
+   等不同概念；"NRZ编码" 与 "NRZI编码" 相似度高但骨架不同，也必须分开。
 
 合并在 occurrence 级别进行；canonical 按“来源最多 → 最小主来源页 → 标题字典
 序”确定性选取，sources 取并集，content 取最长。锁定对（用户显式指定“这两个
@@ -24,8 +25,6 @@ from app.llm.schemas import KnowledgeSourceCandidate
 
 DEFAULT_MAX_SOURCES = 6
 FUZZY_RATIO_THRESHOLD = 0.90
-SHORT_SUBSTRING_MIN_CHARS = 3
-LONG_SUBSTRING_MAX_CHARS = 12
 
 
 @dataclass(frozen=True)
@@ -348,14 +347,20 @@ def _fuzzy_match(left: str, right: str) -> bool:
     if not left or not right or left == right:
         return False
     ratio = SequenceMatcher(None, left, right).ratio()
-    if ratio >= FUZZY_RATIO_THRESHOLD:
-        return True
-    short, long = (left, right) if len(left) <= len(right) else (right, left)
-    return (
-        len(short) >= SHORT_SUBSTRING_MIN_CHARS
-        and short in long
-        and len(long) < LONG_SUBSTRING_MAX_CHARS
-    )
+    if ratio < FUZZY_RATIO_THRESHOLD:
+        return False
+    # NRZ编码 / NRZI编码 这类只差一个 ASCII 字符的标题相似度很高，但语义不同。
+    left_ascii = _ascii_signature(left)
+    right_ascii = _ascii_signature(right)
+    if left_ascii and right_ascii and left_ascii != right_ascii:
+        return False
+    return True
+
+
+def _ascii_signature(title: str) -> str:
+    return "".join(
+        character for character in title if character.isascii() and character.isalnum()
+    ).casefold()
 
 
 def _max_similarity(leaves: list[AlignmentLeaf]) -> float:

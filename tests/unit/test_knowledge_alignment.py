@@ -92,29 +92,41 @@ def test_short_substring_guard_does_not_merge_generic_terms() -> None:
     assert result.decisions == ()
 
 
-def test_long_substring_merges_but_very_long_title_does_not() -> None:
-    short = _leaf("传输控制协议", document_id="doc-1", page_number=1, origin=0)
-    long = _leaf("传输控制协议TCP", document_id="doc-2", page_number=2, origin=1)
-    too_long = _leaf("传输控制协议与其端口分配机制", document_id="doc-3", page_number=3, origin=2)
+def test_generic_layer_titles_are_not_fuzzy_merged() -> None:
+    leaves = [
+        _leaf("物理层", document_id="doc-1", page_number=1, origin=0),
+        _leaf("物理层机械特性", document_id="doc-1", page_number=2, origin=1),
+        _leaf("物理层电气特性", document_id="doc-1", page_number=3, origin=2),
+        _leaf("数据链路层", document_id="doc-1", page_number=4, origin=3),
+        _leaf("数据链路层服务类型", document_id="doc-1", page_number=5, origin=4),
+    ]
 
-    result = align_leaves([short, long, too_long])
+    result = align_leaves(leaves)
 
-    # short 是 long 的子串且 long 短于 12 字，二者合并；too_long 不满足长度守卫。
-    assert sorted(_titles(result)) == sorted(["传输控制协议", "传输控制协议与其端口分配机制"])
-    assert any(decision.method in {"exact", "fuzzy"} for decision in result.decisions)
+    assert len(result.leaves) == 5
+    assert result.decisions == ()
 
 
-def test_fuzzy_substring_merge_marks_method_and_similarity() -> None:
-    first = _leaf("TCP流量控制", document_id="doc-1", page_number=1, origin=0)
-    second = _leaf("TCP流量控制机制", document_id="doc-2", page_number=2, origin=1)
+def test_fuzzy_ratio_0_9_merges_satellite_title() -> None:
+    first = _leaf("卫星通信传播特点与局限", document_id="doc-1", page_number=1, origin=0)
+    second = _leaf("卫星通信特点与局限", document_id="doc-2", page_number=2, origin=1)
 
     result = align_leaves([first, second])
 
     assert len(result.leaves) == 1
     assert result.leaves[0].merge_method == "fuzzy"
-    assert result.leaves[0].similarity is not None
-    # 子串守卫可以合并比例低于 0.90 的短标题；similarity 记录真实比例。
-    assert 0.85 <= result.leaves[0].similarity < 0.90
+    assert result.leaves[0].similarity == 0.9
+    assert result.leaves[0].aliases == ("卫星通信特点与局限",)
+
+
+def test_ascii_near_duplicate_is_not_merged() -> None:
+    first = _leaf("NRZ编码", document_id="doc-1", page_number=1, origin=0)
+    second = _leaf("NRZI编码", document_id="doc-1", page_number=2, origin=1)
+
+    result = align_leaves([first, second])
+
+    assert sorted(_titles(result)) == ["NRZI编码", "NRZ编码"]
+    assert result.decisions == ()
 
 
 def test_alias_lock_keeps_conflicting_leaves_apart() -> None:
