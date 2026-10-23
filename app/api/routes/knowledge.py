@@ -1,16 +1,19 @@
 import threading
 from typing import Literal
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Body, Query, Response
 
 from app.db.session import session_scope
 from app.jobs.runner import get_job_runner
 from app.schemas.knowledge import (
+    KnowledgeAliasLockRequest,
+    KnowledgeAliasLockResponse,
     KnowledgeBuildRequest,
     KnowledgeBuildResponse,
     KnowledgeFrameworkResponse,
     KnowledgeGraphResponse,
     KnowledgeHighlightsResponse,
+    KnowledgeMergeDecisionsResponse,
     KnowledgeNodeDetailResponse,
     KnowledgeScoredTreeResponse,
     KnowledgeVersionResponse,
@@ -84,6 +87,72 @@ async def get_knowledge_highlights(
             limit=limit,
             order=order,
         )
+
+
+@router.get(
+    "/courses/{course_id}/knowledge/merge-decisions",
+    response_model=KnowledgeMergeDecisionsResponse,
+)
+async def list_knowledge_merge_decisions(
+    course_id: str,
+) -> KnowledgeMergeDecisionsResponse:
+    with session_scope() as session:
+        return KnowledgeService().list_merge_decisions(session, course_id)
+
+
+@router.post(
+    "/courses/{course_id}/knowledge/alias-locks",
+    response_model=KnowledgeAliasLockResponse,
+)
+async def add_knowledge_alias_lock(
+    course_id: str,
+    payload: KnowledgeAliasLockRequest,
+) -> KnowledgeAliasLockResponse:
+    with session_scope() as session:
+        return KnowledgeService().add_alias_lock(
+            session,
+            course_id,
+            title_a=payload.title_a,
+            title_b=payload.title_b,
+        )
+
+
+@router.post(
+    "/courses/{course_id}/knowledge/alias-locks/delete",
+    status_code=204,
+    response_model=None,
+)
+async def delete_knowledge_alias_lock_via_post(
+    course_id: str,
+    payload: KnowledgeAliasLockRequest,
+) -> Response:
+    """POST alias for ModelScope gateways that reject DELETE (same as course delete)."""
+    with session_scope() as session:
+        KnowledgeService().delete_alias_lock(
+            session, course_id, title_a=payload.title_a, title_b=payload.title_b
+        )
+    return Response(status_code=204)
+
+
+@router.delete(
+    "/courses/{course_id}/knowledge/alias-locks",
+    status_code=204,
+    response_model=None,
+)
+async def delete_knowledge_alias_lock(
+    course_id: str,
+    payload: KnowledgeAliasLockRequest | None = Body(default=None),
+    title_a: str | None = Query(default=None),
+    title_b: str | None = Query(default=None),
+) -> Response:
+    first = payload.title_a if payload is not None else title_a
+    second = payload.title_b if payload is not None else title_b
+    if first is not None and second is not None:
+        with session_scope() as session:
+            KnowledgeService().delete_alias_lock(
+                session, course_id, title_a=first, title_b=second
+            )
+    return Response(status_code=204)
 
 
 @router.get(

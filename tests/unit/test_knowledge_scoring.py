@@ -22,6 +22,7 @@ def _leaf(
     node_id: str,
     *,
     pages: int = 1,
+    documents: int = 0,
     content: int = 100,
     questions: int = 0,
 ) -> LeafScoringInput:
@@ -29,6 +30,7 @@ def _leaf(
         node_version_id=node_id,
         content_length=content,
         source_pages=pages,
+        source_documents=documents,
         question_count=questions,
     )
 
@@ -66,13 +68,14 @@ def test_weights_sum_to_one_and_scoring_version_is_pinned() -> None:
         "relation_centrality",
         "content_length",
         "quiz_reinforcement",
+        "source_documents",
     }
     assert set(DIFFICULTY_WEIGHTS) == {
         "prerequisite_depth",
         "prerequisite_in_degree",
         "content_length",
     }
-    assert SCORING_VERSION == "scoring-v1"
+    assert SCORING_VERSION == "scoring-v2"
     assert HIGHLIGHT_ORDERS == ("importance", "difficulty", "gap")
 
 
@@ -92,13 +95,30 @@ def test_components_are_normalized_by_leaf_maximum() -> None:
         "relation_centrality": 0,
         "content_length": 100,
         "quiz_reinforcement": 0,
+        "source_documents": 0,
     }
-    # a: 0.3·1 + 0.2·1 = 0.5；b: 0.3·0.4 + 0.2·1 = 0.32（篇幅相同，都拿满分）
-    assert scores["a"].importance == pytest.approx(0.5)
-    assert scores["b"].importance == pytest.approx(0.32)
+    # a: 0.25·1 + 0.15·1 = 0.40；b: 0.25·0.4 + 0.15·1 = 0.25
+    assert scores["a"].importance == pytest.approx(0.40)
+    assert scores["b"].importance == pytest.approx(0.25)
     # 没有关系时难度只剩篇幅项
     assert scores["a"].difficulty == pytest.approx(0.2)
     assert scores["b"].difficulty == pytest.approx(0.2)
+
+
+def test_source_documents_rewards_cross_document_coverage() -> None:
+    scores = score_leaves(
+        [
+            _leaf("both", documents=2),
+            _leaf("single", documents=1),
+        ],
+        [],
+    )
+
+    assert scores["both"].components["source_documents"] == 2
+    assert scores["both"].importance > scores["single"].importance
+    assert scores["both"].importance - scores["single"].importance == pytest.approx(
+        0.20 * (1.0 - 0.5)
+    )
 
 
 def test_all_zero_component_does_not_divide_by_zero() -> None:
@@ -110,7 +130,7 @@ def test_all_zero_component_does_not_divide_by_zero() -> None:
     assert scores["a"].importance == 0.0
     assert scores["a"].difficulty == 0.0
     assert scores["b"].components["source_pages"] == 0
-    assert scores["b"].importance == pytest.approx(0.2)
+    assert scores["b"].importance == pytest.approx(0.15)
 
 
 def test_empty_inputs_degrade_to_empty_scores() -> None:
@@ -130,7 +150,7 @@ def test_quiz_reinforcement_boosts_importance() -> None:
     assert scores["tested"].importance > scores["untested"].importance
     assert scores["tested"].components["quiz_reinforcement"] == 3
     # 未测验不是负分：untested 仍有出处与篇幅贡献
-    assert scores["untested"].importance == pytest.approx(0.5)
+    assert scores["untested"].importance == pytest.approx(0.40)
 
 
 # --------------------------------------------------------------------------
@@ -236,9 +256,9 @@ def test_reasons_report_top_two_components_with_raw_and_normalized_values() -> N
     ]
     assert reasons[0]["value"] == 10
     assert reasons[0]["normalized"] == pytest.approx(1.0)
-    assert reasons[0]["contribution"] == pytest.approx(0.3)
+    assert reasons[0]["contribution"] == pytest.approx(0.25)
     assert reasons[1]["value"] == 400
-    assert reasons[1]["contribution"] == pytest.approx(0.2)
+    assert reasons[1]["contribution"] == pytest.approx(0.15)
 
 
 def test_reasons_fall_back_to_weight_order_when_everything_is_zero() -> None:

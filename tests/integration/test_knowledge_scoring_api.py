@@ -169,8 +169,10 @@ async def test_scored_tree_preserves_old_shape_and_aggregates_children(
                 "relation_centrality",
                 "content_length",
                 "quiz_reinforcement",
+                "source_documents",
             }
             assert node["components"]["source_pages"] >= 1
+            assert node["components"]["source_documents"] >= 1
             assert node["components"]["content_length"] > 0
         else:
             assert node["components"] is None

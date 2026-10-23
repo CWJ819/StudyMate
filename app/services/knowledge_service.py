@@ -17,9 +17,12 @@ from app.repositories.knowledge_repository import KnowledgeRepository
 from app.repositories.job_repository import JobRepository
 from app.repositories.mastery_repository import MasteryRepository
 from app.schemas.knowledge import (
+    KnowledgeAliasLockResponse,
     KnowledgeBuildRequest,
     KnowledgeBuildResponse,
     KnowledgeFrameworkResponse,
+    KnowledgeMergeDecisionResponse,
+    KnowledgeMergeDecisionsResponse,
     KnowledgeGraphEdgeResponse,
     KnowledgeGraphNodeResponse,
     KnowledgeGraphResponse,
@@ -54,6 +57,27 @@ from app.services.knowledge_scoring import (
 # v5 起构建走三阶段流水线（outline → per-section extract → merge/activate）。
 # D5 修复：job 不再自动重跑，失败由用户重新触发并复用 section 缓存续跑。
 BUILD_JOB_MAX_ATTEMPTS = 1
+
+
+def _normalize_alias_pair(title_a: str, title_b: str) -> tuple[str, str]:
+    first = " ".join(title_a.split())
+    second = " ".join(title_b.split())
+    if not first or not second:
+        raise AppError(
+            code="VALIDATION_ERROR",
+            message="Alias lock titles must not be empty.",
+            status_code=422,
+        )
+    if first.casefold() == second.casefold():
+        raise AppError(
+            code="VALIDATION_ERROR",
+            message="Alias lock requires two distinct titles.",
+            status_code=422,
+            details={"title": first},
+        )
+    if first.casefold() <= second.casefold():
+        return first, second
+    return second, first
 
 
 class KnowledgeBuildPayloadModel(BaseModel):
@@ -284,6 +308,7 @@ class KnowledgeService:
             section_label=node_version.section_label,
             title=node_version.title,
             content=node_version.content,
+            aliases=list(node_version.aliases or []),
             level=node_version.level,
             is_leaf=node_version.is_leaf,
             sources=self._serialize_sources(node_version),
@@ -302,37 +327,48 @@ class KnowledgeService:
         versions_by_id = {node.id: node for node in version.node_versions}
         section_paths = self._section_paths(version.node_versions)
 
-        edges: list[KnowledgeGraphEdgeResponse] = []
+        # 读取层双保险：历史版本可能因旧 bug 在同一框架里落下同一 node 的多行
+        # version。按 knowledge_node_id 聚合，边按 (source,target,type) 去重并保留
+        # 置信度最高的一条，保证 API 输出“一节点一行、一逻辑边一行”。
+        edges_by_key: dict[tuple[str, str, str], KnowledgeGraphEdgeResponse] = {}
         connected: set[str] = set()
         for relation in version.relations:
             source = versions_by_id.get(relation.source_node_version_id)
             target = versions_by_id.get(relation.target_node_version_id)
             if source is None or target is None:
                 continue
-            edges.append(
-                KnowledgeGraphEdgeResponse(
-                    source=source.knowledge_node_id,
-                    target=target.knowledge_node_id,
-                    relation_type=relation.relation_type,
-                    confidence=relation.confidence,
-                    evidence=relation.evidence,
-                )
+            key = (
+                source.knowledge_node_id,
+                target.knowledge_node_id,
+                relation.relation_type,
             )
-            connected.add(source.id)
-            connected.add(target.id)
-        edges.sort(
+            existing = edges_by_key.get(key)
+            if existing is not None and existing.confidence >= relation.confidence:
+                continue
+            edges_by_key[key] = KnowledgeGraphEdgeResponse(
+                source=source.knowledge_node_id,
+                target=target.knowledge_node_id,
+                relation_type=relation.relation_type,
+                confidence=relation.confidence,
+                evidence=relation.evidence,
+            )
+            connected.add(source.knowledge_node_id)
+            connected.add(target.knowledge_node_id)
+        edges = sorted(
+            edges_by_key.values(),
             key=lambda edge: (
                 edge.source,
                 edge.target,
                 edge.relation_type,
                 -edge.confidence,
-            )
+            ),
         )
 
         children_map: dict[str | None, list[KnowledgeNodeVersion]] = {}
         for node in version.node_versions:
             children_map.setdefault(node.parent_id, []).append(node)
         nodes: list[KnowledgeGraphNodeResponse] = []
+        seen_nodes: set[str] = set()
         stack = [
             node
             for node in sorted(
@@ -341,7 +377,12 @@ class KnowledgeService:
         ]
         while stack:
             node = stack.pop()
-            if node.level > 0 and node.id in connected:
+            if (
+                node.level > 0
+                and node.knowledge_node_id in connected
+                and node.knowledge_node_id not in seen_nodes
+            ):
+                seen_nodes.add(node.knowledge_node_id)
                 nodes.append(
                     KnowledgeGraphNodeResponse(
                         knowledge_node_id=node.knowledge_node_id,
@@ -368,24 +409,42 @@ class KnowledgeService:
     # Phase 3：importance / difficulty（读取时计算，不落库）
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _dedupe_leaf_versions(
+        node_versions: list[KnowledgeNodeVersion],
+    ) -> list[KnowledgeNodeVersion]:
+        """旧数据可能在同一版本里给同一 node 落多行叶 version。
+
+        读取层按 knowledge_node_id 保留首见行；容器不参与去重（它们不承载
+        关系与评分分量）。
+        """
+        seen_leaf_ids: set[str] = set()
+        deduped: list[KnowledgeNodeVersion] = []
+        for node in node_versions:
+            if node.is_leaf:
+                if node.knowledge_node_id in seen_leaf_ids:
+                    continue
+                seen_leaf_ids.add(node.knowledge_node_id)
+            deduped.append(node)
+        return deduped
+
     def get_scored_tree(
         self, session: Session, course_id: str
     ) -> KnowledgeScoredTreeResponse:
-        """带评分的章节树：叶子带自身分数与四分量，容器取后代最大值。"""
+        """带评分的章节树：叶子带自身分数与五分量，容器取后代最大值。"""
         version = self._require_active_framework(session, course_id)
         scores = self._score_framework(session, version)
 
         children_map: dict[str | None, list[KnowledgeNodeVersion]] = {}
-        for node in version.node_versions:
+        for node in self._dedupe_leaf_versions(version.node_versions):
             children_map.setdefault(node.parent_id, []).append(node)
 
         def convert(node: KnowledgeNodeVersion) -> KnowledgeScoredTreeNodeResponse:
-            children = [
-                convert(child)
-                for child in sorted(
-                    children_map.get(node.id, []), key=lambda item: item.sort_order
-                )
-            ]
+            children: list[KnowledgeScoredTreeNodeResponse] = []
+            for child in sorted(
+                children_map.get(node.id, []), key=lambda item: item.sort_order
+            ):
+                children.append(convert(child))
             score = scores.get(node.id)
             if node.is_leaf:
                 importance = score.importance if score is not None else 0.0
@@ -460,9 +519,11 @@ class KnowledgeService:
         }
 
         candidates: list[HighlightCandidate] = []
+        seen_leaf_ids: set[str] = set()
         for node in version.node_versions:
-            if not node.is_leaf:
+            if not node.is_leaf or node.knowledge_node_id in seen_leaf_ids:
                 continue
+            seen_leaf_ids.add(node.knowledge_node_id)
             score = scores.get(node.id)
             if score is None:
                 continue
@@ -509,12 +570,83 @@ class KnowledgeService:
             ),
         )
 
+    def list_merge_decisions(
+        self, session: Session, course_id: str
+    ) -> KnowledgeMergeDecisionsResponse:
+        version = self._require_active_framework(session, course_id)
+        decisions = self.repository.list_merge_decisions(
+            session, framework_version_id=version.id
+        )
+        return KnowledgeMergeDecisionsResponse(
+            framework_version_id=version.id,
+            decisions=[
+                KnowledgeMergeDecisionResponse(
+                    id=decision.id,
+                    framework_version_id=decision.framework_version_id,
+                    canonical_title=decision.canonical_title,
+                    aliases=list(decision.aliases or []),
+                    members=list(decision.members or []),
+                    distinct_documents=decision.distinct_documents,
+                    method=decision.method,
+                    similarity=decision.similarity,
+                    created_at=decision.created_at,
+                )
+                for decision in decisions
+            ],
+        )
+
+    def add_alias_lock(
+        self, session: Session, course_id: str, *, title_a: str, title_b: str
+    ) -> KnowledgeAliasLockResponse:
+        course = self.repository.get_course(session, course_id)
+        if course is None:
+            raise AppError(
+                code="RESOURCE_NOT_FOUND",
+                message="Course not found.",
+                status_code=404,
+                details={"course_id": course_id},
+            )
+        first, second = _normalize_alias_pair(title_a, title_b)
+        self.repository.add_alias_lock(
+            session, course_id=course_id, title_a=first, title_b=second
+        )
+        session.commit()
+        return KnowledgeAliasLockResponse(
+            course_id=course_id, title_a=first, title_b=second
+        )
+
+    def delete_alias_lock(
+        self, session: Session, course_id: str, *, title_a: str, title_b: str
+    ) -> None:
+        course = self.repository.get_course(session, course_id)
+        if course is None:
+            raise AppError(
+                code="RESOURCE_NOT_FOUND",
+                message="Course not found.",
+                status_code=404,
+                details={"course_id": course_id},
+            )
+        first, second = _normalize_alias_pair(title_a, title_b)
+        self.repository.delete_alias_lock(
+            session, course_id=course_id, title_a=first, title_b=second
+        )
+        session.commit()
+
     def _score_framework(
         self, session: Session, version
     ) -> dict[str, LeafScore]:
         """把 active 版本的出处/关系/测验映射聚合成评分输入。"""
-        leaf_nodes = [node for node in version.node_versions if node.is_leaf]
+        leaf_nodes: list[KnowledgeNodeVersion] = []
+        seen_leaf_ids: set[str] = set()
+        for node in version.node_versions:
+            if not node.is_leaf or node.knowledge_node_id in seen_leaf_ids:
+                continue
+            seen_leaf_ids.add(node.knowledge_node_id)
+            leaf_nodes.append(node)
         source_pages = self.repository.count_source_pages_by_node(
+            session, framework_version_id=version.id
+        )
+        source_documents = self.repository.count_source_documents_by_node(
             session, framework_version_id=version.id
         )
         question_counts = self.repository.count_question_mappings_by_node(
@@ -532,6 +664,7 @@ class KnowledgeService:
                     node_version_id=node.id,
                     content_length=len(node.content or ""),
                     source_pages=source_pages.get(node.id, 0),
+                    source_documents=source_documents.get(node.id, 0),
                     question_count=question_counts.get(node.id, 0),
                 )
                 for node in leaf_nodes
@@ -578,7 +711,7 @@ class KnowledgeService:
         self, node_versions: list[KnowledgeNodeVersion]
     ) -> list[KnowledgeTreeNodeResponse]:
         children_map: dict[str | None, list[KnowledgeNodeVersion]] = {}
-        for node in node_versions:
+        for node in self._dedupe_leaf_versions(node_versions):
             children_map.setdefault(node.parent_id, []).append(node)
 
         def convert(node: KnowledgeNodeVersion) -> KnowledgeTreeNodeResponse:

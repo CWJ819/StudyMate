@@ -71,7 +71,7 @@ async def test_health_check_reports_outdated_database_schema(
     body = response.json()
     assert body["error"]["code"] == "DATABASE_SCHEMA_OUTDATED"
     assert body["error"]["details"]["current_revision"] == "20261017_0007"
-    assert "20261021_0011" in body["error"]["details"]["head_revisions"]
+    assert "20261021_0012" in body["error"]["details"]["head_revisions"]
 
     reset_session_state()
     reset_settings_cache()

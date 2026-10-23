@@ -6,7 +6,9 @@ from sqlalchemy.orm import Session, selectinload
 from app.db.models.course import Course
 from app.db.models.document import Document, DocumentChunk, DocumentPage
 from app.db.models.knowledge import (
+    KnowledgeAliasLock,
     KnowledgeFrameworkVersion,
+    KnowledgeMergeDecision,
     KnowledgeNode,
     KnowledgeNodeRelation,
     KnowledgeNodeVersion,
@@ -112,6 +114,24 @@ class KnowledgeRepository:
         for node_version_id, document_id, page_number in rows:
             pages.setdefault(node_version_id, set()).add((document_id, page_number))
         return {node_version_id: len(values) for node_version_id, values in pages.items()}
+
+    def count_source_documents_by_node(
+        self, session: Session, *, framework_version_id: str
+    ) -> dict[str, int]:
+        """每片叶子 distinct 的来源文档数（跨文档覆盖分量 X）。"""
+        rows = session.execute(
+            select(
+                KnowledgeSource.node_version_id,
+                func.count(func.distinct(KnowledgeSource.document_id)),
+            )
+            .join(
+                KnowledgeNodeVersion,
+                KnowledgeNodeVersion.id == KnowledgeSource.node_version_id,
+            )
+            .where(KnowledgeNodeVersion.framework_version_id == framework_version_id)
+            .group_by(KnowledgeSource.node_version_id)
+        )
+        return {node_version_id: int(count) for node_version_id, count in rows}
 
     def count_question_mappings_by_node(
         self, session: Session, *, framework_version_id: str
@@ -288,6 +308,87 @@ class KnowledgeRepository:
         )
         session.flush()
 
+    def add_merge_decision(
+        self,
+        session: Session,
+        *,
+        framework_version_id: str,
+        canonical_title: str,
+        aliases: list[str],
+        members: list[str],
+        distinct_documents: int,
+        method: str,
+        similarity: float | None,
+    ) -> KnowledgeMergeDecision:
+        decision = KnowledgeMergeDecision(
+            framework_version_id=framework_version_id,
+            canonical_title=canonical_title,
+            aliases=aliases,
+            members=members,
+            distinct_documents=distinct_documents,
+            method=method,
+            similarity=similarity,
+        )
+        session.add(decision)
+        session.flush()
+        return decision
+
+    def list_merge_decisions(
+        self, session: Session, *, framework_version_id: str
+    ) -> list[KnowledgeMergeDecision]:
+        return list(
+            session.scalars(
+                select(KnowledgeMergeDecision)
+                .where(
+                    KnowledgeMergeDecision.framework_version_id
+                    == framework_version_id
+                )
+                .order_by(KnowledgeMergeDecision.created_at.asc())
+            )
+        )
+
+    def list_alias_locks(self, session: Session, *, course_id: str) -> list[tuple[str, str]]:
+        return [
+            (lock.title_a, lock.title_b)
+            for lock in session.scalars(
+                select(KnowledgeAliasLock)
+                .where(KnowledgeAliasLock.course_id == course_id)
+                .order_by(KnowledgeAliasLock.title_a.asc(), KnowledgeAliasLock.title_b.asc())
+            )
+        ]
+
+    def add_alias_lock(
+        self, session: Session, *, course_id: str, title_a: str, title_b: str
+    ) -> bool:
+        existing = session.scalar(
+            select(KnowledgeAliasLock.id)
+            .where(KnowledgeAliasLock.course_id == course_id)
+            .where(KnowledgeAliasLock.title_a == title_a)
+            .where(KnowledgeAliasLock.title_b == title_b)
+        )
+        if existing is not None:
+            return False
+        session.add(
+            KnowledgeAliasLock(course_id=course_id, title_a=title_a, title_b=title_b)
+        )
+        session.flush()
+        return True
+
+    def delete_alias_lock(
+        self, session: Session, *, course_id: str, title_a: str, title_b: str
+    ) -> bool:
+        lock = session.scalar(
+            select(KnowledgeAliasLock)
+            .where(KnowledgeAliasLock.course_id == course_id)
+            .where(KnowledgeAliasLock.title_a == title_a)
+            .where(KnowledgeAliasLock.title_b == title_b)
+        )
+        if lock is None:
+            return False
+        session.delete(lock)
+        session.flush()
+        return True
+
     def add_node_version(
         self,
         session: Session,
@@ -301,6 +402,7 @@ class KnowledgeRepository:
         level: int,
         is_leaf: bool,
         sort_order: int,
+        aliases: list[str] | None = None,
     ) -> KnowledgeNodeVersion:
         node_version = KnowledgeNodeVersion(
             framework_version_id=framework_version_id,
@@ -309,6 +411,7 @@ class KnowledgeRepository:
             title=title,
             section_label=section_label,
             content=content,
+            aliases=aliases,
             level=level,
             is_leaf=is_leaf,
             sort_order=sort_order,

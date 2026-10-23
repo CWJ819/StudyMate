@@ -57,6 +57,13 @@ from app.llm.schemas import (
 )
 from app.repositories.job_repository import JobRepository
 from app.repositories.knowledge_repository import KnowledgeRepository
+from app.services.knowledge_alignment import (
+    AlignmentLeaf,
+    MergeDecision,
+    align_leaves,
+    dedupe_relations,
+    remap_relation_keys,
+)
 from app.services.knowledge_outline_service import (
     OUTLINE_PARSER_VERSION,
     MergedSection,
@@ -185,6 +192,10 @@ class PendingLeaf:
     content: str
     section_label: str | None
     sources: list[KnowledgeSourceCandidate]
+    # 跨 section/文档对齐后留下的别名与合并方式；singleton 为空/None。
+    aliases: list[str] = field(default_factory=list)
+    merge_method: str | None = None
+    similarity: float | None = None
 
 
 @dataclass(frozen=True)
@@ -225,6 +236,9 @@ class BuildDiagnostics:
     # 包含非法 ref/类型/置信度、自环、去重输家、超上限与端点丢失。
     relations_kept: int = 0
     relations_dropped: int = 0
+    # 版本级唯一守卫：同一 stable_key 的叶再次出现（对齐漏网）被跳过的次数。
+    duplicate_leaf_occurrences: int = 0
+    merge_decisions: list[MergeDecision] = field(default_factory=list)
     # 进度与终态诊断：completed_units 只统计成功，失败/跳过分开计
     succeeded_units: int = 0
     failed_units: int = 0
@@ -674,7 +688,9 @@ class KnowledgeBuildPipeline:
 
         # ---- Stage C: merge / validate / persist / activate ------------------
         reporter.update("merge", 1, 1, "正在合并知识点")
-        containers = self._merge_to_containers(session, outline, outcomes, diagnostics)
+        containers = self._merge_to_containers(
+            session, course.id, outline, outcomes, diagnostics
+        )
         reporter.update("validate", 1, 1, "正在校验知识框架")
         self._validate_containers(containers)
 
@@ -1090,6 +1106,7 @@ class KnowledgeBuildPipeline:
     def _merge_to_containers(
         self,
         session: Session,
+        course_id: str,
         outline: list[MergedSection],
         outcomes: list[WindowOutcome],
         diagnostics: BuildDiagnostics,
@@ -1128,7 +1145,92 @@ class KnowledgeBuildPipeline:
                     diagnostics,
                 )
             containers.append(chapter_container)
+        containers = self._prune_containers(containers)
+        containers = self._align_containers(
+            session, course_id, containers, diagnostics
+        )
         return self._prune_containers(containers)
+
+    def _align_containers(
+        self,
+        session: Session,
+        course_id: str,
+        containers: list[PendingContainer],
+        diagnostics: BuildDiagnostics,
+    ) -> list[PendingContainer]:
+        """跨 section 对齐叶子，并把关系 key 改指 canonical 叶。
+
+        对齐是 Stage C 的纯后处理：输入只来自已通过来源校验的 PendingLeaf，
+        不重抽、不改 section 缓存；canonical 叶留在其原始 section。
+        """
+        origin_container: dict[int, PendingContainer] = {}
+        flattened: list[AlignmentLeaf] = []
+        origin = 0
+
+        def add_leaves(container: PendingContainer, path: list[str]) -> None:
+            nonlocal origin
+            for leaf in container.leaves:
+                origin_container[origin] = container
+                flattened.append(
+                    AlignmentLeaf(
+                        title=leaf.title,
+                        content=leaf.content,
+                        section_label=leaf.section_label,
+                        sources=tuple(leaf.sources),
+                        section_path=tuple(path),
+                        origin=origin,
+                    )
+                )
+                origin += 1
+
+        for chapter in containers:
+            if chapter.children:
+                for section in chapter.children:
+                    add_leaves(section, [chapter.title, section.title])
+            else:
+                add_leaves(chapter, [chapter.title])
+
+        locked_pairs = set(
+            self.repository.list_alias_locks(session, course_id=course_id)
+        )
+        result = align_leaves(
+            flattened,
+            locked_pairs=locked_pairs,
+            max_sources=MAX_SOURCES_PER_LEAF,
+        )
+        diagnostics.merge_decisions = list(result.decisions)
+
+        aligned_by_container: dict[int, list[tuple[int, AlignmentLeaf]]] = {}
+        for leaf in result.leaves:
+            container = origin_container[leaf.origin]
+            aligned_by_container.setdefault(id(container), []).append(
+                (leaf.origin, leaf)
+            )
+
+        for chapter in containers:
+            chapter_containers = [chapter, *chapter.children]
+            for container in chapter_containers:
+                entries = aligned_by_container.get(id(container), [])
+                entries.sort(key=lambda item: item[0])
+                container.leaves = [
+                    PendingLeaf(
+                        title=leaf.title,
+                        content=leaf.content,
+                        section_label=leaf.section_label,
+                        sources=list(leaf.sources),
+                        aliases=list(leaf.aliases),
+                        merge_method=leaf.merge_method,
+                        similarity=leaf.similarity,
+                    )
+                    for _, leaf in entries
+                ]
+                if result.canonical_by_title:
+                    container.relations = remap_relation_keys(
+                        container.relations,
+                        result.canonical_by_title,
+                        normalize_key=normalize_title_key,
+                    )
+        return containers
 
     def _collect_leaves(
         self,
@@ -1361,6 +1463,11 @@ class KnowledgeBuildPipeline:
             sort_order=0,
         )
 
+        # 关系必须等全部叶落库后再统一写：对齐后的 canonical 叶可能落在另一个
+        # section，按容器局部写会把跨 section 的边误判为端点丢失。
+        node_version_ids: dict[str, str] = {}
+        node_version_by_node_id: dict[str, str] = {}
+        persisted_leaf_node_ids: set[str] = set()
         for chapter_order, chapter in enumerate(containers, start=1):
             chapter_node = self.repository.get_or_create_node(
                 session,
@@ -1380,7 +1487,7 @@ class KnowledgeBuildPipeline:
                 sort_order=chapter_order,
             )
             if not chapter.children:
-                node_version_ids = self._persist_leaves(
+                self._persist_leaves(
                     session,
                     course=course,
                     version=version,
@@ -1389,13 +1496,9 @@ class KnowledgeBuildPipeline:
                     leaves=chapter.leaves,
                     resolver=resolver,
                     diagnostics=diagnostics,
-                )
-                self._persist_relations(
-                    session,
-                    version=version,
-                    relations=chapter.relations,
                     node_version_ids=node_version_ids,
-                    diagnostics=diagnostics,
+                    node_version_by_node_id=node_version_by_node_id,
+                    persisted_leaf_node_ids=persisted_leaf_node_ids,
                 )
                 continue
             for section_order, section in enumerate(chapter.children, start=1):
@@ -1418,7 +1521,7 @@ class KnowledgeBuildPipeline:
                     is_leaf=False,
                     sort_order=section_order,
                 )
-                node_version_ids = self._persist_leaves(
+                self._persist_leaves(
                     session,
                     course=course,
                     version=version,
@@ -1427,14 +1530,25 @@ class KnowledgeBuildPipeline:
                     leaves=section.leaves,
                     resolver=resolver,
                     diagnostics=diagnostics,
-                )
-                self._persist_relations(
-                    session,
-                    version=version,
-                    relations=section.relations,
                     node_version_ids=node_version_ids,
-                    diagnostics=diagnostics,
+                    node_version_by_node_id=node_version_by_node_id,
+                    persisted_leaf_node_ids=persisted_leaf_node_ids,
                 )
+
+        all_relations: list[PendingRelation] = []
+        for chapter in containers:
+            all_relations.extend(chapter.relations)
+            for section in chapter.children:
+                all_relations.extend(section.relations)
+        all_relations = dedupe_relations(all_relations, diagnostics=diagnostics)
+        self._persist_relations(
+            session,
+            version=version,
+            relations=all_relations,
+            node_version_ids=node_version_ids,
+            diagnostics=diagnostics,
+        )
+        self._persist_merge_decisions(session, version=version, diagnostics=diagnostics)
 
     def _persist_leaves(
         self,
@@ -1447,9 +1561,15 @@ class KnowledgeBuildPipeline:
         leaves: list[PendingLeaf],
         resolver: IdentityResolver,
         diagnostics: BuildDiagnostics,
-    ) -> dict[str, str]:
-        """落库一个容器的叶子，返回 规范化标题 → node_version_id（供关系解析）。"""
-        node_version_ids: dict[str, str] = {}
+        node_version_ids: dict[str, str],
+        node_version_by_node_id: dict[str, str],
+        persisted_leaf_node_ids: set[str],
+    ) -> None:
+        """落库一个容器的叶子；版本级守卫保证一个 node 至多一行 version。
+
+        ``node_version_ids`` 是跨容器共享的“规范化标题 → version id”映射；
+        ``node_version_by_node_id`` 用于重复 occurrence 回指已存在的 version。
+        """
         for leaf_order, leaf in enumerate(leaves, start=1):
             primary = min(
                 (source.page_number, source.document_id, source.chunk_id or "")
@@ -1482,6 +1602,15 @@ class KnowledgeBuildPipeline:
                     diagnostics.new_nodes += 1
                     if decision.orphaned:
                         diagnostics.orphaned_nodes += 1
+            if knowledge_node.id in persisted_leaf_node_ids:
+                # 对齐漏网的结构兜底：同一框架版本内同一 node 只允许一行
+                # version。关系仍指向已落库的那一行，不能产生第二个 version。
+                diagnostics.duplicate_leaf_occurrences += 1
+                existing_version_id = node_version_by_node_id[knowledge_node.id]
+                node_version_ids.setdefault(
+                    normalize_title_key(leaf.title), existing_version_id
+                )
+                continue
             node_version = self.repository.add_node_version(
                 session,
                 framework_version_id=version.id,
@@ -1493,7 +1622,10 @@ class KnowledgeBuildPipeline:
                 level=level,
                 is_leaf=True,
                 sort_order=leaf_order,
+                aliases=list(leaf.aliases) or None,
             )
+            persisted_leaf_node_ids.add(knowledge_node.id)
+            node_version_by_node_id[knowledge_node.id] = node_version.id
             node_version_ids.setdefault(normalize_title_key(leaf.title), node_version.id)
             for source in leaf.sources:
                 self.repository.add_source(
@@ -1504,7 +1636,6 @@ class KnowledgeBuildPipeline:
                     chunk_id=source.chunk_id,
                     evidence_type=source.evidence_type,
                 )
-        return node_version_ids
 
     def _persist_relations(
         self,
@@ -1515,8 +1646,9 @@ class KnowledgeBuildPipeline:
         node_version_ids: dict[str, str],
         diagnostics: BuildDiagnostics,
     ) -> None:
-        """在叶子落库后写关系行；关系是版本作用域的，随框架版本整体重写。"""
-        written: set[tuple[str, str, str]] = set()
+        """在叶子落库后写关系行；版本级按无序端点去重，保留高置信度方向。"""
+        best: dict[tuple[str, str, str], PendingRelation] = {}
+        resolved: dict[tuple[str, str, str], tuple[str, str]] = {}
         for relation in relations:
             source_id = node_version_ids.get(relation.source_key)
             target_id = node_version_ids.get(relation.target_key)
@@ -1524,11 +1656,21 @@ class KnowledgeBuildPipeline:
                 # 端点叶子被裁掉（或合并成同一节点）时整条边丢弃
                 diagnostics.relations_dropped += 1
                 continue
-            edge = (source_id, target_id, relation.relation_type)
-            if edge in written:
+            edge_key = (
+                min(source_id, target_id),
+                max(source_id, target_id),
+                relation.relation_type,
+            )
+            existing = best.get(edge_key)
+            if existing is not None:
                 diagnostics.relations_dropped += 1
-                continue
-            written.add(edge)
+                if relation.confidence <= existing.confidence:
+                    continue
+            best[edge_key] = relation
+            resolved[edge_key] = (source_id, target_id)
+
+        for edge_key, relation in best.items():
+            source_id, target_id = resolved[edge_key]
             self.repository.add_relation(
                 session,
                 framework_version_id=version.id,
@@ -1539,6 +1681,25 @@ class KnowledgeBuildPipeline:
                 evidence=relation.evidence,
             )
             diagnostics.relations_kept += 1
+
+    def _persist_merge_decisions(
+        self,
+        session: Session,
+        *,
+        version: KnowledgeFrameworkVersion,
+        diagnostics: BuildDiagnostics,
+    ) -> None:
+        for decision in diagnostics.merge_decisions:
+            self.repository.add_merge_decision(
+                session,
+                framework_version_id=version.id,
+                canonical_title=decision.canonical_title,
+                aliases=list(decision.aliases),
+                members=list(decision.members),
+                distinct_documents=decision.distinct_documents,
+                method=decision.method,
+                similarity=decision.similarity,
+            )
 
     # ---------------------------------------------------------- 独立事务写
 

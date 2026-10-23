@@ -2,7 +2,9 @@ from app.db.models.course import Course
 from app.db.models.document import Document, DocumentChunk, DocumentPage
 from app.db.models.job import Job
 from app.db.models.knowledge import (
+    KnowledgeAliasLock,
     KnowledgeFrameworkVersion,
+    KnowledgeMergeDecision,
     KnowledgeNode,
     KnowledgeNodeRelation,
     KnowledgeNodeVersion,
@@ -38,7 +40,9 @@ __all__ = [
     "DocumentChunk",
     "DocumentPage",
     "Job",
+    "KnowledgeAliasLock",
     "KnowledgeFrameworkVersion",
+    "KnowledgeMergeDecision",
     "KnowledgeGap",
     "KnowledgeNode",
     "KnowledgeNodeRelation",

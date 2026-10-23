@@ -67,6 +67,7 @@ class KnowledgeNodeDetailResponse(BaseModel):
     section_label: str | None
     title: str
     content: str | None
+    aliases: list[str] = Field(default_factory=list)
     level: int
     is_leaf: bool
     sources: list[KnowledgeSourceResponse]
@@ -110,7 +111,7 @@ class KnowledgeScoredTreeNodeResponse(KnowledgeTreeNodeResponse):
 
     importance / difficulty 是工程估计值，不是对课程内容的精确测量。
     容器取后代最大值（语义：“本章最重要 0.82”）；components 只给叶子
-    （四分量原值），容器为 null。
+    （五分量原值），容器为 null。
     """
 
     importance: float
@@ -152,3 +153,33 @@ class KnowledgeScoringBasisResponse(BaseModel):
 class KnowledgeHighlightsResponse(BaseModel):
     items: list[KnowledgeHighlightItemResponse]
     basis: KnowledgeScoringBasisResponse
+
+
+class KnowledgeMergeDecisionResponse(BaseModel):
+    id: str
+    framework_version_id: str
+    canonical_title: str
+    aliases: list[str]
+    members: list[str]
+    distinct_documents: int
+    method: str
+    similarity: float | None
+    created_at: datetime
+
+
+class KnowledgeMergeDecisionsResponse(BaseModel):
+    framework_version_id: str
+    decisions: list[KnowledgeMergeDecisionResponse]
+
+
+class KnowledgeAliasLockRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title_a: str = Field(min_length=1, max_length=255)
+    title_b: str = Field(min_length=1, max_length=255)
+
+
+class KnowledgeAliasLockResponse(BaseModel):
+    course_id: str
+    title_a: str
+    title_b: str

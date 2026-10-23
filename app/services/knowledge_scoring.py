@@ -2,7 +2,7 @@
 
 对应设计文档公式的落地版：
 
-    重要性 I = w1·E + w2·C + w3·F + w4·R
+    重要性 I = w1·E + w2·C + w3·F + w4·R + w5·X
     难度   D = 0.5·前置链深度 + 0.3·前置入度 + 0.2·F
 
 - **E 出处**（``source_pages``）：该叶 distinct 来源页数（document_id + page_number），
@@ -12,8 +12,10 @@
 - **F 篇幅**（``content_length``）：content 字符数，教学投入的代理。
 - **R 测验强化**（``quiz_reinforcement``）：``question_knowledge`` 中映射到该叶的
   题目数；还没有测验时全 0，公式优雅退化。
+- **X 跨文档覆盖**（``source_documents``）：该叶 distinct 来源文档数；同一概念被
+  多份课件讲到时权重更高，鼓励跨文档对齐后的 canonical 叶。
 
-I 的四个分量各自除以全体叶子的最大值（该列全零则整列置 0）再加权，因此 I、D 都落在
+I 的五个分量各自除以全体叶子的最大值（该列全零则整列置 0）再加权，因此 I、D 都落在
 [0, 1]。D 复用同一个归一化后的 F；前置链深度沿 ``prerequisite`` 边反向（从依赖者走向
 被依赖者）取最长链，用记忆化 DFS + on-stack 集合防环——遇到环时按当前路径长度截断，
 不会无限递归。
@@ -28,14 +30,15 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
-SCORING_VERSION = "scoring-v1"
+SCORING_VERSION = "scoring-v2"
 
-# 重要性四分量权重（设计文档 I = w1E + w2C + w3F + w4R 的落地值）。
+# 重要性五分量权重（Phase 4：加入跨文档覆盖 X；E/C 各下调 0.05，F/R 各下调 0.05）。
 IMPORTANCE_WEIGHTS: dict[str, float] = {
-    "source_pages": 0.3,
-    "relation_centrality": 0.3,
-    "content_length": 0.2,
-    "quiz_reinforcement": 0.2,
+    "source_pages": 0.25,
+    "relation_centrality": 0.25,
+    "content_length": 0.15,
+    "quiz_reinforcement": 0.15,
+    "source_documents": 0.20,
 }
 
 # 难度三分量权重（0.5 前置链深度 + 0.3 前置入度 + 0.2 篇幅）。
@@ -63,6 +66,7 @@ class LeafScoringInput:
     content_length: int = 0
     source_pages: int = 0
     question_count: int = 0
+    source_documents: int = 0
 
 
 @dataclass(frozen=True)
@@ -78,7 +82,7 @@ class RelationEdge:
 class LeafScore:
     importance: float
     difficulty: float
-    # 四分量原值（未归一化），供前端解释分数来源。
+    # 五分量原值（未归一化），供前端解释分数来源。
     components: dict[str, int]
     # 贡献最大的前两个分量（含原值、归一化值与加权贡献）。
     reasons: list[dict[str, int | float | str]]
@@ -117,6 +121,9 @@ def score_leaves(
     source_pages = {leaf.node_version_id: max(0, int(leaf.source_pages)) for leaf in ordered}
     content_length = {leaf.node_version_id: max(0, int(leaf.content_length)) for leaf in ordered}
     question_count = {leaf.node_version_id: max(0, int(leaf.question_count)) for leaf in ordered}
+    source_documents = {
+        leaf.node_version_id: max(0, int(leaf.source_documents)) for leaf in ordered
+    }
     centrality = {node_id: 0 for node_id in node_ids}
     prerequisite_in_degree = {node_id: 0 for node_id in node_ids}
 
@@ -139,6 +146,7 @@ def score_leaves(
     centrality_norm = _normalize(centrality)
     length_norm = _normalize(content_length)
     quiz_norm = _normalize(question_count)
+    documents_norm = _normalize(source_documents)
     depth_norm = _normalize(depths)
     in_degree_norm = _normalize(prerequisite_in_degree)
 
@@ -150,12 +158,14 @@ def score_leaves(
             "relation_centrality": centrality[node_id],
             "content_length": content_length[node_id],
             "quiz_reinforcement": question_count[node_id],
+            "source_documents": source_documents[node_id],
         }
         normalized = {
             "source_pages": source_norm[node_id],
             "relation_centrality": centrality_norm[node_id],
             "content_length": length_norm[node_id],
             "quiz_reinforcement": quiz_norm[node_id],
+            "source_documents": documents_norm[node_id],
         }
         contributions = {
             name: IMPORTANCE_WEIGHTS[name] * normalized[name] for name in IMPORTANCE_WEIGHTS

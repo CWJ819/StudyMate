@@ -103,6 +103,8 @@ class KnowledgeNodeVersion(Base):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     section_label: Mapped[str | None] = mapped_column(String(100), nullable=True)
     content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # 跨文档对齐时被并进来的其它标题；canonical 标题仍是 title。
+    aliases: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     level: Mapped[int] = mapped_column(Integer, nullable=False)
     is_leaf: Mapped[bool] = mapped_column(Boolean, nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -240,6 +242,53 @@ class KnowledgeOutlineCache(Base):
     model_name: Mapped[str] = mapped_column(String(100), nullable=False)
     provider_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     payload_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+    )
+
+
+class KnowledgeMergeDecision(Base):
+    """Stage C 跨 section 对齐时发生的一次合并，只记录真正合并的簇。"""
+
+    __tablename__ = "knowledge_merge_decisions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    framework_version_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("knowledge_framework_versions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    canonical_title: Mapped[str] = mapped_column(String(255), nullable=False)
+    aliases: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    members: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    distinct_documents: Mapped[int] = mapped_column(Integer, nullable=False)
+    method: Mapped[str] = mapped_column(String(20), nullable=False)
+    similarity: Mapped[float | None] = mapped_column(Float, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+    )
+
+
+class KnowledgeAliasLock(Base):
+    """用户显式锁定的标题对：自动对齐时不得把这两片叶子并成一个。"""
+
+    __tablename__ = "knowledge_alias_locks"
+    __table_args__ = (UniqueConstraint("course_id", "title_a", "title_b"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    course_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("courses.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    title_a: Mapped[str] = mapped_column(String(255), nullable=False)
+    title_b: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
