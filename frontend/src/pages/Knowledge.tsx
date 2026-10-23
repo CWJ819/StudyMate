@@ -989,7 +989,9 @@ function MergePanel({ courseId }: { courseId: string }) {
             {decision.similarity != null && (
               <span className="font-mono text-[11px] text-ink3">相似度 {decision.similarity.toFixed(2)}</span>
             )}
-            <span className="text-[11px] text-ink3">{decision.distinct_documents} 份文档</span>
+            <span className="text-[11px] text-ink3">
+              {decision.members.length} 个成员 · {decision.distinct_documents} 份文档
+            </span>
             {decision.aliases.length > 0 && (
               <button
                 type="button"
