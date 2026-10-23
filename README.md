@@ -14,7 +14,7 @@
 |---|---|
 | 后端 | 内部 Stage 8 已完成，并补齐本地 LLM 密钥、部署入口与知识框架修复 |
 | 前端 | 课程、总览、资料（含详情）、知识框架、测验、复习、计划、设置等 9 个页面已接入真实接口 |
-| 测试 | 后端 `pytest` 50 passed；前端 `vitest` 63 passed；`npm run build` 通过 |
+| 测试 | 后端 `pytest` 164 passed；前端 `vitest` 73 passed；`npm run build` 通过 |
 | 部署 | 多阶段 Docker 镜像已在 7860 单容器验证（2026-10-20）；已上线魔搭创空间在线演示（2026-10-21，见「快速开始 · 方式一」） |
 | 模式 | `mock://local` 可离线跑通全流程；也支持任意 OpenAI 兼容服务 |
 
@@ -260,7 +260,7 @@ npm run test
 npm run build
 ```
 
-当前基线（2026-10-23）：后端 **154 passed**（约 104 秒），前端 **63 passed**，生产构建通过。测试使用 mock LLM 或本地替身，不需要真实 API Key。
+当前基线（2026-10-24）：后端 **164 passed**（约 100 秒），前端 **73 passed**，生产构建通过。测试使用 mock LLM 或本地替身，不需要真实 API Key。
 
 - Docker 构建、7860 启动、完整 mock 流程与重启持久化记录：[`docs/testing/docker-deployment-report-2026-10-20.md`](docs/testing/docker-deployment-report-2026-10-20.md)
 - 真实模型验收、已知结构化输出问题记录：[`docs/testing/real-model-acceptance-report-2026-10-20.md`](docs/testing/real-model-acceptance-report-2026-10-20.md)
