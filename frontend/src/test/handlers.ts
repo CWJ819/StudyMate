@@ -3,15 +3,19 @@ import {
   chunkDetail,
   course1,
   frameworkActive,
+  graphFixture,
   healthOk,
+  highlightsFixture,
   knowledgeVersions,
   masteryStates,
   materialsC1,
+  mergeDecisionsFixture,
   nodeDetailKn2,
   planDetailActive,
   planDetailInactive,
   plansC1,
   quizOpen,
+  scoredFramework,
   searchResults,
   settingsMock,
   wrongbookGaps,
@@ -37,6 +41,16 @@ export const handlers = [
   http.get('*/api/chunks/ch1', () => HttpResponse.json(chunkDetail)),
   // 知识框架
   http.get('*/api/courses/c1/knowledge', () => HttpResponse.json(frameworkActive)),
+  http.get('*/api/courses/c1/knowledge/tree', () => HttpResponse.json(scoredFramework)),
+  http.get('*/api/courses/c1/knowledge/highlights*', () => HttpResponse.json(highlightsFixture)),
+  http.get('*/api/courses/c1/knowledge/graph', () => HttpResponse.json(graphFixture)),
+  http.get('*/api/courses/c1/knowledge/merge-decisions', () => HttpResponse.json(mergeDecisionsFixture)),
+  http.get('*/api/courses/c1/knowledge/alias-locks', () => HttpResponse.json([])),
+  http.post('*/api/courses/c1/knowledge/alias-locks', async ({ request }) => {
+    const body = (await request.json()) as { title_a: string; title_b: string }
+    return HttpResponse.json({ course_id: 'c1', ...body })
+  }),
+  http.post('*/api/courses/c1/knowledge/alias-locks/delete', () => new HttpResponse(null, { status: 204 })),
   http.get('*/api/knowledge/:nodeId', ({ params }) =>
     params.nodeId === 'kn2'
       ? HttpResponse.json(nodeDetailKn2)

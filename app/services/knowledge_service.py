@@ -595,6 +595,24 @@ class KnowledgeService:
             ],
         )
 
+    def list_alias_locks(
+        self, session: Session, course_id: str
+    ) -> list[KnowledgeAliasLockResponse]:
+        course = self.repository.get_course(session, course_id)
+        if course is None:
+            raise AppError(
+                code="RESOURCE_NOT_FOUND",
+                message="Course not found.",
+                status_code=404,
+                details={"course_id": course_id},
+            )
+        return [
+            KnowledgeAliasLockResponse(course_id=course_id, title_a=first, title_b=second)
+            for first, second in self.repository.list_alias_locks(
+                session, course_id=course_id
+            )
+        ]
+
     def add_alias_lock(
         self, session: Session, course_id: str, *, title_a: str, title_b: str
     ) -> KnowledgeAliasLockResponse:

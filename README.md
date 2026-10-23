@@ -230,18 +230,18 @@ StudyMate/
 | 系统 | `GET /api/health`；`GET /api/settings`；`PUT /api/settings` |
 | 课程 | `POST/GET /api/courses`；`GET/PATCH/DELETE /api/courses/{course_id}` |
 | 资料 | `POST/GET /api/courses/{course_id}/materials`；`GET/DELETE /api/materials/{material_id}`；`GET /api/courses/{course_id}/search`；`GET /api/chunks/{chunk_id}` |
-| 知识 | `POST /api/courses/{course_id}/knowledge/build`；`GET /api/courses/{course_id}/knowledge`；`GET /api/courses/{course_id}/knowledge/graph`；`GET /api/courses/{course_id}/knowledge/tree`；`GET /api/courses/{course_id}/knowledge/highlights`；`GET /api/courses/{course_id}/knowledge/merge-decisions`；`POST/DELETE /api/courses/{course_id}/knowledge/alias-locks`；`POST /api/courses/{course_id}/knowledge/alias-locks/delete`；`GET /api/knowledge/{knowledge_point_id}`；`GET /api/courses/{course_id}/knowledge/versions` |
+| 知识 | `POST /api/courses/{course_id}/knowledge/build`；`GET /api/courses/{course_id}/knowledge`；`GET /api/courses/{course_id}/knowledge/graph`；`GET /api/courses/{course_id}/knowledge/tree`；`GET /api/courses/{course_id}/knowledge/highlights`；`GET /api/courses/{course_id}/knowledge/merge-decisions`；`GET/POST/DELETE /api/courses/{course_id}/knowledge/alias-locks`；`POST /api/courses/{course_id}/knowledge/alias-locks/delete`；`GET /api/knowledge/{knowledge_point_id}`；`GET /api/courses/{course_id}/knowledge/versions` |
 | 测验 | `POST /api/courses/{course_id}/quiz/generate`；`GET /api/quizzes/{quiz_id}`；`POST /api/quizzes/{quiz_id}/submit` |
 | 掌握度/复习 | `GET /api/courses/{course_id}/mastery`；`GET /api/courses/{course_id}/wrongbook`；`POST /api/courses/{course_id}/review-targets` |
 | 计划 | `POST /api/courses/{course_id}/plan`；`GET /api/courses/{course_id}/plans`；`GET /api/plans/{plan_id}`；`PATCH /api/tasks/{task_id}` |
-| 任务 | `GET /api/jobs/{job_id}` |
+| 任务 | `GET /api/jobs/{job_id}`；`GET /api/jobs/{job_id}/llm-calls` |
 
 ## 关键行为与客户端约定
 
 - **错误信封**：业务错误为 `{"error": {"code", "message", "details", "request_id"}}`，并带 `x-request-id` 头；路由层 404/405 可能是 FastAPI 默认的 `{"detail": "..."}`。
 - **异步任务**：上传、建知识框架、出题返回 `job_id`；轮询任务到 `succeeded` / `failed` / `cancelled`。`progress` 只有 0 和 100，不能做真实进度条。
 - **知识框架空状态**：活动框架不存在时，`GET /knowledge`、`GET /knowledge/tree`、`GET /knowledge/highlights` 都返回 `404 RESOURCE_NOT_FOUND`，这是“尚未构建”，不是服务故障。
-- **跨文档/跨 section 对齐**：Stage C 在落库前把同一概念的不同标题（空字符差异精确合并；`difflib` 相似度 ≥0.90 且 ASCII 字母数字骨架一致视为 fuzzy，不做子串合并，避免“物理层”吞掉“物理层机械特性”）并成一个 canonical 叶，`sources` 取并集（最多 6 条），其余标题进 `aliases`；`GET /knowledge/merge-decisions` 只列真正发生合并的簇；`POST/DELETE /knowledge/alias-locks` 可把一对标题锁定为“永不合并”（按课程、无序对、幂等）；魔搭网关拒绝 DELETE，线上解绑走 `POST /knowledge/alias-locks/delete`。合并在关系解析前完成，关系 ref 会重映射到 canonical。版本级守卫保证同一框架版本内一个 `knowledge_node_id` 至多一行 node_version；graph/tree/highlights 读取层再按 node id 与 `(source,target,type)` 去重。
+- **跨文档/跨 section 对齐**：Stage C 在落库前把同一概念的不同标题（空字符差异精确合并；`difflib` 相似度 ≥0.90 且 ASCII 字母数字骨架一致视为 fuzzy，不做子串合并，避免“物理层”吞掉“物理层机械特性”）并成一个 canonical 叶，`sources` 取并集（最多 6 条），其余标题进 `aliases`；`GET /knowledge/merge-decisions` 只列真正发生合并的簇；`POST/DELETE /knowledge/alias-locks` 可把一对标题锁定为“永不合并”（按课程、无序对、幂等）；魔搭网关拒绝 DELETE，线上解绑走 `POST /knowledge/alias-locks/delete`。合并在关系解析前完成，关系 ref 会重映射到 canonical。版本级守卫保证同一框架版本内一个 `knowledge_node_id` 至多一行 node_version；graph/tree/highlights 读取层再按 node id 与 `(source,target,type)` 去重。前端知识页的「整合记录」视图列出合并簇并可锁定/解绑；「关系图」为关系边列表（不引入图形库）。
 - **重难点评分**：`GET /knowledge/tree` 在旧树节点上追加 `importance` / `difficulty`（容器取后代最大值，叶子另带 `components` 五分量原值：出处页数、关系中心性、篇幅、测验题数、跨文档覆盖数）；`GET /knowledge/highlights?limit=20&order=importance|difficulty|gap` 返回 `{items, basis}`，`order=gap` 用 `importance × (1 − mastery_estimate)`，未测验的排在最后且 `untested: true`（未测验 ≠ 薄弱）。分数在读取时计算，不落库、不调 LLM；`limit` 上限 50，非法 `order` 或越界 `limit` 返回 422 `VALIDATION_ERROR`；旧 `GET /knowledge` 与详情接口保持不变。
 - **测验幂等**：一份测验只能提交一次，且必须每题都有答案；同一幂等键 + 同一答案重试会返回已保存结果，换新键会得到 `409 QUIZ_NOT_OPEN`。
 - **简答批改**：在提交请求内同步调用 LLM；临时失败返回 503 且不落库，可用同一幂等键重试。

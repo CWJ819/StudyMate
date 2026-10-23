@@ -3,14 +3,22 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router'
 import { useEffect, useId, useMemo, useState } from 'react'
 import {
+  addKnowledgeAliasLock,
   buildKnowledge,
+  deleteKnowledgeAliasLock,
   getChunk,
   getKnowledge,
+  getKnowledgeGraph,
+  getKnowledgeHighlights,
   getKnowledgeNode,
+  getKnowledgeTree,
+  listKnowledgeAliasLocks,
+  listKnowledgeMergeDecisions,
   listKnowledgeVersions,
   listMastery,
+  type KnowledgeMergeDecision,
+  type KnowledgeScoredTreeNode,
   type KnowledgeSource,
-  type KnowledgeTreeNode,
   type MasteryState,
 } from '../api/endpoints'
 import { ApiError } from '../api/client'
@@ -22,6 +30,52 @@ import { ErrorNotice } from '../components/ErrorNotice'
 /** pptx 的“页”显示为幻灯片（plan §5） */
 function pageWord(filename: string): string {
   return filename.toLowerCase().endsWith('.pptx') ? '张幻灯片' : '页'
+}
+
+const COMPONENT_LABELS: Record<string, string> = {
+  source_pages: '出处页数',
+  relation_centrality: '关系连接',
+  content_length: '内容长度',
+  quiz_reinforcement: '测验强化',
+  source_documents: '跨文档覆盖',
+  prerequisite_depth: '前置链深度',
+  prerequisite_indegree: '前置入度',
+}
+
+const IMPORTANCE_WEIGHTS: Record<string, number> = {
+  source_pages: 0.25,
+  relation_centrality: 0.25,
+  content_length: 0.15,
+  quiz_reinforcement: 0.15,
+  source_documents: 0.2,
+}
+
+const RELATION_TYPE_LABELS: Record<string, string> = {
+  prerequisite: '前置',
+  derives: '推导',
+  causes: '因果',
+  contrasts_with: '对比',
+  applies_to: '应用',
+  counterexample_of: '反例',
+}
+
+const RELATION_TYPES = Object.keys(RELATION_TYPE_LABELS)
+
+function contributionReasons(
+  components: Record<string, number> | null | undefined,
+  weights: Record<string, number>,
+  limit = 2,
+): { key: string; label: string; value: number; weighted: number }[] {
+  if (!components) return []
+  return Object.entries(components)
+    .map(([key, value]) => ({
+      key,
+      label: COMPONENT_LABELS[key] ?? key,
+      value,
+      weighted: value * (weights[key] ?? 0),
+    }))
+    .sort((a, b) => b.weighted - a.weighted)
+    .slice(0, limit)
 }
 
 /** 出处行：点击内联展开/收起该 chunk 的完整原文（不再弹侧边抽屉） */
@@ -80,9 +134,9 @@ function SourceItem({ source }: { source: KnowledgeSource }) {
 const BATCH_LIMIT = 20
 
 /** 后代叶子中已有掌握度记录的数量（组头「已测 M」徽标） */
-function countTested(node: KnowledgeTreeNode, mastery: Map<string, MasteryState>): number {
+function countTested(node: KnowledgeScoredTreeNode, mastery: Map<string, MasteryState>): number {
   let n = 0
-  const walk = (cur: KnowledgeTreeNode) => {
+  const walk = (cur: KnowledgeScoredTreeNode) => {
     for (const c of cur.children ?? []) {
       if (c.is_leaf && mastery.has(c.knowledge_node_id)) n += 1
       walk(c)
@@ -100,16 +154,31 @@ function labelDuplicatesTitle(label: string | null | undefined, title: string): 
 }
 
 /** 后代叶子总数（容器摘要卡的「M 个知识点」） */
-function countLeaves(node: KnowledgeTreeNode): number {
+function countLeaves(node: KnowledgeScoredTreeNode): number {
   const children = node.children ?? []
   if (children.length === 0) return node.is_leaf ? 1 : 0
   return children.reduce((sum, child) => sum + countLeaves(child), 0)
 }
 
-function findTreeNode(nodes: KnowledgeTreeNode[], id: string): KnowledgeTreeNode | null {
+function findTreeNode(nodes: KnowledgeScoredTreeNode[], id: string): KnowledgeScoredTreeNode | null {
   for (const node of nodes) {
     if (node.knowledge_node_id === id) return node
     const found = findTreeNode(node.children ?? [], id)
+    if (found) return found
+  }
+  return null
+}
+
+/** 返回从根到目标节点的容器 id 路径（点击重难点/关系节点时展开） */
+function findPath(
+  nodes: KnowledgeScoredTreeNode[],
+  id: string,
+  ancestors: string[] = [],
+): string[] | null {
+  for (const node of nodes) {
+    const path = [...ancestors, node.knowledge_node_id]
+    if (node.knowledge_node_id === id) return path
+    const found = findPath(node.children ?? [], id, path)
     if (found) return found
   }
   return null
@@ -134,10 +203,10 @@ function MasteryBadge({ m }: { m?: MasteryState }) {  if (!m) return <span class
 interface FlatGroup {
   key: string
   filename: string
-  leaves: KnowledgeTreeNode[]
+  leaves: KnowledgeScoredTreeNode[]
 }
 
-function buildFlatGroups(tree: KnowledgeTreeNode[]): FlatGroup[] | null {
+function buildFlatGroups(tree: KnowledgeScoredTreeNode[]): FlatGroup[] | null {
   // 旧框架形态：顶层直接是叶子（API 不含合成根），没有任何层级 → 按来源文档现场分组
   if (tree.length === 0 || !tree.every((n) => n.is_leaf)) return null
   const groups: FlatGroup[] = []
@@ -163,7 +232,7 @@ function FlatLeafRow({
   mastery,
   onSelect,
 }: {
-  node: KnowledgeTreeNode
+  node: KnowledgeScoredTreeNode
   selectedId: string | null
   mastery: Map<string, MasteryState>
   onSelect: (id: string) => void
@@ -267,6 +336,24 @@ function FlatGroupBlock({
   )
 }
 
+/** 读取时评分：树行迷你条（分数为工程估计值，不写成精确测量） */
+function ScoreBar({ value, label = '重要度' }: { value: number; label?: string }) {
+  return (
+    <span
+      className="flex flex-none items-center gap-1 font-mono text-[10.5px] text-ink3"
+      title={`${label}（估计值） ${value.toFixed(2)}`}
+    >
+      <span className="inline-block h-1 w-7 overflow-hidden rounded-sm bg-untested-bg">
+        <span
+          className="block h-full bg-accent/70"
+          style={{ width: `${Math.round(value * 100)}%` }}
+        />
+      </span>
+      {value.toFixed(2)}
+    </span>
+  )
+}
+
 /** 树行：缩进 + 展开/折叠 + 选中高亮 + 掌握度叠加；组头带 N/已测 徽标、组内前 20 条分批、叶子行内 P{page} */
 function TreeRow({
   node,
@@ -279,7 +366,7 @@ function TreeRow({
   onToggleFull,
   onSelect,
 }: {
-  node: KnowledgeTreeNode
+  node: KnowledgeScoredTreeNode
   depth: number
   expanded: Set<string>
   fullIds: Set<string>
@@ -332,6 +419,16 @@ function TreeRow({
           )}
           <span className="align-baseline">{node.title}</span>
         </span>
+        {node.is_leaf ? (
+          <ScoreBar value={node.importance} />
+        ) : (
+          <span
+            className="flex-none rounded-full bg-accent-bg px-1.5 py-0.5 font-mono text-[10.5px] text-accent"
+            title={`后代最高重要度（估计值） ${node.importance.toFixed(2)}`}
+          >
+            重要度 {node.importance.toFixed(2)}
+          </span>
+        )}
         {node.is_leaf && node.sources[0] && (
           <span className="flex-none font-mono text-[10.5px] text-ink3">
             P{node.sources[0].page_number}
@@ -382,7 +479,7 @@ function ContainerSummary({
   mastery,
   onSelect,
 }: {
-  node: KnowledgeTreeNode
+  node: KnowledgeScoredTreeNode
   mastery: Map<string, MasteryState>
   onSelect: (id: string) => void
 }) {
@@ -429,7 +526,15 @@ function ContainerSummary({
   )
 }
 
-function NodeDetail({ nodeId, hideHeading = false }: { nodeId: string; hideHeading?: boolean }) {
+function NodeDetail({
+  nodeId,
+  score,
+  hideHeading = false,
+}: {
+  nodeId: string
+  score?: KnowledgeScoredTreeNode
+  hideHeading?: boolean
+}) {
   const detail = useQuery({
     queryKey: ['knode', nodeId],
     queryFn: () => getKnowledgeNode(nodeId),
@@ -437,6 +542,7 @@ function NodeDetail({ nodeId, hideHeading = false }: { nodeId: string; hideHeadi
   if (detail.isError) return <ErrorNotice error={detail.error} />
   if (detail.isLoading || !detail.data) return <p className="text-[13px] text-ink3">加载中…</p>
   const d = detail.data
+  const reasons = contributionReasons(score?.components, IMPORTANCE_WEIGHTS)
   return (
     <div>
       {!hideHeading && (
@@ -451,6 +557,70 @@ function NodeDetail({ nodeId, hideHeading = false }: { nodeId: string; hideHeadi
         <p className="mt-2 whitespace-pre-wrap rounded-md bg-quote-bg px-4 py-3 text-[13.5px] leading-[1.7] text-ink">
           {d.content}
         </p>
+      )}
+      {d.aliases && d.aliases.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11.5px] text-ink3">
+          <span>别名</span>
+          {d.aliases.map((alias) => (
+            <span
+              key={alias}
+              className="rounded-full border border-border bg-bg px-2 py-0.5 text-ink2"
+            >
+              {alias}
+            </span>
+          ))}
+        </div>
+      )}
+      {score && (
+        <div className="mt-4 rounded-md border border-border bg-bg px-3.5 py-3">
+          <h3 className="text-[13px] font-semibold text-ink2">学习优先级（估计值）</h3>
+          <div className="mt-2 grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-[11.5px] text-ink3">重要度</div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[20px] font-bold text-accent">
+                  {score.importance.toFixed(2)}
+                </span>
+                <span className="h-1.5 w-16 overflow-hidden rounded-sm bg-untested-bg">
+                  <span
+                    className="block h-full bg-accent"
+                    style={{ width: `${Math.round(score.importance * 100)}%` }}
+                  />
+                </span>
+              </div>
+            </div>
+            <div>
+              <div className="text-[11.5px] text-ink3">难度</div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[20px] font-bold text-ink">
+                  {score.difficulty.toFixed(2)}
+                </span>
+                <span className="h-1.5 w-16 overflow-hidden rounded-sm bg-untested-bg">
+                  <span
+                    className="block h-full bg-ink3/60"
+                    style={{ width: `${Math.round(score.difficulty * 100)}%` }}
+                  />
+                </span>
+              </div>
+            </div>
+          </div>
+          {reasons.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {reasons.map((reason) => (
+                <span
+                  key={reason.key}
+                  className="rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] text-ink3"
+                  title={`${reason.label} · 原值 ${reason.value.toFixed(2)} · 归一化 — · 贡献 ${reason.weighted.toFixed(3)}`}
+                >
+                  {reason.label} 贡献 {reason.weighted.toFixed(3)}
+                </span>
+              ))}
+            </div>
+          )}
+          <p className="mt-2 text-[11px] text-ink3">
+            分数为工程估计值，依据抽取出处与关系证据，不代表教材语义重要性。
+          </p>
+        </div>
       )}
       {d.sources.length > 0 && (
         <div className="mt-4">
@@ -482,6 +652,385 @@ function NodeDetail({ nodeId, hideHeading = false }: { nodeId: string; hideHeadi
   )
 }
 
+function HighlightsPanel({
+  courseId,
+  masteryMap,
+  onPick,
+}: {
+  courseId: string
+  masteryMap: Map<string, MasteryState>
+  onPick: (id: string) => void
+}) {
+  const [order, setOrder] = useState<'importance' | 'difficulty' | 'gap'>('importance')
+  const [limit, setLimit] = useState(20)
+  const highlights = useQuery({
+    queryKey: ['knowledge-highlights', courseId, order, limit],
+    queryFn: () => getKnowledgeHighlights(courseId, { order, limit }),
+  })
+  return (
+    <section className="rounded-lg border border-border bg-surface">
+      <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3">
+        <div>
+          <h2 className="text-[15px] font-semibold">重难点</h2>
+          <p className="mt-0.5 text-[11.5px] text-ink3">按读取时评分排序；分数是工程估计值，不是教材语义重要性。</p>
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <div className="flex rounded-md border border-border p-0.5" role="group" aria-label="排序">
+            {(['importance', 'difficulty', 'gap'] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={order === value}
+                onClick={() => setOrder(value)}
+                className={`rounded px-2 py-1 text-[11.5px] ${
+                  order === value ? 'bg-accent-bg text-accent' : 'text-ink3 hover:text-ink'
+                }`}
+              >
+                {value === 'importance' ? '重要度' : value === 'difficulty' ? '难度' : '掌握缺口'}
+              </button>
+            ))}
+          </div>
+          <select
+            aria-label="显示数量"
+            value={limit}
+            onChange={(event) => setLimit(Number(event.target.value))}
+            className="rounded-md border border-border bg-surface px-2 py-1 text-[11.5px] text-ink2"
+          >
+            {[10, 20, 50].map((value) => (
+              <option key={value} value={value}>
+                {value} 条
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      {highlights.isLoading && <p className="px-4 py-4 text-[13px] text-ink3">加载中…</p>}
+      {highlights.isError && (
+        <div className="px-4 py-4">
+          <ErrorNotice error={highlights.error} />
+        </div>
+      )}
+      {highlights.data && highlights.data.items.length === 0 && (
+        <p className="px-4 py-4 text-[13px] text-ink3">当前版本还没有可排序的知识点。</p>
+      )}
+      {highlights.data && highlights.data.items.length > 0 && (
+        <div className="divide-y divide-border">
+          {highlights.data.items.map((item, index) => {
+            const m = masteryMap.get(item.knowledge_node_id)
+            const gap = item.importance * (1 - (item.mastery_estimate ?? 0))
+            const reasons = item.reasons ?? []
+            return (
+              <div key={item.knowledge_node_id} className="flex items-start gap-3 px-4 py-2.5 text-[13px]">
+                <span className="w-6 flex-none pt-0.5 text-right font-mono text-[11.5px] text-ink3">
+                  {index + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <button
+                    type="button"
+                    onClick={() => onPick(item.knowledge_node_id)}
+                    className="block max-w-full truncate text-left font-medium text-ink hover:text-accent"
+                    title={item.title}
+                  >
+                    {item.title}
+                  </button>
+                  <div className="mt-0.5 truncate text-[11px] text-ink3" title={item.section_path.join(' > ')}>
+                    {item.section_path.join(' > ')}
+                  </div>
+                </div>
+                <div className="flex flex-none items-center gap-3">
+                  <ScoreBar value={item.importance} label="重要度" />
+                  <ScoreBar value={item.difficulty} label="难度" />
+                  <span className="w-14 text-right font-mono text-[11px] text-ink3">
+                    {order === 'gap' ? `缺口 ${gap.toFixed(2)}` : ''}
+                  </span>
+                  {item.untested || item.mastery_estimate == null ? (
+                    <span className="flex-none rounded-full bg-untested-bg px-2 py-0.5 text-[11px] text-ink3">
+                      未测验
+                    </span>
+                  ) : (
+                    <MasteryBadge m={m} />
+                  )}
+                  <span
+                    className="flex-none cursor-help text-[11px] text-ink3"
+                    title={reasons
+                      .map(
+                        (reason) =>
+                          `${COMPONENT_LABELS[reason.component] ?? reason.component} · 原值 ${reason.value.toFixed(2)} · 归一化 ${reason.normalized.toFixed(2)} · 贡献 ${reason.contribution.toFixed(3)}`,
+                      )
+                      .join('\n')}
+                  >
+                    依据
+                  </span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+      {highlights.data && (
+        <div className="border-t border-border px-4 py-3 text-[11.5px] leading-relaxed text-ink3">
+          重要度权重：
+          {Object.entries(highlights.data.basis.weights.importance)
+            .map(([key, value]) => `${COMPONENT_LABELS[key] ?? key} ${value}`)
+            .join(' · ')}
+          ；难度权重：
+          {Object.entries(highlights.data.basis.weights.difficulty)
+            .map(([key, value]) => `${COMPONENT_LABELS[key] ?? key} ${value}`)
+            .join(' · ')}
+          。评分版本 {highlights.data.basis.scoring_version}；未测验 ≠ 薄弱。
+        </div>
+      )}
+    </section>
+  )
+}
+
+function GraphPanel({ courseId, onPick }: { courseId: string; onPick: (id: string) => void }) {
+  const graph = useQuery({
+    queryKey: ['knowledge-graph', courseId],
+    queryFn: () => getKnowledgeGraph(courseId),
+  })
+  const [type, setType] = useState<string>('all')
+  const [openEvidence, setOpenEvidence] = useState<Set<string>>(new Set())
+  const nodeMap = useMemo(
+    () => new Map((graph.data?.nodes ?? []).map((node) => [node.knowledge_node_id, node])),
+    [graph.data],
+  )
+  const edges = (graph.data?.edges ?? []).filter((edge) => type === 'all' || edge.relation_type === type)
+  const typeCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const edge of graph.data?.edges ?? []) {
+      counts.set(edge.relation_type, (counts.get(edge.relation_type) ?? 0) + 1)
+    }
+    return counts
+  }, [graph.data])
+  return (
+    <section className="rounded-lg border border-border bg-surface">
+      <div className="border-b border-border px-4 py-3">
+        <h2 className="text-[15px] font-semibold">关系图</h2>
+        <p className="mt-0.5 text-[11.5px] text-ink3">
+          只展示构建时产出的关系边；关系来自同一次抽取，只连接同一窗口内的叶子。
+        </p>
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            aria-pressed={type === 'all'}
+            onClick={() => setType('all')}
+            className={`rounded-full border px-2.5 py-1 text-[11.5px] ${
+              type === 'all' ? 'border-accent bg-accent-bg text-accent' : 'border-border text-ink2'
+            }`}
+          >
+            全部 {graph.data?.edges.length ?? 0}
+          </button>
+          {RELATION_TYPES.map((value) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={type === value}
+              onClick={() => setType(value)}
+              className={`rounded-full border px-2.5 py-1 text-[11.5px] ${
+                type === value ? 'border-accent bg-accent-bg text-accent' : 'border-border text-ink2'
+              }`}
+            >
+              {RELATION_TYPE_LABELS[value]} {typeCounts.get(value) ?? 0}
+            </button>
+          ))}
+        </div>
+      </div>
+      {graph.isLoading && <p className="px-4 py-4 text-[13px] text-ink3">加载中…</p>}
+      {graph.isError && (
+        <div className="px-4 py-4">
+          <ErrorNotice error={graph.error} />
+        </div>
+      )}
+      {graph.data && edges.length === 0 && (
+        <p className="px-4 py-4 text-[13px] text-ink3">
+          {graph.data.edges.length === 0 ? '当前版本还没有关系边。' : '该类型下没有关系边。'}
+        </p>
+      )}
+      <div className="divide-y divide-border">
+        {edges.map((edge, index) => {
+          const source = nodeMap.get(edge.source)
+          const target = nodeMap.get(edge.target)
+          const key = `${edge.source}-${edge.target}-${edge.relation_type}-${index}`
+          const evidenceOpen = openEvidence.has(key)
+          return (
+            <div key={key} className="px-4 py-2.5 text-[12.5px]">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => onPick(edge.source)}
+                  className="max-w-[220px] truncate rounded-full border border-border bg-bg px-2 py-0.5 text-ink2 hover:text-accent"
+                  title={source?.title ?? edge.source}
+                >
+                  {source?.title ?? edge.source}
+                </button>
+                <span className="text-ink3">→</span>
+                <span className="rounded bg-untested-bg px-1.5 py-0.5 text-[10.5px] text-ink3">
+                  {RELATION_TYPE_LABELS[edge.relation_type] ?? edge.relation_type}
+                </span>
+                <span className="text-ink3">→</span>
+                <button
+                  type="button"
+                  onClick={() => onPick(edge.target)}
+                  className="max-w-[220px] truncate rounded-full border border-border bg-bg px-2 py-0.5 text-ink2 hover:text-accent"
+                  title={target?.title ?? edge.target}
+                >
+                  {target?.title ?? edge.target}
+                </button>
+                <span className="ml-auto flex items-center gap-1 font-mono text-[10.5px] text-ink3">
+                  置信
+                  <span className="inline-block h-1 w-10 overflow-hidden rounded-sm bg-untested-bg">
+                    <span
+                      className="block h-full bg-accent/60"
+                      style={{ width: `${Math.round(edge.confidence * 100)}%` }}
+                    />
+                  </span>
+                  {edge.confidence.toFixed(2)}
+                </span>
+              </div>
+              {edge.evidence && (
+                <div className="mt-1 pl-1">
+                  <button
+                    type="button"
+                    className="text-[11px] text-accent hover:underline"
+                    aria-expanded={evidenceOpen}
+                    onClick={() =>
+                      setOpenEvidence((prev) => {
+                        const next = new Set(prev)
+                        if (next.has(key)) next.delete(key)
+                        else next.add(key)
+                        return next
+                      })
+                    }
+                  >
+                    {evidenceOpen ? '收起依据' : '展开依据'}
+                  </button>
+                  {evidenceOpen && (
+                    <p className="mt-1 whitespace-pre-wrap rounded bg-quote-bg px-2.5 py-1.5 text-[12px] leading-relaxed text-ink2">
+                      {edge.evidence}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+      {graph.data && (
+        <div className="border-t border-border px-4 py-2.5 text-[11.5px] text-ink3">
+          {graph.data.nodes.length} 个节点 · {graph.data.edges.length} 条关系边（已按 node id 与三元组去重）
+        </div>
+      )}
+    </section>
+  )
+}
+
+function MergePanel({ courseId }: { courseId: string }) {
+  const queryClient = useQueryClient()
+  const decisions = useQuery({
+    queryKey: ['knowledge-merge-decisions', courseId],
+    queryFn: () => listKnowledgeMergeDecisions(courseId),
+  })
+  const locks = useQuery({
+    queryKey: ['knowledge-alias-locks', courseId],
+    queryFn: () => listKnowledgeAliasLocks(courseId),
+  })
+  const [message, setMessage] = useState<string | null>(null)
+  const addLock = useMutation({
+    mutationFn: (decision: KnowledgeMergeDecision) =>
+      addKnowledgeAliasLock(courseId, {
+        title_a: decision.canonical_title,
+        title_b: decision.aliases[0]!,
+      }),
+    onSuccess: () => {
+      setMessage('已锁定，下次重建时这两个标题不再合并。')
+      queryClient.invalidateQueries({ queryKey: ['knowledge-merge-decisions', courseId] })
+      queryClient.invalidateQueries({ queryKey: ['knowledge-alias-locks', courseId] })
+    },
+    onError: (error) => setMessage(error instanceof Error ? error.message : '锁定失败'),
+  })
+  const removeLock = useMutation({
+    mutationFn: (lock: { title_a: string; title_b: string }) =>
+      deleteKnowledgeAliasLock(courseId, lock),
+    onSuccess: () => {
+      setMessage('已解锁。')
+      queryClient.invalidateQueries({ queryKey: ['knowledge-merge-decisions', courseId] })
+      queryClient.invalidateQueries({ queryKey: ['knowledge-alias-locks', courseId] })
+    },
+    onError: (error) => setMessage(error instanceof Error ? error.message : '解锁失败'),
+  })
+  return (
+    <section className="rounded-lg border border-border bg-surface">
+      <div className="border-b border-border px-4 py-3">
+        <h2 className="text-[15px] font-semibold">整合记录</h2>
+        <p className="mt-0.5 text-[11.5px] text-ink3">
+          Stage C 把跨文档、跨 section 的同概念标题合并为一个知识点；相似度与方法是确定性规则的结果，不是语义判断。
+        </p>
+      </div>
+      {decisions.isLoading && <p className="px-4 py-4 text-[13px] text-ink3">加载中…</p>}
+      {decisions.isError && (
+        <div className="px-4 py-4">
+          <ErrorNotice error={decisions.error} />
+        </div>
+      )}
+      {decisions.data && decisions.data.decisions.length === 0 && (
+        <p className="px-4 py-4 text-[13px] text-ink3">当前版本没有跨文档合并。</p>
+      )}
+      {message && <p className="mx-4 my-2 rounded bg-accent-bg px-3 py-1.5 text-[12px] text-accent">{message}</p>}
+      <div className="divide-y divide-border">
+        {(decisions.data?.decisions ?? []).map((decision) => (
+          <div key={decision.id} className="flex flex-wrap items-center gap-2 px-4 py-2.5 text-[12.5px]">
+            <span className="rounded bg-untested-bg px-1.5 py-0.5 text-[10.5px] text-ink3">
+              {decision.method === 'exact' ? '精确' : '相似'}
+            </span>
+            <span className="font-medium text-ink">{decision.canonical_title}</span>
+            {decision.aliases.length > 0 && (
+              <span className="text-ink3">← {decision.aliases.join(' / ')}</span>
+            )}
+            {decision.similarity != null && (
+              <span className="font-mono text-[11px] text-ink3">相似度 {decision.similarity.toFixed(2)}</span>
+            )}
+            <span className="text-[11px] text-ink3">{decision.distinct_documents} 份文档</span>
+            {decision.aliases.length > 0 && (
+              <button
+                type="button"
+                disabled={addLock.isPending}
+                onClick={() => addLock.mutate(decision)}
+                className="ml-auto rounded border border-border2 px-2 py-0.5 text-[11.5px] text-ink2 hover:text-ink disabled:opacity-50"
+              >
+                禁止再合并
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+      {(locks.data?.length ?? 0) > 0 && (
+        <div className="border-t border-border px-4 py-3">
+          <h3 className="text-[12px] font-semibold text-ink2">已锁定的标题对</h3>
+          <div className="mt-1.5 grid gap-1">
+            {(locks.data ?? []).map((lock) => (
+              <div key={`${lock.title_a}-${lock.title_b}`} className="flex items-center gap-2 text-[12px] text-ink2">
+                <span className="truncate">{lock.title_a}</span>
+                <span className="text-ink3">↔</span>
+                <span className="truncate">{lock.title_b}</span>
+                <button
+                  type="button"
+                  disabled={removeLock.isPending}
+                  onClick={() => removeLock.mutate(lock)}
+                  className="ml-auto text-[11.5px] text-accent hover:underline disabled:opacity-50"
+                >
+                  解锁
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  )
+}
+
+
 export function KnowledgePage() {
   const { courseId } = useParams()
   const queryClient = useQueryClient()
@@ -495,6 +1044,7 @@ export function KnowledgePage() {
   const [showVersions, setShowVersions] = useState(false)
   const [buildJobId, setBuildJobId] = useState<string | null>(null)
   const [buildError, setBuildError] = useState<unknown>(null)
+  const [view, setView] = useState<'tree' | 'highlights' | 'graph' | 'merge'>('tree')
 
   const framework = useQuery({
     queryKey: ['knowledge', courseId],
@@ -502,9 +1052,21 @@ export function KnowledgePage() {
     enabled: courseId !== undefined,
     retry: false,
   })
+  const scored = useQuery({
+    queryKey: ['knowledge-scored', courseId],
+    queryFn: () => getKnowledgeTree(courseId!),
+    enabled: courseId !== undefined,
+    retry: false,
+  })
   const notBuilt =
-    framework.isError && framework.error instanceof ApiError && framework.error.code === 'RESOURCE_NOT_FOUND'
-  const otherError = framework.isError && !notBuilt
+    (framework.isError && framework.error instanceof ApiError && framework.error.code === 'RESOURCE_NOT_FOUND') ||
+    (scored.isError && scored.error instanceof ApiError && scored.error.code === 'RESOURCE_NOT_FOUND')
+  const otherError =
+    framework.isError && !(framework.error instanceof ApiError && framework.error.code === 'RESOURCE_NOT_FOUND')
+      ? framework.error
+      : scored.isError && !(scored.error instanceof ApiError && scored.error.code === 'RESOURCE_NOT_FOUND')
+        ? scored.error
+        : null
 
   const mastery = useQuery({
     queryKey: ['mastery', courseId],
@@ -527,7 +1089,11 @@ export function KnowledgePage() {
   const buildJob = useJob(buildJobId, {
     onSettledInvalidate: [
       ['knowledge', courseId],
+      ['knowledge-scored', courseId],
       ['knowledge-versions', courseId],
+      ['knowledge-highlights', courseId],
+      ['knowledge-graph', courseId],
+      ['knowledge-merge-decisions', courseId],
     ],
   })
 
@@ -542,6 +1108,7 @@ export function KnowledgePage() {
       setBuildJobId(result.job_id)
       if (courseId != null) saveJobId(`knowledge:${courseId}`, result.job_id)
       queryClient.invalidateQueries({ queryKey: ['knowledge', courseId] })
+      queryClient.invalidateQueries({ queryKey: ['knowledge-scored', courseId] })
     },
     onError: (err) => setBuildError(err),
   })
@@ -552,8 +1119,9 @@ export function KnowledgePage() {
     enabled: courseId !== undefined && showVersions,
   })
 
-  const tree = framework.data?.tree ?? []
+  const tree = scored.data?.tree ?? []
   const meta = framework.data ? frameworkStatus(framework.data.status) : null
+  const leafCount = tree.reduce((total, node) => total + countLeaves(node), 0)
   // 右侧详情：容器节点额外渲染摘要卡（计数 + 可点开的小节）
   const selectedNode = useMemo(
     () => (selectedId ? findTreeNode(tree, selectedId) : null),
@@ -579,7 +1147,7 @@ export function KnowledgePage() {
       return
     }
     const ids = new Set<string>()
-    const walk = (nodes: KnowledgeTreeNode[]) => {
+    const walk = (nodes: KnowledgeScoredTreeNode[]) => {
       for (const n of nodes) {
         if ((n.children ?? []).length > 0) {
           ids.add(n.knowledge_node_id)
@@ -674,7 +1242,7 @@ export function KnowledgePage() {
                   <span className={`inline-block size-2 rounded-full ${meta!.dot}`} />
                   {meta!.label}
                 </span>
-                <span className="text-ink3">{framework.data.nodes.length} 个知识点</span>
+                <span className="text-ink3">{leafCount} 个知识点</span>
               </>
             )}
           </p>
@@ -730,10 +1298,61 @@ export function KnowledgePage() {
         </div>
       )}
 
-      {otherError && <ErrorNotice error={framework.error} />}
+      {otherError != null && <ErrorNotice error={otherError} />}
       {framework.isLoading && <p className="text-[13px] text-ink3">加载中…</p>}
 
-      {tree.length > 0 && (
+      <div className="mb-4 flex gap-1 border-b border-border" role="tablist" aria-label="知识视图">
+        {(
+          [
+            ['tree', '章节树'],
+            ['highlights', '重难点'],
+            ['graph', '关系图'],
+            ['merge', '整合记录'],
+          ] as const
+        ).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            role="tab"
+            aria-selected={view === value}
+            onClick={() => setView(value)}
+            className={`-mb-px border-b-2 px-3 py-2 text-[13px] ${
+              view === value
+                ? 'border-accent font-medium text-accent'
+                : 'border-transparent text-ink2 hover:text-ink'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {view === 'highlights' && courseId && (
+        <HighlightsPanel
+          courseId={courseId}
+          masteryMap={masteryMap}
+          onPick={(id) => {
+            setView('tree')
+            setSelectedId(id)
+            const path = findPath(tree, id)
+            if (path) setExpanded((prev) => new Set([...prev, ...path]))
+          }}
+        />
+      )}
+      {view === 'graph' && courseId && (
+        <GraphPanel
+          courseId={courseId}
+          onPick={(id) => {
+            setView('tree')
+            setSelectedId(id)
+            const path = findPath(tree, id)
+            if (path) setExpanded((prev) => new Set([...prev, ...path]))
+          }}
+        />
+      )}
+      {view === 'merge' && courseId && <MergePanel courseId={courseId} />}
+
+      {view === 'tree' && tree.length > 0 && (
         <div className="grid grid-cols-[340px_1fr] gap-6">
           <section className="h-fit rounded-lg border border-border bg-surface" role="tree" aria-label="知识框架树">
             <div className="flex items-center gap-2 border-b border-border px-3 py-1.5">
@@ -801,10 +1420,10 @@ export function KnowledgePage() {
               selectedNode != null && (selectedNode.children ?? []).length > 0 ? (
                 <>
                   <ContainerSummary node={selectedNode} mastery={masteryMap} onSelect={setSelectedId} />
-                  <NodeDetail nodeId={selectedId} hideHeading />
+                  <NodeDetail nodeId={selectedId} score={selectedNode} hideHeading />
                 </>
               ) : (
-                <NodeDetail nodeId={selectedId} />
+                <NodeDetail nodeId={selectedId} score={selectedNode ?? undefined} />
               )
             ) : (
               <p className="text-[13px] text-ink3">在左侧选择一个知识点查看详情与出处。</p>
@@ -845,3 +1464,5 @@ export function KnowledgePage() {
     </div>
   )
 }
+
+

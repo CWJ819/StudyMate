@@ -1,16 +1,18 @@
-// 知识框架页：404 空态 / 树 + 掌握度叠加 / 节点详情 + 来源内联展开 / 构建流 / 失败态 /
-// 侧栏分组（层级树默认只展开根；平铺旧框架按来源文档分组 + 组内前 20 条分批，报告 §5.3.3）
+// 知识框架页（Phase 4 前端轮）：章节树 scored tree / 重难点 / 关系图 / 整合记录。
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { server } from '../test/server'
 import {
   frameworkActive,
-  frameworkFlat,
+  graphFixture,
+  highlightsFixture,
   jobFailed,
   jobSucceeded,
+  mergeDecisionsFixture,
   nodeDetailKn2,
+  scoredFramework,
 } from '../test/fixtures'
 import { KnowledgePage } from './Knowledge'
 
@@ -31,92 +33,125 @@ test('未构建（404 RESOURCE_NOT_FOUND）：显示空状态而非报错，可�
   let built = false
   server.use(
     http.get('*/api/courses/c1/knowledge', () =>
-      built
-        ? HttpResponse.json(frameworkActive)
-        : HttpResponse.json(
-            {
-              error: { code: 'RESOURCE_NOT_FOUND', message: 'no framework', request_id: 'r1' },
-            },
-            { status: 404 },
-          ),
+      built ? HttpResponse.json(frameworkActive) : HttpResponse.json(
+        { error: { code: 'RESOURCE_NOT_FOUND', message: 'no framework', request_id: 'r1' } },
+        { status: 404 },
+      ),
     ),
-  )
-  server.use(
+    http.get('*/api/courses/c1/knowledge/tree', () =>
+      built ? HttpResponse.json(scoredFramework) : HttpResponse.json(
+        { error: { code: 'RESOURCE_NOT_FOUND', message: 'no framework', request_id: 'r1' } },
+        { status: 404 },
+      ),
+    ),
     http.post('*/api/courses/c1/knowledge/build', () => {
       built = true
       return HttpResponse.json(
         { job_id: 'job-ok', framework_version_id: 'fv1', status: 'building' },
-        { status: 201 },
+        { status: 202 },
       )
     }),
+    http.get('*/api/jobs/job-ok', () => HttpResponse.json(jobSucceeded)),
   )
-  server.use(http.get('*/api/jobs/job-ok', () => HttpResponse.json(jobSucceeded)))
 
   renderKnowledge()
   expect(await screen.findByText('还没有知识框架')).toBeTruthy()
 
   fireEvent.click(screen.getByRole('button', { name: '构建知识框架' }))
-  // job 成功 → 失效刷新 → 框架出现（层级树默认只展开根，先看到文档层）
   const treeSection = await screen.findByRole('tree', { name: '知识框架树' })
-  expect(await within(treeSection).findByText('拥塞控制', {}, { timeout: 3000 })).toBeTruthy()
+  expect(await within(treeSection).findByText('运输层')).toBeTruthy()
 })
 
-test('已有框架：渲染树与掌握度叠加，选中节点看详情与来源展开', async () => {
+test('章节树：scored tree 展示重要度，详情展示分数块与 aliases', async () => {
   server.use(
-    http.get('*/api/knowledge/:nodeId', ({ params }) =>
-      params.nodeId === 'kn2' ? HttpResponse.json(nodeDetailKn2) : HttpResponse.json({
-        ...nodeDetailKn2,
-        knowledge_node_id: String(params.nodeId),
-        title: '运输层',
-        content: null,
-        sources: [],
-        relations: [],
-      }),
+    http.get('*/api/knowledge/kn2', () =>
+      HttpResponse.json({ ...nodeDetailKn2, aliases: ['拥塞窗口控制'] }),
     ),
   )
   renderKnowledge()
 
-  // 树 + 版本头；默认只展开根（文档组收起）
   const treeSection = await screen.findByRole('tree', { name: '知识框架树' })
-  expect(await within(treeSection).findByText('拥塞控制')).toBeTruthy()
-  expect(screen.getByText('4 个知识点')).toBeTruthy()
-  expect(screen.queryByText('慢启动与拥塞避免')).toBeNull()
+  expect(await within(treeSection).findByText('运输层')).toBeTruthy()
+  expect(screen.getByText('2 个知识点')).toBeTruthy()
+  expect(within(treeSection).getByText('重要度 0.82')).toBeTruthy()
 
-  // 组头计数徽标（后代 N 个 · 已测 M）
-  expect(within(treeSection).getByText('2 个 · 已测 1')).toBeTruthy() // 根
-  expect(within(treeSection).getByText('1 个 · 已测 1')).toBeTruthy() // 拥塞控制
-
-  // 容器详情摘要卡（默认选中根）：计数 + 可点开的小节行
-  expect(screen.getByText('1 个小节 · 2 个知识点 · 已测 1')).toBeTruthy()
-  expect(screen.getByRole('button', { name: /拥塞控制/ })).toBeTruthy()
-
-  // 展开文档组 → 叶子可见 + 掌握度叠加 + 行内页码
-  fireEvent.click(screen.getByRole('button', { name: '展开' }))
-  expect(await screen.findByText('慢启动与拥塞避免')).toBeTruthy()
-  expect(screen.getByText('0.42·3')).toBeTruthy()
-  expect(screen.getByText('未测验')).toBeTruthy()
-  expect(screen.getByText('P18')).toBeTruthy()
-
-  // 点选叶子节点 → 详情
-  fireEvent.click(screen.getByText('慢启动与拥塞避免'))
-  expect(await screen.findByText(/慢启动阶段 cwnd 指数增长/)).toBeTruthy()
-  expect(screen.getByText(/出处（1）/)).toBeTruthy()
-
-  // 来源 → 内联展开显示 chunk 完整原文，再次点击收起
-  const sourceButton = screen.getByRole('button', { name: /运输层讲义\.pdf · 第 18 页/ })
-  fireEvent.click(sourceButton)
-  expect(await screen.findByText(/完整原文，比搜索摘要长/)).toBeTruthy()
-  expect(sourceButton.getAttribute('aria-expanded')).toBe('true')
-  fireEvent.click(sourceButton)
-  expect(screen.queryByText(/完整原文，比搜索摘要长/)).toBeNull()
-  expect(sourceButton.getAttribute('aria-expanded')).toBe('false')
-
-  // 全部收起 → 组折叠；全部展开 → 恢复（卡头按钮，操作所有组；断言限定在树内，
-  // 选中节点的标题/关联还会出现在右侧详情面板里）
-  fireEvent.click(screen.getByRole('button', { name: '全部收起' }))
-  expect(within(treeSection).queryByText('慢启动与拥塞避免')).toBeNull()
-  fireEvent.click(screen.getByRole('button', { name: '全部展开' }))
+  fireEvent.click(within(treeSection).getAllByRole('button', { name: '展开' })[0]!)
   expect(await within(treeSection).findByText('慢启动与拥塞避免')).toBeTruthy()
+  fireEvent.click(within(treeSection).getByText('慢启动与拥塞避免'))
+
+  expect(await screen.findByText(/慢启动阶段 cwnd 指数增长/)).toBeTruthy()
+  expect(screen.getByText('别名')).toBeTruthy()
+  expect(screen.getByText('拥塞窗口控制')).toBeTruthy()
+  expect(screen.getAllByText('0.53').length).toBeGreaterThan(0)
+  expect(screen.getByText('重要度')).toBeTruthy()
+  expect(screen.getByText('难度')).toBeTruthy()
+})
+
+test('重难点：排序切换、未测验灰显、点击标题跳回树并选中', async () => {
+  renderKnowledge()
+  await screen.findByRole('tree', { name: '知识框架树' })
+
+  fireEvent.click(screen.getByRole('tab', { name: '重难点' }))
+  expect(await screen.findByText('慢启动与拥塞避免')).toBeTruthy()
+  expect(screen.getByText('可靠传输：GBN 与 SR')).toBeTruthy()
+  expect(screen.getAllByText('未测验').length).toBeGreaterThan(0)
+
+  const gapButton = screen.getByRole('button', { name: '掌握缺口' })
+  fireEvent.click(gapButton)
+  expect(gapButton.getAttribute('aria-pressed')).toBe('true')
+  fireEvent.change(screen.getByRole('combobox', { name: '显示数量' }), { target: { value: '10' } })
+
+  fireEvent.click(await screen.findByRole('button', { name: '慢启动与拥塞避免' }))
+  expect(await screen.findByText(/慢启动阶段 cwnd 指数增长/)).toBeTruthy()
+  expect(screen.getByRole('tab', { name: '章节树' }).getAttribute('aria-selected')).toBe('true')
+})
+
+test('关系图：按类型筛选、依据展开、点节点 chip 跳树', async () => {
+  renderKnowledge()
+  await screen.findByRole('tree', { name: '知识框架树' })
+
+  fireEvent.click(screen.getByRole('tab', { name: '关系图' }))
+  expect(await screen.findByText('全部 1')).toBeTruthy()
+  expect(screen.getByText('慢启动与拥塞避免')).toBeTruthy()
+
+  fireEvent.click(screen.getByRole('button', { name: '前置 1' }))
+  fireEvent.click(screen.getByRole('button', { name: '展开依据' }))
+  expect(await screen.findByText('慢启动是可靠传输的前置概念。')).toBeTruthy()
+
+  fireEvent.click(screen.getAllByRole('button', { name: '慢启动与拥塞避免' })[0]!)
+  expect(await screen.findByText(/慢启动阶段 cwnd 指数增长/)).toBeTruthy()
+})
+
+test('整合记录：显示合并决策、加锁与解锁', async () => {
+  let locks: { title_a: string; title_b: string }[] = []
+  server.use(
+    http.get('*/api/courses/c1/knowledge/alias-locks', () => HttpResponse.json(locks)),
+    http.post('*/api/courses/c1/knowledge/alias-locks', async ({ request }) => {
+      const body = (await request.json()) as { title_a: string; title_b: string }
+      locks = [body]
+      return HttpResponse.json({ course_id: 'c1', ...body })
+    }),
+    http.post('*/api/courses/c1/knowledge/alias-locks/delete', () => {
+      locks = []
+      return new HttpResponse(null, { status: 204 })
+    }),
+  )
+
+  renderKnowledge()
+  await screen.findByRole('tree', { name: '知识框架树' })
+  fireEvent.click(screen.getByRole('tab', { name: '整合记录' }))
+
+  expect(await screen.findByText('拥塞控制')).toBeTruthy()
+  expect(screen.getByText('相似')).toBeTruthy()
+  expect(screen.getByText(/0\.91/)).toBeTruthy()
+
+  fireEvent.click(screen.getByRole('button', { name: '禁止再合并' }))
+  expect(await screen.findByText('已锁定的标题对')).toBeTruthy()
+  expect(screen.getByText('拥塞控制算法')).toBeTruthy()
+
+  fireEvent.click(screen.getByRole('button', { name: '解锁' }))
+  expect(await screen.findByText('已解锁。')).toBeTruthy()
+  await waitFor(() => expect(screen.queryByText('已锁定的标题对')).toBeNull())
 })
 
 test('构建失败：显示 job.error_code 的中文文案', async () => {
@@ -137,83 +172,18 @@ test('构建失败：显示 job.error_code 的中文文案', async () => {
 
 test('版本列表：展示版本与状态', async () => {
   renderKnowledge()
-  const treeSection = await screen.findByRole('tree', { name: '知识框架树' })
-  await within(treeSection).findByText('拥塞控制')
+  await screen.findByRole('tree', { name: '知识框架树' })
 
   fireEvent.click(screen.getByRole('button', { name: '版本列表' }))
-  // 等第二行（v2）出现，避免把页头的 v3 当成列表行
   expect(await screen.findByText('v2')).toBeTruthy()
   expect(screen.getAllByText('v3').length).toBeGreaterThanOrEqual(2)
   expect(screen.getByText('失败', { exact: false })).toBeTruthy()
 })
 
-test('平铺兜底分组：按来源文档分组、默认收起、组内前 20 条 + 展开其余 + 行内页码', async () => {
-  server.use(
-    http.get('*/api/courses/c1/knowledge', () => HttpResponse.json(frameworkFlat)),
-    http.get('*/api/courses/c1/mastery', () =>
-      HttpResponse.json([
-        {
-          knowledge_node_id: 'knf-0',
-          title: 'MAC 知识点 01',
-          alpha: 3.2,
-          beta: 6.8,
-          mastery_estimate: 0.31,
-          evidence_count: 2,
-          updated_at: '2026-01-03T11:00:00Z',
-        },
-      ]),
-    ),
-    http.get('*/api/knowledge/:nodeId', ({ params }) =>
-      HttpResponse.json({
-        ...nodeDetailKn2,
-        knowledge_node_id: String(params.nodeId),
-        title: `节点 ${params.nodeId}`,
-        content: null,
-        sources: [],
-        relations: [],
-      }),
-    ),
-  )
-  renderKnowledge()
-
-  // 组头：文件名 + N 个 + 已测 M；无来源归「未标注来源」；默认收起（叶子不可见）
-  const macGroup = await screen.findByRole('button', { name: /第4章 MAC子层\.pdf/ })
-  expect(macGroup.getAttribute('aria-expanded')).toBe('false')
-  expect(screen.getByText('22 个 · 已测 1')).toBeTruthy()
-  expect(screen.getByText('3 个')).toBeTruthy()
-  expect(screen.getByRole('button', { name: /未标注来源/ })).toBeTruthy()
-  expect(screen.queryByText('MAC 知识点 01')).toBeNull()
-
-  // 展开 → 前 20 条 + 「展开其余 2 条」；行内 P{page}、掌握度叠加、未测验灰、truncate tooltip
-  fireEvent.click(macGroup)
-  expect(await screen.findByText('MAC 知识点 01')).toBeTruthy()
-  expect(screen.getByText('MAC 知识点 20')).toBeTruthy()
-  expect(screen.queryByText('MAC 知识点 21')).toBeNull()
-  expect(screen.getByText('P3')).toBeTruthy()
-  expect(screen.getByText('0.31·2')).toBeTruthy()
-  expect(screen.getAllByText('未测验').length).toBeGreaterThan(0)
-  expect(screen.getByTitle('MAC 知识点 01')).toBeTruthy()
-
-  fireEvent.click(screen.getByRole('button', { name: /展开其余 2 条/ }))
-  expect(screen.getByText('MAC 知识点 22')).toBeTruthy()
-
-  // 兜底分组不改节点 ID：选中叶子仍按 ID 查详情
-  fireEvent.click(screen.getByText('MAC 知识点 05'))
-  expect(await screen.findByText('节点 knf-4')).toBeTruthy()
+test('知识页 fixture 与端点形状一致（防类型漂移）', () => {
+  expect(scoredFramework.scoring_version).toBe('scoring-v2')
+  expect(highlightsFixture.basis.scoring_version).toBe('scoring-v2')
+  expect(graphFixture.edges[0]!.relation_type).toBe('prerequisite')
+  expect(mergeDecisionsFixture.decisions[0]!.method).toBe('fuzzy')
 })
 
-test('平铺兜底分组：全部展开 / 全部收起', async () => {
-  server.use(
-    http.get('*/api/courses/c1/knowledge', () => HttpResponse.json(frameworkFlat)),
-  )
-  renderKnowledge()
-  await screen.findByRole('button', { name: /第4章 MAC子层\.pdf/ })
-
-  fireEvent.click(screen.getByRole('button', { name: '全部展开' }))
-  expect(await screen.findByText('MAC 知识点 22')).toBeTruthy()
-  expect(screen.getByText('未标注来源的知识点')).toBeTruthy()
-
-  fireEvent.click(screen.getByRole('button', { name: '全部收起' }))
-  expect(screen.queryByText('MAC 知识点 01')).toBeNull()
-  expect(screen.queryByText('未标注来源的知识点')).toBeNull()
-})

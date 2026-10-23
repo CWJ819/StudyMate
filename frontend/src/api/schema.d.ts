@@ -41,6 +41,26 @@ export interface paths {
         patch: operations["update_course_api_courses__course_id__patch"];
         trace?: never;
     };
+    "/api/courses/{course_id}/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete Course Via Post
+         * @description ModelScope's API gateway rejects DELETE; the SPA uses this POST alias.
+         */
+        post: operations["delete_course_via_post_api_courses__course_id__delete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -67,6 +87,23 @@ export interface paths {
         };
         /** Get Job */
         get: operations["get_job_api_jobs__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/jobs/{job_id}/llm-calls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Job Llm Calls */
+        get: operations["get_job_llm_calls_api_jobs__job_id__llm_calls_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -103,6 +140,112 @@ export interface paths {
         get: operations["get_active_knowledge_framework_api_courses__course_id__knowledge_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/courses/{course_id}/knowledge/graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Knowledge Graph */
+        get: operations["get_knowledge_graph_api_courses__course_id__knowledge_graph_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/courses/{course_id}/knowledge/tree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Scored Knowledge Tree */
+        get: operations["get_scored_knowledge_tree_api_courses__course_id__knowledge_tree_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/courses/{course_id}/knowledge/highlights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Knowledge Highlights */
+        get: operations["get_knowledge_highlights_api_courses__course_id__knowledge_highlights_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/courses/{course_id}/knowledge/merge-decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Knowledge Merge Decisions */
+        get: operations["list_knowledge_merge_decisions_api_courses__course_id__knowledge_merge_decisions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/courses/{course_id}/knowledge/alias-locks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Knowledge Alias Lock */
+        post: operations["add_knowledge_alias_lock_api_courses__course_id__knowledge_alias_locks_post"];
+        /** Delete Knowledge Alias Lock */
+        delete: operations["delete_knowledge_alias_lock_api_courses__course_id__knowledge_alias_locks_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/courses/{course_id}/knowledge/alias-locks/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete Knowledge Alias Lock Via Post
+         * @description POST alias for ModelScope gateways that reject DELETE (same as course delete).
+         */
+        post: operations["delete_knowledge_alias_lock_via_post_api_courses__course_id__knowledge_alias_locks_delete_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -225,6 +368,26 @@ export interface paths {
         post?: never;
         /** Delete Material */
         delete: operations["delete_material_api_materials__material_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/materials/{material_id}/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete Material Via Post
+         * @description ModelScope's API gateway rejects DELETE; the SPA uses this POST alias.
+         */
+        post: operations["delete_material_via_post_api_materials__material_id__delete_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -532,6 +695,30 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+            /** Phase */
+            phase?: string | null;
+            /** Completed Units */
+            completed_units?: number | null;
+            /** Total Units */
+            total_units?: number | null;
+            /** Message */
+            message?: string | null;
+        };
+        /** KnowledgeAliasLockRequest */
+        KnowledgeAliasLockRequest: {
+            /** Title A */
+            title_a: string;
+            /** Title B */
+            title_b: string;
+        };
+        /** KnowledgeAliasLockResponse */
+        KnowledgeAliasLockResponse: {
+            /** Course Id */
+            course_id: string;
+            /** Title A */
+            title_a: string;
+            /** Title B */
+            title_b: string;
         };
         /** KnowledgeBuildRequest */
         KnowledgeBuildRequest: {
@@ -590,6 +777,97 @@ export interface components {
              */
             updated_at: string;
         };
+        /** KnowledgeGraphEdgeResponse */
+        KnowledgeGraphEdgeResponse: {
+            /** Source */
+            source: string;
+            /** Target */
+            target: string;
+            /** Relation Type */
+            relation_type: string;
+            /** Confidence */
+            confidence: number;
+            /** Evidence */
+            evidence: string | null;
+        };
+        /** KnowledgeGraphNodeResponse */
+        KnowledgeGraphNodeResponse: {
+            /** Knowledge Node Id */
+            knowledge_node_id: string;
+            /** Title */
+            title: string;
+            /** Section Path */
+            section_path: string[];
+            /** Is Leaf */
+            is_leaf: boolean;
+        };
+        /** KnowledgeGraphResponse */
+        KnowledgeGraphResponse: {
+            /** Framework Version Id */
+            framework_version_id: string;
+            /** Nodes */
+            nodes: components["schemas"]["KnowledgeGraphNodeResponse"][];
+            /** Edges */
+            edges: components["schemas"]["KnowledgeGraphEdgeResponse"][];
+        };
+        /** KnowledgeHighlightItemResponse */
+        KnowledgeHighlightItemResponse: {
+            /** Knowledge Node Id */
+            knowledge_node_id: string;
+            /** Title */
+            title: string;
+            /** Section Path */
+            section_path: string[];
+            /** Importance */
+            importance: number;
+            /** Difficulty */
+            difficulty: number;
+            /** Mastery Estimate */
+            mastery_estimate: number | null;
+            /** Evidence Count */
+            evidence_count: number;
+            /** Untested */
+            untested: boolean;
+            /** Reasons */
+            reasons: components["schemas"]["KnowledgeScoreReasonResponse"][];
+        };
+        /** KnowledgeHighlightsResponse */
+        KnowledgeHighlightsResponse: {
+            /** Items */
+            items: components["schemas"]["KnowledgeHighlightItemResponse"][];
+            basis: components["schemas"]["KnowledgeScoringBasisResponse"];
+        };
+        /** KnowledgeMergeDecisionResponse */
+        KnowledgeMergeDecisionResponse: {
+            /** Id */
+            id: string;
+            /** Framework Version Id */
+            framework_version_id: string;
+            /** Canonical Title */
+            canonical_title: string;
+            /** Aliases */
+            aliases: string[];
+            /** Members */
+            members: string[];
+            /** Distinct Documents */
+            distinct_documents: number;
+            /** Method */
+            method: string;
+            /** Similarity */
+            similarity: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** KnowledgeMergeDecisionsResponse */
+        KnowledgeMergeDecisionsResponse: {
+            /** Framework Version Id */
+            framework_version_id: string;
+            /** Decisions */
+            decisions: components["schemas"]["KnowledgeMergeDecisionResponse"][];
+        };
         /** KnowledgeNodeDetailResponse */
         KnowledgeNodeDetailResponse: {
             /** Knowledge Node Id */
@@ -604,6 +882,8 @@ export interface components {
             title: string;
             /** Content */
             content: string | null;
+            /** Aliases */
+            aliases?: string[];
             /** Level */
             level: number;
             /** Is Leaf */
@@ -625,6 +905,84 @@ export interface components {
             confidence: number;
             /** Evidence */
             evidence: string | null;
+        };
+        /**
+         * KnowledgeScoreReasonResponse
+         * @description 一个评分分量的解释：原值、归一化值、加权贡献。
+         */
+        KnowledgeScoreReasonResponse: {
+            /** Component */
+            component: string;
+            /** Value */
+            value: number;
+            /** Normalized */
+            normalized: number;
+            /** Contribution */
+            contribution: number;
+        };
+        /**
+         * KnowledgeScoredTreeNodeResponse
+         * @description 与 GET /knowledge 的树节点同形，另加读取时计算的分数。
+         *
+         *     importance / difficulty 是工程估计值，不是对课程内容的精确测量。
+         *     容器取后代最大值（语义：“本章最重要 0.82”）；components 只给叶子
+         *     （五分量原值），容器为 null。
+         */
+        KnowledgeScoredTreeNodeResponse: {
+            /** Knowledge Node Id */
+            knowledge_node_id: string;
+            /** Node Version Id */
+            node_version_id: string;
+            /** Section Label */
+            section_label: string | null;
+            /** Title */
+            title: string;
+            /** Content */
+            content: string | null;
+            /** Level */
+            level: number;
+            /** Is Leaf */
+            is_leaf: boolean;
+            /** Sources */
+            sources: components["schemas"]["KnowledgeSourceResponse"][];
+            /** Children */
+            children?: components["schemas"]["KnowledgeScoredTreeNodeResponse"][];
+            /** Importance */
+            importance: number;
+            /** Difficulty */
+            difficulty: number;
+            /** Components */
+            components?: {
+                [key: string]: number;
+            } | null;
+        };
+        /** KnowledgeScoredTreeResponse */
+        KnowledgeScoredTreeResponse: {
+            /** Framework Version Id */
+            framework_version_id: string;
+            /** Version Number */
+            version_number: number;
+            /** Scoring Version */
+            scoring_version: string;
+            /** Tree */
+            tree: components["schemas"]["KnowledgeScoredTreeNodeResponse"][];
+        };
+        /** KnowledgeScoringBasisResponse */
+        KnowledgeScoringBasisResponse: {
+            /** Scoring Version */
+            scoring_version: string;
+            weights: components["schemas"]["KnowledgeScoringWeightsResponse"];
+        };
+        /** KnowledgeScoringWeightsResponse */
+        KnowledgeScoringWeightsResponse: {
+            /** Importance */
+            importance: {
+                [key: string]: number;
+            };
+            /** Difficulty */
+            difficulty: {
+                [key: string]: number;
+            };
         };
         /** KnowledgeSourceResponse */
         KnowledgeSourceResponse: {
@@ -675,6 +1033,28 @@ export interface components {
             created_at: string;
             /** Activated At */
             activated_at: string | null;
+        };
+        /** LLMCallPurposeCount */
+        LLMCallPurposeCount: {
+            /** Purpose */
+            purpose: string;
+            /** Count */
+            count: number;
+        };
+        /** LLMCallSummaryResponse */
+        LLMCallSummaryResponse: {
+            /** Job Id */
+            job_id: string;
+            /** Total */
+            total: number;
+            /** Succeeded */
+            succeeded: number;
+            /** Failed */
+            failed: number;
+            /** Skipped Deadline */
+            skipped_deadline: number;
+            /** By Purpose */
+            by_purpose: components["schemas"]["LLMCallPurposeCount"][];
         };
         /** MasteryStateResponse */
         MasteryStateResponse: {
@@ -1265,6 +1645,35 @@ export interface operations {
             };
         };
     };
+    delete_course_via_post_api_courses__course_id__delete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     health_check_api_health_get: {
         parameters: {
             query?: never;
@@ -1303,6 +1712,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_job_llm_calls_api_jobs__job_id__llm_calls_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LLMCallSummaryResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1370,6 +1810,237 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["KnowledgeFrameworkResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_knowledge_graph_api_courses__course_id__knowledge_graph_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeGraphResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_scored_knowledge_tree_api_courses__course_id__knowledge_tree_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeScoredTreeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_knowledge_highlights_api_courses__course_id__knowledge_highlights_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                order?: "importance" | "difficulty" | "gap";
+            };
+            header?: never;
+            path: {
+                course_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeHighlightsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_knowledge_merge_decisions_api_courses__course_id__knowledge_merge_decisions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeMergeDecisionsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_knowledge_alias_lock_api_courses__course_id__knowledge_alias_locks_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KnowledgeAliasLockRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeAliasLockResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_knowledge_alias_lock_api_courses__course_id__knowledge_alias_locks_delete: {
+        parameters: {
+            query?: {
+                title_a?: string | null;
+                title_b?: string | null;
+            };
+            header?: never;
+            path: {
+                course_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["KnowledgeAliasLockRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_knowledge_alias_lock_via_post_api_courses__course_id__knowledge_alias_locks_delete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KnowledgeAliasLockRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -1639,6 +2310,35 @@ export interface operations {
         };
     };
     delete_material_api_materials__material_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                material_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_material_via_post_api_materials__material_id__delete_post: {
         parameters: {
             query?: never;
             header?: never;

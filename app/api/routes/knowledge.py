@@ -100,6 +100,17 @@ async def list_knowledge_merge_decisions(
         return KnowledgeService().list_merge_decisions(session, course_id)
 
 
+@router.get(
+    "/courses/{course_id}/knowledge/alias-locks",
+    response_model=list[KnowledgeAliasLockResponse],
+)
+async def list_knowledge_alias_locks(
+    course_id: str,
+) -> list[KnowledgeAliasLockResponse]:
+    with session_scope() as session:
+        return KnowledgeService().list_alias_locks(session, course_id)
+
+
 @router.post(
     "/courses/{course_id}/knowledge/alias-locks",
     response_model=KnowledgeAliasLockResponse,

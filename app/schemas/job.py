@@ -25,3 +25,31 @@ class JobResponse(BaseModel):
     completed_units: int | None = None
     total_units: int | None = None
     message: str | None = None
+
+
+class LLMCallPurposeCount(BaseModel):
+    purpose: str
+    count: int
+
+
+class LLMCallSummaryResponse(BaseModel):
+    job_id: str
+    total: int
+    succeeded: int
+    failed: int
+    skipped_deadline: int
+    by_purpose: list[LLMCallPurposeCount]
+
+
+class LLMCallPurposeCount(BaseModel):
+    purpose: str
+    count: int
+
+
+class LLMCallSummaryResponse(BaseModel):
+    job_id: str
+    total: int
+    succeeded: int
+    failed: int
+    skipped_deadline: int
+    by_purpose: list[LLMCallPurposeCount]

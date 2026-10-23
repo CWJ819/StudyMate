@@ -1,5 +1,5 @@
 // §7 手工清单的自动化部分：后端全部错误码（plan §4.1 契约）都必须有中文文案。
-// 清单提取自 app/ 全量 grep `code="…"`（2026-10-20，34 个）；后端新增码而此处未同步时，
+// 清单提取自 app/ 全量 grep `code="…"`（2026-10-23，38 个）；后端新增码而此处未同步时，
 // 这个测试会失败并提醒补文案。
 import { isRetryable, messageFor } from './errors'
 
@@ -19,7 +19,11 @@ const BACKEND_CODES = [
   'INVALID_TASK_STATUS_TRANSITION',
   'JOB_EXECUTION_FAILED',
   'JOB_PAYLOAD_INVALID',
+  'JOB_DEADLINE_EXCEEDED',
   'KNOWLEDGE_BUILD_FAILED',
+  'KNOWLEDGE_BUILD_IN_PROGRESS',
+  'KNOWLEDGE_EXTRACTION_FAILED',
+  'KNOWLEDGE_OUTLINE_FAILED',
   'LLM_AUTH_FAILED',
   'LLM_NETWORK_ERROR',
   'LLM_NOT_CONFIGURED',

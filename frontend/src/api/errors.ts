@@ -43,6 +43,10 @@ const MESSAGES: Record<string, string> = {
   JOB_EXECUTION_FAILED: '后台任务执行失败，请重试',
   JOB_PAYLOAD_INVALID: '后台任务参数异常（程序错误）',
   KNOWLEDGE_BUILD_FAILED: '知识框架构建失败，请重试',
+  KNOWLEDGE_BUILD_IN_PROGRESS: '知识框架正在构建中，请稍后再试',
+  KNOWLEDGE_OUTLINE_FAILED: '无法识别文档章节结构，请检查文档后重试',
+  KNOWLEDGE_EXTRACTION_FAILED: '知识抽取失败，请稍后重试',
+  JOB_DEADLINE_EXCEEDED: '任务超时，请稍后重试',
   // 本机 Key 保存：格式校验失败 / 本地密钥文件写入失败
   INVALID_LLM_API_KEY: 'API Key 不合法（不能包含换行，长度不超过 4096）',
   LOCAL_SECRETS_WRITE_FAILED: '无法写入本机密钥文件，请检查数据目录权限',

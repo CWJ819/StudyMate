@@ -5,6 +5,7 @@ from sqlalchemy import JSON, func, select
 from sqlalchemy.orm import Session
 
 from app.db.models.job import Job
+from app.db.models.llm_call import LLMCall
 
 JOB_STATUS_QUEUED = "queued"
 JOB_STATUS_RUNNING = "running"
@@ -139,6 +140,29 @@ class JobRepository:
             job.error_code = None
             job.error_summary = None
         return len(jobs)
+
+    def summarize_llm_calls(self, session: Session, job_id: str) -> dict[str, object]:
+        status_rows = session.execute(
+            select(LLMCall.status, func.count(LLMCall.id))
+            .where(LLMCall.job_id == job_id)
+            .group_by(LLMCall.status)
+        ).all()
+        purpose_rows = session.execute(
+            select(LLMCall.purpose, func.count(LLMCall.id))
+            .where(LLMCall.job_id == job_id)
+            .group_by(LLMCall.purpose)
+            .order_by(LLMCall.purpose.asc())
+        ).all()
+        counts = {status: count for status, count in status_rows}
+        return {
+            "total": sum(counts.values()),
+            "succeeded": counts.get("succeeded", 0),
+            "failed": counts.get("failed", 0),
+            "skipped_deadline": counts.get("skipped_deadline", 0),
+            "by_purpose": [
+                {"purpose": purpose, "count": count} for purpose, count in purpose_rows
+            ],
+        }
 
     def cancel_document_jobs(self, session: Session, *, document_id: str) -> int:
         jobs = list(

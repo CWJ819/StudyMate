@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import random
 import time
 from dataclasses import dataclass
@@ -169,7 +170,7 @@ def submit_random_answers(
         f"/quizzes/{quiz['quiz_id']}/submit",
         expected=200,
         json={
-            "idempotency_key": f"seed-v16-{target.course_id[:8]}-{round_index}",
+            "idempotency_key": f"seed-demo-{target.course_id[:8]}-{round_index}",
             "answers": answers,
         },
     ).json()
@@ -267,7 +268,7 @@ def report_course(
         )
         print(f"  {left_text:<58} {right_text}")
     print("  排序分歧（前 50）: yes（gap 中被考节点 untested=false 的数量=%d）" % len(tested))
-    print("  结构校验: v16 未变、framework_version_id 未变、叶数未变")
+    print("  结构校验: 版本未变、framework_version_id 未变、叶数未变")
 
 
 def run_course(client: httpx.Client, target: CourseTarget, rounds: int, seed: int) -> None:
@@ -285,22 +286,51 @@ def run_course(client: httpx.Client, target: CourseTarget, rounds: int, seed: in
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--api-base", default=DEFAULT_API)
-    parser.add_argument("--course", default=None, help="只处理 course id 前缀匹配的课程")
+    parser.add_argument("--course", default=None, help="只处理 course id 前缀匹配的本地课程")
+    parser.add_argument("--course-id", default=None, help="直接指定任意课程（线上演示课）")
+    parser.add_argument("--label", default="在线演示课")
+    parser.add_argument("--expected-version", type=int, default=None)
+    parser.add_argument("--expected-leaves", type=int, default=None)
+    parser.add_argument("--token-env", default=None, help="从该环境变量读取 Bearer token（不打印）")
     parser.add_argument("--rounds", type=int, default=2, help="每门课生成几场测验")
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     args = parser.parse_args()
 
-    targets = [target for target in TARGETS if not args.course or target.course_id.startswith(args.course)]
+    if args.course_id:
+        if args.expected_version is None or args.expected_leaves is None:
+            raise SystemExit("--course-id 需要同时给出 --expected-version 和 --expected-leaves")
+        targets = [
+            CourseTarget(
+                course_id=args.course_id,
+                label=args.label,
+                expected_version=args.expected_version,
+                expected_leaves=args.expected_leaves,
+            )
+        ]
+    else:
+        targets = [
+            target
+            for target in TARGETS
+            if not args.course or target.course_id.startswith(args.course)
+        ]
     if not targets:
         raise SystemExit(f"没有课程匹配 --course {args.course}")
 
     print(f"API: {args.api_base} | seed={args.seed} | rounds={args.rounds}", flush=True)
     print("提示：本脚本只生成/提交测验并读掌握度，不会触发知识构建或修改设置。", flush=True)
 
+    headers = {"User-Agent": "studymate-demo-seed/1.0"}
+    if args.token_env:
+        token = os.environ.get(args.token_env, "").strip()
+        if not token:
+            raise SystemExit(f"环境变量 {args.token_env} 为空")
+        headers["Authorization"] = f"Bearer {token}"
+        print(f"auth: Bearer <{args.token_env}>", flush=True)
+
     with httpx.Client(
         base_url=args.api_base,
         timeout=httpx.Timeout(180.0, connect=10.0),
-        headers={"User-Agent": "studymate-demo-seed/1.0"},
+        headers=headers,
     ) as client:
         health = request(client, "GET", "/health", expected=200).json()
         print(f"health: {health}", flush=True)
@@ -312,3 +342,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

@@ -1,1 +1,4397 @@
-{"openapi":"3.1.0","info":{"title":"StudyMate Backend","version":"0.1.0"},"paths":{"/api/courses":{"get":{"tags":["courses"],"summary":"List Courses","operationId":"list_courses_api_courses_get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"items":{"$ref":"#/components/schemas/CourseResponse"},"type":"array","title":"Response List Courses Api Courses Get"}}}}}},"post":{"tags":["courses"],"summary":"Create Course","operationId":"create_course_api_courses_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/CourseCreateRequest"}}},"required":true},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/CourseResponse"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/courses/{course_id}":{"get":{"tags":["courses"],"summary":"Get Course","operationId":"get_course_api_courses__course_id__get","parameters":[{"name":"course_id","in":"path","required":true,"schema":{"type":"string","title":"Course Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/CourseResponse"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"patch":{"tags":["courses"],"summary":"Update Course","operationId":"update_course_api_courses__course_id__patch","parameters":[{"name":"course_id","in":"path","required":true,"schema":{"type":"string","title":"Course Id"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/CourseUpdateRequest"}}}},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/CourseResponse"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"delete":{"tags":["courses"],"summary":"Delete Course","operationId":"delete_course_api_courses__course_id__delete","parameters":[{"name":"course_id","in":"path","required":true,"schema":{"type":"string","title":"Course Id"}}],"responses":{"204":{"description":"Successful Response"},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/health":{"get":{"tags":["health"],"summary":"Health Check","operationId":"health_check_api_health_get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HealthResponse"}}}}}}},"/api/jobs/{job_id}":{"get":{"tags":["jobs"],"summary":"Get Job","operationId":"get_job_api_jobs__job_id__get","parameters":[{"name":"job_id","in":"path","required":true,"schema":{"type":"string","title":"Job Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/JobResponse"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/courses/{course_id}/knowledge/build":{"post":{"tags":["knowledge"],"summary":"Build Knowledge Framework","operationId":"build_knowledge_framework_api_courses__course_id__knowledge_build_post","parameters":[{"name":"course_id","in":"path","required":true,"schema":{"type":"string","title":"Course Id"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/KnowledgeBuildRequest"}}}},"responses":{"202":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/KnowledgeBuildResponse"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/courses/{course_id}/knowledge":{"get":{"tags":["knowledge"],"summary":"Get Active Knowledge Framework","operationId":"get_active_knowledge_framework_api_courses__course_id__knowledge_get","parameters":[{"name":"course_id","in":"path","required":true,"schema":{"type":"string","title":"Course Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/KnowledgeFrameworkResponse"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/knowledge/{knowledge_point_id}":{"get":{"tags":["knowledge"],"summary":"Get Knowledge Node","operationId":"get_knowledge_node_api_knowledge__knowledge_point_id__get","parameters":[{"name":"knowledge_point_id","in":"path","required":true,"schema":{"type":"string","title":"Knowledge Point Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/KnowledgeNodeDetailResponse"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/courses/{course_id}/knowledge/versions":{"get":{"tags":["knowledge"],"summary":"List Knowledge Versions","operationId":"list_knowledge_versions_api_courses__course_id__knowledge_versions_get","parameters":[{"name":"course_id","in":"path","required":true,"schema":{"type":"string","title":"Course Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/KnowledgeVersionResponse"},"title":"Response List Knowledge Versions Api Courses  Course Id  Knowledge Versions Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/courses/{course_id}/mastery":{"get":{"tags":["mastery"],"summary":"List Mastery","operationId":"list_mastery_api_courses__course_id__mastery_get","parameters":[{"name":"course_id","in":"path","required":true,"schema":{"type":"string","title":"Course Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/MasteryStateResponse"},"title":"Response List Mastery Api Courses  Course Id  Mastery Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/courses/{course_id}/wrongbook":{"get":{"tags":["mastery"],"summary":"List Wrongbook","operationId":"list_wrongbook_api_courses__course_id__wrongbook_get","parameters":[{"name":"course_id","in":"path","required":true,"schema":{"type":"string","title":"Course Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/KnowledgeGapResponse"},"title":"Response List Wrongbook Api Courses  Course Id  Wrongbook Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/courses/{course_id}/review-targets":{"post":{"tags":["mastery"],"summary":"Select Review Targets","operationId":"select_review_targets_api_courses__course_id__review_targets_post","parameters":[{"name":"course_id","in":"path","required":true,"schema":{"type":"string","title":"Course Id"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ReviewTargetsRequest"}}}},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ReviewTargetsResponse"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/courses/{course_id}/materials":{"post":{"tags":["materials"],"summary":"Upload Material","operationId":"upload_material_api_courses__course_id__materials_post","parameters":[{"name":"course_id","in":"path","required":true,"schema":{"type":"string","title":"Course Id"}}],"requestBody":{"required":true,"content":{"multipart/form-data":{"schema":{"$ref":"#/components/schemas/Body_upload_material_api_courses__course_id__materials_post"}}}},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/MaterialUploadResponse"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"get":{"tags":["materials"],"summary":"List Materials","operationId":"list_materials_api_courses__course_id__materials_get","parameters":[{"name":"course_id","in":"path","required":true,"schema":{"type":"string","title":"Course Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/MaterialSummaryResponse"},"title":"Response List Materials Api Courses  Course Id  Materials Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/materials/{material_id}":{"get":{"tags":["materials"],"summary":"Get Material","operationId":"get_material_api_materials__material_id__get","parameters":[{"name":"material_id","in":"path","required":true,"schema":{"type":"string","title":"Material Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/MaterialDetailResponse"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"delete":{"tags":["materials"],"summary":"Delete Material","operationId":"delete_material_api_materials__material_id__delete","parameters":[{"name":"material_id","in":"path","required":true,"schema":{"type":"string","title":"Material Id"}}],"responses":{"204":{"description":"Successful Response"},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/courses/{course_id}/search":{"get":{"tags":["materials"],"summary":"Search Materials","operationId":"search_materials_api_courses__course_id__search_get","parameters":[{"name":"course_id","in":"path","required":true,"schema":{"type":"string","title":"Course Id"}},{"name":"q","in":"query","required":true,"schema":{"type":"string","minLength":1,"title":"Q"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/ChunkSearchResult"},"title":"Response Search Materials Api Courses  Course Id  Search Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/chunks/{chunk_id}":{"get":{"tags":["materials"],"summary":"Get Chunk","operationId":"get_chunk_api_chunks__chunk_id__get","parameters":[{"name":"chunk_id","in":"path","required":true,"schema":{"type":"string","title":"Chunk Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ChunkDetailResponse"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/courses/{course_id}/plan":{"post":{"tags":["plans"],"summary":"Generate Study Plan","operationId":"generate_study_plan_api_courses__course_id__plan_post","parameters":[{"name":"course_id","in":"path","required":true,"schema":{"type":"string","title":"Course Id"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/StudyPlanGenerateRequest"}}}},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/StudyPlanDetailResponse"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/courses/{course_id}/plans":{"get":{"tags":["plans"],"summary":"List Study Plans","operationId":"list_study_plans_api_courses__course_id__plans_get","parameters":[{"name":"course_id","in":"path","required":true,"schema":{"type":"string","title":"Course Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/StudyPlanSummaryResponse"},"title":"Response List Study Plans Api Courses  Course Id  Plans Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/plans/{plan_id}":{"get":{"tags":["plans"],"summary":"Get Study Plan","operationId":"get_study_plan_api_plans__plan_id__get","parameters":[{"name":"plan_id","in":"path","required":true,"schema":{"type":"string","title":"Plan Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/StudyPlanDetailResponse"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/tasks/{task_id}":{"patch":{"tags":["plans"],"summary":"Update Study Task","operationId":"update_study_task_api_tasks__task_id__patch","parameters":[{"name":"task_id","in":"path","required":true,"schema":{"type":"string","title":"Task Id"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/StudyTaskUpdateRequest"}}}},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/StudyTaskResponse"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/courses/{course_id}/quiz/generate":{"post":{"tags":["quizzes"],"summary":"Generate Quiz","operationId":"generate_quiz_api_courses__course_id__quiz_generate_post","parameters":[{"name":"course_id","in":"path","required":true,"schema":{"type":"string","title":"Course Id"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuizGenerateRequest"}}}},"responses":{"202":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuizGenerateResponse"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/quizzes/{quiz_id}":{"get":{"tags":["quizzes"],"summary":"Get Quiz","operationId":"get_quiz_api_quizzes__quiz_id__get","parameters":[{"name":"quiz_id","in":"path","required":true,"schema":{"type":"string","title":"Quiz Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuizDetailResponse"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/quizzes/{quiz_id}/submit":{"post":{"tags":["quizzes"],"summary":"Submit Quiz","operationId":"submit_quiz_api_quizzes__quiz_id__submit_post","parameters":[{"name":"quiz_id","in":"path","required":true,"schema":{"type":"string","title":"Quiz Id"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuizSubmitRequest"}}}},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuizSubmitResponse"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/settings":{"get":{"tags":["settings"],"summary":"Read Settings","operationId":"read_settings_api_settings_get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/SettingsResponse"}}}}}},"put":{"tags":["settings"],"summary":"Update Settings","operationId":"update_settings_api_settings_put","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/SettingsUpdateRequest"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/SettingsResponse"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}}},"components":{"schemas":{"Body_upload_material_api_courses__course_id__materials_post":{"properties":{"file":{"type":"string","contentMediaType":"application/octet-stream","title":"File"}},"type":"object","required":["file"],"title":"Body_upload_material_api_courses__course_id__materials_post"},"ChunkDetailResponse":{"properties":{"id":{"type":"string","title":"Id"},"document_id":{"type":"string","title":"Document Id"},"course_id":{"type":"string","title":"Course Id"},"filename":{"type":"string","title":"Filename"},"page_start":{"type":"integer","title":"Page Start"},"page_end":{"type":"integer","title":"Page End"},"text":{"type":"string","title":"Text"}},"type":"object","required":["id","document_id","course_id","filename","page_start","page_end","text"],"title":"ChunkDetailResponse"},"ChunkSearchResult":{"properties":{"chunk_id":{"type":"string","title":"Chunk Id"},"document_id":{"type":"string","title":"Document Id"},"filename":{"type":"string","title":"Filename"},"page_start":{"type":"integer","title":"Page Start"},"page_end":{"type":"integer","title":"Page End"},"text":{"type":"string","title":"Text"}},"type":"object","required":["chunk_id","document_id","filename","page_start","page_end","text"],"title":"ChunkSearchResult"},"CourseCreateRequest":{"properties":{"name":{"type":"string","maxLength":255,"minLength":1,"title":"Name"},"description":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Description"}},"additionalProperties":false,"type":"object","required":["name"],"title":"CourseCreateRequest"},"CourseResponse":{"properties":{"id":{"type":"string","title":"Id"},"name":{"type":"string","title":"Name"},"description":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Description"},"active_framework_version_id":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Active Framework Version Id"},"created_at":{"type":"string","format":"date-time","title":"Created At"},"updated_at":{"type":"string","format":"date-time","title":"Updated At"}},"type":"object","required":["id","name","description","active_framework_version_id","created_at","updated_at"],"title":"CourseResponse"},"CourseUpdateRequest":{"properties":{"name":{"anyOf":[{"type":"string","maxLength":255,"minLength":1},{"type":"null"}],"title":"Name"},"description":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Description"}},"additionalProperties":false,"type":"object","title":"CourseUpdateRequest"},"HTTPValidationError":{"properties":{"detail":{"items":{"$ref":"#/components/schemas/ValidationError"},"type":"array","title":"Detail"}},"type":"object","title":"HTTPValidationError"},"HealthResponse":{"properties":{"status":{"type":"string","title":"Status"},"application":{"type":"string","title":"Application"},"database":{"type":"string","title":"Database"},"environment":{"type":"string","title":"Environment"}},"type":"object","required":["status","application","database","environment"],"title":"HealthResponse"},"JobResponse":{"properties":{"id":{"type":"string","title":"Id"},"type":{"type":"string","title":"Type"},"status":{"type":"string","title":"Status"},"progress":{"type":"integer","title":"Progress"},"attempts":{"type":"integer","title":"Attempts"},"max_attempts":{"type":"integer","title":"Max Attempts"},"run_after":{"type":"string","format":"date-time","title":"Run After"},"locked_at":{"anyOf":[{"type":"string","format":"date-time"},{"type":"null"}],"title":"Locked At"},"error_code":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Error Code"},"error_summary":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Error Summary"},"started_at":{"anyOf":[{"type":"string","format":"date-time"},{"type":"null"}],"title":"Started At"},"finished_at":{"anyOf":[{"type":"string","format":"date-time"},{"type":"null"}],"title":"Finished At"},"created_at":{"type":"string","format":"date-time","title":"Created At"},"updated_at":{"type":"string","format":"date-time","title":"Updated At"}},"type":"object","required":["id","type","status","progress","attempts","max_attempts","run_after","locked_at","error_code","error_summary","started_at","finished_at","created_at","updated_at"],"title":"JobResponse"},"KnowledgeBuildRequest":{"properties":{"reference_outline":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Reference Outline"}},"additionalProperties":false,"type":"object","title":"KnowledgeBuildRequest"},"KnowledgeBuildResponse":{"properties":{"job_id":{"type":"string","title":"Job Id"},"framework_version_id":{"type":"string","title":"Framework Version Id"},"status":{"type":"string","title":"Status"}},"type":"object","required":["job_id","framework_version_id","status"],"title":"KnowledgeBuildResponse"},"KnowledgeFrameworkResponse":{"properties":{"framework_version_id":{"type":"string","title":"Framework Version Id"},"version_number":{"type":"integer","title":"Version Number"},"status":{"type":"string","title":"Status"},"activated_at":{"anyOf":[{"type":"string","format":"date-time"},{"type":"null"}],"title":"Activated At"},"tree":{"items":{"$ref":"#/components/schemas/KnowledgeTreeNodeResponse"},"type":"array","title":"Tree"},"nodes":{"items":{"$ref":"#/components/schemas/KnowledgeTreeNodeResponse"},"type":"array","title":"Nodes"}},"type":"object","required":["framework_version_id","version_number","status","activated_at","tree","nodes"],"title":"KnowledgeFrameworkResponse"},"KnowledgeGapResponse":{"properties":{"gap_id":{"type":"string","title":"Gap Id"},"knowledge_node_id":{"type":"string","title":"Knowledge Node Id"},"node_version_id":{"type":"string","title":"Node Version Id"},"title":{"type":"string","title":"Title"},"gap_type":{"type":"string","title":"Gap Type"},"status":{"type":"string","title":"Status"},"confidence":{"type":"number","title":"Confidence"},"evidence_count":{"type":"integer","title":"Evidence Count"},"evidence_summary":{"additionalProperties":true,"type":"object","title":"Evidence Summary"},"updated_at":{"type":"string","format":"date-time","title":"Updated At"}},"type":"object","required":["gap_id","knowledge_node_id","node_version_id","title","gap_type","status","confidence","evidence_count","evidence_summary","updated_at"],"title":"KnowledgeGapResponse"},"KnowledgeNodeDetailResponse":{"properties":{"knowledge_node_id":{"type":"string","title":"Knowledge Node Id"},"node_version_id":{"type":"string","title":"Node Version Id"},"framework_version_id":{"type":"string","title":"Framework Version Id"},"section_label":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Section Label"},"title":{"type":"string","title":"Title"},"content":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Content"},"level":{"type":"integer","title":"Level"},"is_leaf":{"type":"boolean","title":"Is Leaf"},"sources":{"items":{"$ref":"#/components/schemas/KnowledgeSourceResponse"},"type":"array","title":"Sources"},"relations":{"items":{"$ref":"#/components/schemas/KnowledgeRelationResponse"},"type":"array","title":"Relations"}},"type":"object","required":["knowledge_node_id","node_version_id","framework_version_id","section_label","title","content","level","is_leaf","sources","relations"],"title":"KnowledgeNodeDetailResponse"},"KnowledgeRelationResponse":{"properties":{"target_knowledge_node_id":{"type":"string","title":"Target Knowledge Node Id"},"target_title":{"type":"string","title":"Target Title"},"relation_type":{"type":"string","title":"Relation Type"},"confidence":{"type":"number","title":"Confidence"},"evidence":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Evidence"}},"type":"object","required":["target_knowledge_node_id","target_title","relation_type","confidence","evidence"],"title":"KnowledgeRelationResponse"},"KnowledgeSourceResponse":{"properties":{"document_id":{"type":"string","title":"Document Id"},"filename":{"type":"string","title":"Filename"},"page_number":{"type":"integer","title":"Page Number"},"chunk_id":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Chunk Id"},"evidence_type":{"type":"string","title":"Evidence Type"}},"type":"object","required":["document_id","filename","page_number","chunk_id","evidence_type"],"title":"KnowledgeSourceResponse"},"KnowledgeTreeNodeResponse":{"properties":{"knowledge_node_id":{"type":"string","title":"Knowledge Node Id"},"node_version_id":{"type":"string","title":"Node Version Id"},"section_label":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Section Label"},"title":{"type":"string","title":"Title"},"content":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Content"},"level":{"type":"integer","title":"Level"},"is_leaf":{"type":"boolean","title":"Is Leaf"},"sources":{"items":{"$ref":"#/components/schemas/KnowledgeSourceResponse"},"type":"array","title":"Sources"},"children":{"items":{"$ref":"#/components/schemas/KnowledgeTreeNodeResponse"},"type":"array","title":"Children"}},"type":"object","required":["knowledge_node_id","node_version_id","section_label","title","content","level","is_leaf","sources"],"title":"KnowledgeTreeNodeResponse"},"KnowledgeVersionResponse":{"properties":{"id":{"type":"string","title":"Id"},"version_number":{"type":"integer","title":"Version Number"},"status":{"type":"string","title":"Status"},"created_at":{"type":"string","format":"date-time","title":"Created At"},"activated_at":{"anyOf":[{"type":"string","format":"date-time"},{"type":"null"}],"title":"Activated At"}},"type":"object","required":["id","version_number","status","created_at","activated_at"],"title":"KnowledgeVersionResponse"},"MasteryStateResponse":{"properties":{"knowledge_node_id":{"type":"string","title":"Knowledge Node Id"},"title":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Title"},"alpha":{"type":"number","title":"Alpha"},"beta":{"type":"number","title":"Beta"},"mastery_estimate":{"type":"number","title":"Mastery Estimate"},"evidence_count":{"type":"integer","title":"Evidence Count"},"updated_at":{"type":"string","format":"date-time","title":"Updated At"}},"type":"object","required":["knowledge_node_id","title","alpha","beta","mastery_estimate","evidence_count","updated_at"],"title":"MasteryStateResponse"},"MaterialDetailResponse":{"properties":{"id":{"type":"string","title":"Id"},"course_id":{"type":"string","title":"Course Id"},"filename":{"type":"string","title":"Filename"},"mime_type":{"type":"string","title":"Mime Type"},"size_bytes":{"type":"integer","title":"Size Bytes"},"status":{"type":"string","title":"Status"},"error_code":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Error Code"},"page_count":{"type":"integer","title":"Page Count"},"chunk_count":{"type":"integer","title":"Chunk Count"},"no_text_pages":{"items":{"type":"integer"},"type":"array","title":"No Text Pages"},"created_at":{"type":"string","format":"date-time","title":"Created At"},"updated_at":{"type":"string","format":"date-time","title":"Updated At"},"pages":{"items":{"$ref":"#/components/schemas/MaterialPageResponse"},"type":"array","title":"Pages"}},"type":"object","required":["id","course_id","filename","mime_type","size_bytes","status","error_code","page_count","chunk_count","no_text_pages","created_at","updated_at","pages"],"title":"MaterialDetailResponse"},"MaterialPageResponse":{"properties":{"page_number":{"type":"integer","title":"Page Number"},"extraction_status":{"type":"string","title":"Extraction Status"},"error_code":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Error Code"},"text_preview":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Text Preview"},"text_length":{"type":"integer","title":"Text Length"}},"type":"object","required":["page_number","extraction_status","error_code","text_preview","text_length"],"title":"MaterialPageResponse"},"MaterialSummaryResponse":{"properties":{"id":{"type":"string","title":"Id"},"course_id":{"type":"string","title":"Course Id"},"filename":{"type":"string","title":"Filename"},"mime_type":{"type":"string","title":"Mime Type"},"size_bytes":{"type":"integer","title":"Size Bytes"},"status":{"type":"string","title":"Status"},"error_code":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Error Code"},"page_count":{"type":"integer","title":"Page Count"},"chunk_count":{"type":"integer","title":"Chunk Count"},"no_text_pages":{"items":{"type":"integer"},"type":"array","title":"No Text Pages"},"created_at":{"type":"string","format":"date-time","title":"Created At"},"updated_at":{"type":"string","format":"date-time","title":"Updated At"}},"type":"object","required":["id","course_id","filename","mime_type","size_bytes","status","error_code","page_count","chunk_count","no_text_pages","created_at","updated_at"],"title":"MaterialSummaryResponse"},"MaterialUploadResponse":{"properties":{"document_id":{"type":"string","title":"Document Id"},"job_id":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Job Id"},"status":{"type":"string","title":"Status"},"error_code":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Error Code"}},"type":"object","required":["document_id","job_id","status"],"title":"MaterialUploadResponse"},"QuizAnswerInput":{"properties":{"question_id":{"type":"string","title":"Question Id"},"selected_option_ids":{"anyOf":[{"items":{"type":"string"},"type":"array"},{"type":"null"}],"title":"Selected Option Ids"},"text":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Text"}},"additionalProperties":false,"type":"object","required":["question_id"],"title":"QuizAnswerInput"},"QuizDetailResponse":{"properties":{"quiz_id":{"type":"string","title":"Quiz Id"},"course_id":{"type":"string","title":"Course Id"},"framework_version_id":{"type":"string","title":"Framework Version Id"},"status":{"type":"string","title":"Status"},"created_at":{"type":"string","format":"date-time","title":"Created At"},"questions":{"items":{"$ref":"#/components/schemas/QuizQuestionResponse"},"type":"array","title":"Questions"}},"type":"object","required":["quiz_id","course_id","framework_version_id","status","created_at","questions"],"title":"QuizDetailResponse"},"QuizGenerateRequest":{"properties":{"knowledge_node_ids":{"items":{"type":"string"},"type":"array","maxItems":50,"title":"Knowledge Node Ids"},"question_count":{"type":"integer","maximum":20.0,"minimum":1.0,"title":"Question Count","default":10},"question_types":{"items":{"type":"string"},"type":"array","maxItems":3,"minItems":1,"title":"Question Types"},"difficulty":{"type":"string","maxLength":50,"minLength":1,"title":"Difficulty","default":"low"}},"additionalProperties":false,"type":"object","title":"QuizGenerateRequest"},"QuizGenerateResponse":{"properties":{"quiz_id":{"type":"string","title":"Quiz Id"},"job_id":{"type":"string","title":"Job Id"},"status":{"type":"string","title":"Status"}},"type":"object","required":["quiz_id","job_id","status"],"title":"QuizGenerateResponse"},"QuizQuestionOption":{"properties":{"id":{"type":"string","title":"Id"},"text":{"type":"string","title":"Text"}},"additionalProperties":false,"type":"object","required":["id","text"],"title":"QuizQuestionOption"},"QuizQuestionResponse":{"properties":{"question_id":{"type":"string","title":"Question Id"},"ordinal":{"type":"integer","title":"Ordinal"},"question_type":{"type":"string","title":"Question Type"},"stem":{"type":"string","title":"Stem"},"options":{"items":{"$ref":"#/components/schemas/QuizQuestionOption"},"type":"array","title":"Options"},"difficulty":{"type":"string","title":"Difficulty"},"max_score":{"type":"number","title":"Max Score"}},"type":"object","required":["question_id","ordinal","question_type","stem","options","difficulty","max_score"],"title":"QuizQuestionResponse"},"QuizQuestionResultResponse":{"properties":{"question_id":{"type":"string","title":"Question Id"},"score":{"type":"number","title":"Score"},"max_score":{"type":"number","title":"Max Score"},"grading_method":{"type":"string","title":"Grading Method"},"correct":{"anyOf":[{"type":"boolean"},{"type":"null"}],"title":"Correct"},"feedback_text":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Feedback Text"}},"type":"object","required":["question_id","score","max_score","grading_method"],"title":"QuizQuestionResultResponse"},"QuizSubmitRequest":{"properties":{"idempotency_key":{"type":"string","maxLength":255,"minLength":1,"title":"Idempotency Key"},"answers":{"items":{"$ref":"#/components/schemas/QuizAnswerInput"},"type":"array","maxItems":50,"minItems":1,"title":"Answers"}},"additionalProperties":false,"type":"object","required":["idempotency_key","answers"],"title":"QuizSubmitRequest"},"QuizSubmitResponse":{"properties":{"submission_id":{"type":"string","title":"Submission Id"},"quiz_id":{"type":"string","title":"Quiz Id"},"status":{"type":"string","title":"Status"},"total_score":{"type":"number","title":"Total Score"},"max_score":{"type":"number","title":"Max Score"},"question_results":{"items":{"$ref":"#/components/schemas/QuizQuestionResultResponse"},"type":"array","title":"Question Results"}},"type":"object","required":["submission_id","quiz_id","status","total_score","max_score","question_results"],"title":"QuizSubmitResponse"},"ReviewTargetResponse":{"properties":{"knowledge_node_id":{"type":"string","title":"Knowledge Node Id"},"node_version_id":{"type":"string","title":"Node Version Id"},"title":{"type":"string","title":"Title"},"priority":{"type":"number","title":"Priority"},"mastery_estimate":{"anyOf":[{"type":"number"},{"type":"null"}],"title":"Mastery Estimate"},"evidence_count":{"type":"integer","title":"Evidence Count"},"reason":{"type":"string","title":"Reason"}},"type":"object","required":["knowledge_node_id","node_version_id","title","priority","mastery_estimate","evidence_count","reason"],"title":"ReviewTargetResponse"},"ReviewTargetsRequest":{"properties":{"limit":{"type":"integer","maximum":50.0,"minimum":1.0,"title":"Limit","default":10},"exploration_ratio":{"type":"number","maximum":1.0,"minimum":0.0,"title":"Exploration Ratio","default":0.3}},"additionalProperties":false,"type":"object","title":"ReviewTargetsRequest"},"ReviewTargetsResponse":{"properties":{"strategy_log_id":{"type":"string","title":"Strategy Log Id"},"strategy_version":{"type":"string","title":"Strategy Version"},"targets":{"items":{"$ref":"#/components/schemas/ReviewTargetResponse"},"type":"array","title":"Targets"}},"type":"object","required":["strategy_log_id","strategy_version","targets"],"title":"ReviewTargetsResponse"},"SettingsResponse":{"properties":{"app_env":{"type":"string","title":"App Env"},"database_url":{"type":"string","title":"Database Url"},"storage_root":{"type":"string","title":"Storage Root"},"llm_base_url":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Llm Base Url"},"llm_model":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Llm Model"},"llm_timeout_seconds":{"type":"integer","title":"Llm Timeout Seconds"},"llm_max_retries":{"type":"integer","title":"Llm Max Retries"},"max_upload_bytes":{"type":"integer","title":"Max Upload Bytes"},"max_document_pages":{"type":"integer","title":"Max Document Pages"},"job_max_attempts":{"type":"integer","title":"Job Max Attempts"},"llm_auth_configured":{"type":"boolean","title":"Llm Auth Configured"},"llm_api_key_source":{"anyOf":[{"type":"string","enum":["local","environment"]},{"type":"null"}],"title":"Llm Api Key Source"}},"type":"object","required":["app_env","database_url","storage_root","llm_base_url","llm_model","llm_timeout_seconds","llm_max_retries","max_upload_bytes","max_document_pages","job_max_attempts","llm_auth_configured"],"title":"SettingsResponse"},"SettingsUpdateRequest":{"properties":{"llm_base_url":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Llm Base Url"},"llm_model":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Llm Model"},"llm_timeout_seconds":{"anyOf":[{"type":"integer","maximum":600.0,"minimum":1.0},{"type":"null"}],"title":"Llm Timeout Seconds"},"llm_max_retries":{"anyOf":[{"type":"integer","maximum":10.0,"minimum":0.0},{"type":"null"}],"title":"Llm Max Retries"},"max_upload_bytes":{"anyOf":[{"type":"integer","minimum":1.0},{"type":"null"}],"title":"Max Upload Bytes"},"max_document_pages":{"anyOf":[{"type":"integer","minimum":1.0},{"type":"null"}],"title":"Max Document Pages"},"job_max_attempts":{"anyOf":[{"type":"integer","maximum":20.0,"minimum":1.0},{"type":"null"}],"title":"Job Max Attempts"},"llm_api_key":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Llm Api Key"}},"additionalProperties":false,"type":"object","title":"SettingsUpdateRequest"},"StudyPlanDetailResponse":{"properties":{"id":{"type":"string","title":"Id"},"course_id":{"type":"string","title":"Course Id"},"version_number":{"type":"integer","title":"Version Number"},"exam_date":{"type":"string","format":"date","title":"Exam Date"},"daily_minutes":{"type":"integer","title":"Daily Minutes"},"target_score":{"type":"integer","title":"Target Score"},"status":{"type":"string","title":"Status"},"constraints":{"additionalProperties":true,"type":"object","title":"Constraints"},"created_at":{"type":"string","format":"date-time","title":"Created At"},"tasks":{"items":{"$ref":"#/components/schemas/StudyTaskResponse"},"type":"array","title":"Tasks"}},"type":"object","required":["id","course_id","version_number","exam_date","daily_minutes","target_score","status","constraints","created_at","tasks"],"title":"StudyPlanDetailResponse"},"StudyPlanGenerateRequest":{"properties":{"exam_date":{"type":"string","format":"date","title":"Exam Date"},"daily_minutes":{"type":"integer","maximum":720.0,"minimum":15.0,"title":"Daily Minutes"},"target_score":{"type":"integer","maximum":100.0,"minimum":0.0,"title":"Target Score"},"knowledge_node_ids":{"items":{"type":"string"},"type":"array","maxItems":100,"title":"Knowledge Node Ids"}},"additionalProperties":false,"type":"object","required":["exam_date","daily_minutes","target_score"],"title":"StudyPlanGenerateRequest"},"StudyPlanSummaryResponse":{"properties":{"id":{"type":"string","title":"Id"},"course_id":{"type":"string","title":"Course Id"},"version_number":{"type":"integer","title":"Version Number"},"exam_date":{"type":"string","format":"date","title":"Exam Date"},"daily_minutes":{"type":"integer","title":"Daily Minutes"},"target_score":{"type":"integer","title":"Target Score"},"status":{"type":"string","title":"Status"},"task_count":{"type":"integer","title":"Task Count"},"created_at":{"type":"string","format":"date-time","title":"Created At"}},"type":"object","required":["id","course_id","version_number","exam_date","daily_minutes","target_score","status","task_count","created_at"],"title":"StudyPlanSummaryResponse"},"StudyTaskResponse":{"properties":{"id":{"type":"string","title":"Id"},"title":{"type":"string","title":"Title"},"task_type":{"type":"string","title":"Task Type"},"scheduled_date":{"type":"string","format":"date","title":"Scheduled Date"},"estimated_minutes":{"type":"integer","title":"Estimated Minutes"},"priority":{"type":"integer","title":"Priority"},"status":{"type":"string","title":"Status"},"targets":{"items":{"$ref":"#/components/schemas/StudyTaskTargetResponse"},"type":"array","title":"Targets"}},"type":"object","required":["id","title","task_type","scheduled_date","estimated_minutes","priority","status","targets"],"title":"StudyTaskResponse"},"StudyTaskTargetResponse":{"properties":{"knowledge_node_id":{"type":"string","title":"Knowledge Node Id"},"title":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Title"},"target_role":{"type":"string","title":"Target Role"}},"type":"object","required":["knowledge_node_id","target_role"],"title":"StudyTaskTargetResponse"},"StudyTaskUpdateRequest":{"properties":{"status":{"type":"string","maxLength":50,"minLength":1,"title":"Status"}},"additionalProperties":false,"type":"object","required":["status"],"title":"StudyTaskUpdateRequest"},"ValidationError":{"properties":{"loc":{"items":{"anyOf":[{"type":"string"},{"type":"integer"}]},"type":"array","title":"Location"},"msg":{"type":"string","title":"Message"},"type":{"type":"string","title":"Error Type"},"input":{"title":"Input"},"ctx":{"type":"object","title":"Context"}},"type":"object","required":["loc","msg","type"],"title":"ValidationError"}}}}
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "StudyMate Backend",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/courses": {
+      "get": {
+        "tags": [
+          "courses"
+        ],
+        "summary": "List Courses",
+        "operationId": "list_courses_api_courses_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CourseResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Courses Api Courses Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "courses"
+        ],
+        "summary": "Create Course",
+        "operationId": "create_course_api_courses_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CourseCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/courses/{course_id}": {
+      "get": {
+        "tags": [
+          "courses"
+        ],
+        "summary": "Get Course",
+        "operationId": "get_course_api_courses__course_id__get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "courses"
+        ],
+        "summary": "Update Course",
+        "operationId": "update_course_api_courses__course_id__patch",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CourseUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "courses"
+        ],
+        "summary": "Delete Course",
+        "operationId": "delete_course_api_courses__course_id__delete",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/courses/{course_id}/delete": {
+      "post": {
+        "tags": [
+          "courses"
+        ],
+        "summary": "Delete Course Via Post",
+        "description": "ModelScope's API gateway rejects DELETE; the SPA uses this POST alias.",
+        "operationId": "delete_course_via_post_api_courses__course_id__delete_post",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health Check",
+        "operationId": "health_check_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Get Job",
+        "operationId": "get_job_api_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/{job_id}/llm-calls": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Get Job Llm Calls",
+        "operationId": "get_job_llm_calls_api_jobs__job_id__llm_calls_get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LLMCallSummaryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/courses/{course_id}/knowledge/build": {
+      "post": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Build Knowledge Framework",
+        "operationId": "build_knowledge_framework_api_courses__course_id__knowledge_build_post",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KnowledgeBuildRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeBuildResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/courses/{course_id}/knowledge": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Get Active Knowledge Framework",
+        "operationId": "get_active_knowledge_framework_api_courses__course_id__knowledge_get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeFrameworkResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/courses/{course_id}/knowledge/graph": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Get Knowledge Graph",
+        "operationId": "get_knowledge_graph_api_courses__course_id__knowledge_graph_get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeGraphResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/courses/{course_id}/knowledge/tree": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Get Scored Knowledge Tree",
+        "operationId": "get_scored_knowledge_tree_api_courses__course_id__knowledge_tree_get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeScoredTreeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/courses/{course_id}/knowledge/highlights": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Get Knowledge Highlights",
+        "operationId": "get_knowledge_highlights_api_courses__course_id__knowledge_highlights_get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "importance",
+                "difficulty",
+                "gap"
+              ],
+              "type": "string",
+              "default": "importance",
+              "title": "Order"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeHighlightsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/courses/{course_id}/knowledge/merge-decisions": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "List Knowledge Merge Decisions",
+        "operationId": "list_knowledge_merge_decisions_api_courses__course_id__knowledge_merge_decisions_get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeMergeDecisionsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/courses/{course_id}/knowledge/alias-locks": {
+      "post": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Add Knowledge Alias Lock",
+        "operationId": "add_knowledge_alias_lock_api_courses__course_id__knowledge_alias_locks_post",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KnowledgeAliasLockRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeAliasLockResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Delete Knowledge Alias Lock",
+        "operationId": "delete_knowledge_alias_lock_api_courses__course_id__knowledge_alias_locks_delete",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "title_a",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Title A"
+            }
+          },
+          {
+            "name": "title_b",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Title B"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/KnowledgeAliasLockRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/courses/{course_id}/knowledge/alias-locks/delete": {
+      "post": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Delete Knowledge Alias Lock Via Post",
+        "description": "POST alias for ModelScope gateways that reject DELETE (same as course delete).",
+        "operationId": "delete_knowledge_alias_lock_via_post_api_courses__course_id__knowledge_alias_locks_delete_post",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KnowledgeAliasLockRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/knowledge/{knowledge_point_id}": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Get Knowledge Node",
+        "operationId": "get_knowledge_node_api_knowledge__knowledge_point_id__get",
+        "parameters": [
+          {
+            "name": "knowledge_point_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Knowledge Point Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeNodeDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/courses/{course_id}/knowledge/versions": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "List Knowledge Versions",
+        "operationId": "list_knowledge_versions_api_courses__course_id__knowledge_versions_get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/KnowledgeVersionResponse"
+                  },
+                  "title": "Response List Knowledge Versions Api Courses  Course Id  Knowledge Versions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/courses/{course_id}/mastery": {
+      "get": {
+        "tags": [
+          "mastery"
+        ],
+        "summary": "List Mastery",
+        "operationId": "list_mastery_api_courses__course_id__mastery_get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MasteryStateResponse"
+                  },
+                  "title": "Response List Mastery Api Courses  Course Id  Mastery Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/courses/{course_id}/wrongbook": {
+      "get": {
+        "tags": [
+          "mastery"
+        ],
+        "summary": "List Wrongbook",
+        "operationId": "list_wrongbook_api_courses__course_id__wrongbook_get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/KnowledgeGapResponse"
+                  },
+                  "title": "Response List Wrongbook Api Courses  Course Id  Wrongbook Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/courses/{course_id}/review-targets": {
+      "post": {
+        "tags": [
+          "mastery"
+        ],
+        "summary": "Select Review Targets",
+        "operationId": "select_review_targets_api_courses__course_id__review_targets_post",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewTargetsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewTargetsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/courses/{course_id}/materials": {
+      "post": {
+        "tags": [
+          "materials"
+        ],
+        "summary": "Upload Material",
+        "operationId": "upload_material_api_courses__course_id__materials_post",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_material_api_courses__course_id__materials_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterialUploadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "materials"
+        ],
+        "summary": "List Materials",
+        "operationId": "list_materials_api_courses__course_id__materials_get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MaterialSummaryResponse"
+                  },
+                  "title": "Response List Materials Api Courses  Course Id  Materials Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/materials/{material_id}": {
+      "get": {
+        "tags": [
+          "materials"
+        ],
+        "summary": "Get Material",
+        "operationId": "get_material_api_materials__material_id__get",
+        "parameters": [
+          {
+            "name": "material_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Material Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterialDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "materials"
+        ],
+        "summary": "Delete Material",
+        "operationId": "delete_material_api_materials__material_id__delete",
+        "parameters": [
+          {
+            "name": "material_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Material Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/materials/{material_id}/delete": {
+      "post": {
+        "tags": [
+          "materials"
+        ],
+        "summary": "Delete Material Via Post",
+        "description": "ModelScope's API gateway rejects DELETE; the SPA uses this POST alias.",
+        "operationId": "delete_material_via_post_api_materials__material_id__delete_post",
+        "parameters": [
+          {
+            "name": "material_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Material Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/courses/{course_id}/search": {
+      "get": {
+        "tags": [
+          "materials"
+        ],
+        "summary": "Search Materials",
+        "operationId": "search_materials_api_courses__course_id__search_get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChunkSearchResult"
+                  },
+                  "title": "Response Search Materials Api Courses  Course Id  Search Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chunks/{chunk_id}": {
+      "get": {
+        "tags": [
+          "materials"
+        ],
+        "summary": "Get Chunk",
+        "operationId": "get_chunk_api_chunks__chunk_id__get",
+        "parameters": [
+          {
+            "name": "chunk_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Chunk Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChunkDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/courses/{course_id}/plan": {
+      "post": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Generate Study Plan",
+        "operationId": "generate_study_plan_api_courses__course_id__plan_post",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StudyPlanGenerateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudyPlanDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/courses/{course_id}/plans": {
+      "get": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "List Study Plans",
+        "operationId": "list_study_plans_api_courses__course_id__plans_get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StudyPlanSummaryResponse"
+                  },
+                  "title": "Response List Study Plans Api Courses  Course Id  Plans Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plans/{plan_id}": {
+      "get": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Get Study Plan",
+        "operationId": "get_study_plan_api_plans__plan_id__get",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudyPlanDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tasks/{task_id}": {
+      "patch": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Update Study Task",
+        "operationId": "update_study_task_api_tasks__task_id__patch",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StudyTaskUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudyTaskResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/courses/{course_id}/quiz/generate": {
+      "post": {
+        "tags": [
+          "quizzes"
+        ],
+        "summary": "Generate Quiz",
+        "operationId": "generate_quiz_api_courses__course_id__quiz_generate_post",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuizGenerateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizGenerateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/quizzes/{quiz_id}": {
+      "get": {
+        "tags": [
+          "quizzes"
+        ],
+        "summary": "Get Quiz",
+        "operationId": "get_quiz_api_quizzes__quiz_id__get",
+        "parameters": [
+          {
+            "name": "quiz_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Quiz Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/quizzes/{quiz_id}/submit": {
+      "post": {
+        "tags": [
+          "quizzes"
+        ],
+        "summary": "Submit Quiz",
+        "operationId": "submit_quiz_api_quizzes__quiz_id__submit_post",
+        "parameters": [
+          {
+            "name": "quiz_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Quiz Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuizSubmitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizSubmitResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/settings": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Read Settings",
+        "operationId": "read_settings_api_settings_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Update Settings",
+        "operationId": "update_settings_api_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Body_upload_material_api_courses__course_id__materials_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_material_api_courses__course_id__materials_post"
+      },
+      "ChunkDetailResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "course_id": {
+            "type": "string",
+            "title": "Course Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "page_start": {
+            "type": "integer",
+            "title": "Page Start"
+          },
+          "page_end": {
+            "type": "integer",
+            "title": "Page End"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "document_id",
+          "course_id",
+          "filename",
+          "page_start",
+          "page_end",
+          "text"
+        ],
+        "title": "ChunkDetailResponse"
+      },
+      "ChunkSearchResult": {
+        "properties": {
+          "chunk_id": {
+            "type": "string",
+            "title": "Chunk Id"
+          },
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "page_start": {
+            "type": "integer",
+            "title": "Page Start"
+          },
+          "page_end": {
+            "type": "integer",
+            "title": "Page End"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chunk_id",
+          "document_id",
+          "filename",
+          "page_start",
+          "page_end",
+          "text"
+        ],
+        "title": "ChunkSearchResult"
+      },
+      "CourseCreateRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "CourseCreateRequest"
+      },
+      "CourseResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "active_framework_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Framework Version Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "active_framework_version_id",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CourseResponse"
+      },
+      "CourseUpdateRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CourseUpdateRequest"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "application": {
+            "type": "string",
+            "title": "Application"
+          },
+          "database": {
+            "type": "string",
+            "title": "Database"
+          },
+          "environment": {
+            "type": "string",
+            "title": "Environment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "application",
+          "database",
+          "environment"
+        ],
+        "title": "HealthResponse"
+      },
+      "JobResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "progress": {
+            "type": "integer",
+            "title": "Progress"
+          },
+          "attempts": {
+            "type": "integer",
+            "title": "Attempts"
+          },
+          "max_attempts": {
+            "type": "integer",
+            "title": "Max Attempts"
+          },
+          "run_after": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Run After"
+          },
+          "locked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locked At"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "error_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Summary"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase"
+          },
+          "completed_units": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed Units"
+          },
+          "total_units": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Units"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "status",
+          "progress",
+          "attempts",
+          "max_attempts",
+          "run_after",
+          "locked_at",
+          "error_code",
+          "error_summary",
+          "started_at",
+          "finished_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "JobResponse"
+      },
+      "KnowledgeAliasLockRequest": {
+        "properties": {
+          "title_a": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Title A"
+          },
+          "title_b": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Title B"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title_a",
+          "title_b"
+        ],
+        "title": "KnowledgeAliasLockRequest"
+      },
+      "KnowledgeAliasLockResponse": {
+        "properties": {
+          "course_id": {
+            "type": "string",
+            "title": "Course Id"
+          },
+          "title_a": {
+            "type": "string",
+            "title": "Title A"
+          },
+          "title_b": {
+            "type": "string",
+            "title": "Title B"
+          }
+        },
+        "type": "object",
+        "required": [
+          "course_id",
+          "title_a",
+          "title_b"
+        ],
+        "title": "KnowledgeAliasLockResponse"
+      },
+      "KnowledgeBuildRequest": {
+        "properties": {
+          "reference_outline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Outline"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "KnowledgeBuildRequest"
+      },
+      "KnowledgeBuildResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "framework_version_id": {
+            "type": "string",
+            "title": "Framework Version Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "framework_version_id",
+          "status"
+        ],
+        "title": "KnowledgeBuildResponse"
+      },
+      "KnowledgeFrameworkResponse": {
+        "properties": {
+          "framework_version_id": {
+            "type": "string",
+            "title": "Framework Version Id"
+          },
+          "version_number": {
+            "type": "integer",
+            "title": "Version Number"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "activated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activated At"
+          },
+          "tree": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeTreeNodeResponse"
+            },
+            "type": "array",
+            "title": "Tree"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeTreeNodeResponse"
+            },
+            "type": "array",
+            "title": "Nodes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "framework_version_id",
+          "version_number",
+          "status",
+          "activated_at",
+          "tree",
+          "nodes"
+        ],
+        "title": "KnowledgeFrameworkResponse"
+      },
+      "KnowledgeGapResponse": {
+        "properties": {
+          "gap_id": {
+            "type": "string",
+            "title": "Gap Id"
+          },
+          "knowledge_node_id": {
+            "type": "string",
+            "title": "Knowledge Node Id"
+          },
+          "node_version_id": {
+            "type": "string",
+            "title": "Node Version Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "gap_type": {
+            "type": "string",
+            "title": "Gap Type"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "evidence_count": {
+            "type": "integer",
+            "title": "Evidence Count"
+          },
+          "evidence_summary": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Evidence Summary"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "gap_id",
+          "knowledge_node_id",
+          "node_version_id",
+          "title",
+          "gap_type",
+          "status",
+          "confidence",
+          "evidence_count",
+          "evidence_summary",
+          "updated_at"
+        ],
+        "title": "KnowledgeGapResponse"
+      },
+      "KnowledgeGraphEdgeResponse": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          },
+          "relation_type": {
+            "type": "string",
+            "title": "Relation Type"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "target",
+          "relation_type",
+          "confidence",
+          "evidence"
+        ],
+        "title": "KnowledgeGraphEdgeResponse"
+      },
+      "KnowledgeGraphNodeResponse": {
+        "properties": {
+          "knowledge_node_id": {
+            "type": "string",
+            "title": "Knowledge Node Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "section_path": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Section Path"
+          },
+          "is_leaf": {
+            "type": "boolean",
+            "title": "Is Leaf"
+          }
+        },
+        "type": "object",
+        "required": [
+          "knowledge_node_id",
+          "title",
+          "section_path",
+          "is_leaf"
+        ],
+        "title": "KnowledgeGraphNodeResponse"
+      },
+      "KnowledgeGraphResponse": {
+        "properties": {
+          "framework_version_id": {
+            "type": "string",
+            "title": "Framework Version Id"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeGraphNodeResponse"
+            },
+            "type": "array",
+            "title": "Nodes"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeGraphEdgeResponse"
+            },
+            "type": "array",
+            "title": "Edges"
+          }
+        },
+        "type": "object",
+        "required": [
+          "framework_version_id",
+          "nodes",
+          "edges"
+        ],
+        "title": "KnowledgeGraphResponse"
+      },
+      "KnowledgeHighlightItemResponse": {
+        "properties": {
+          "knowledge_node_id": {
+            "type": "string",
+            "title": "Knowledge Node Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "section_path": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Section Path"
+          },
+          "importance": {
+            "type": "number",
+            "title": "Importance"
+          },
+          "difficulty": {
+            "type": "number",
+            "title": "Difficulty"
+          },
+          "mastery_estimate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mastery Estimate"
+          },
+          "evidence_count": {
+            "type": "integer",
+            "title": "Evidence Count"
+          },
+          "untested": {
+            "type": "boolean",
+            "title": "Untested"
+          },
+          "reasons": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeScoreReasonResponse"
+            },
+            "type": "array",
+            "title": "Reasons"
+          }
+        },
+        "type": "object",
+        "required": [
+          "knowledge_node_id",
+          "title",
+          "section_path",
+          "importance",
+          "difficulty",
+          "mastery_estimate",
+          "evidence_count",
+          "untested",
+          "reasons"
+        ],
+        "title": "KnowledgeHighlightItemResponse"
+      },
+      "KnowledgeHighlightsResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeHighlightItemResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "basis": {
+            "$ref": "#/components/schemas/KnowledgeScoringBasisResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "basis"
+        ],
+        "title": "KnowledgeHighlightsResponse"
+      },
+      "KnowledgeMergeDecisionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "framework_version_id": {
+            "type": "string",
+            "title": "Framework Version Id"
+          },
+          "canonical_title": {
+            "type": "string",
+            "title": "Canonical Title"
+          },
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Aliases"
+          },
+          "members": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Members"
+          },
+          "distinct_documents": {
+            "type": "integer",
+            "title": "Distinct Documents"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method"
+          },
+          "similarity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Similarity"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "framework_version_id",
+          "canonical_title",
+          "aliases",
+          "members",
+          "distinct_documents",
+          "method",
+          "similarity",
+          "created_at"
+        ],
+        "title": "KnowledgeMergeDecisionResponse"
+      },
+      "KnowledgeMergeDecisionsResponse": {
+        "properties": {
+          "framework_version_id": {
+            "type": "string",
+            "title": "Framework Version Id"
+          },
+          "decisions": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeMergeDecisionResponse"
+            },
+            "type": "array",
+            "title": "Decisions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "framework_version_id",
+          "decisions"
+        ],
+        "title": "KnowledgeMergeDecisionsResponse"
+      },
+      "KnowledgeNodeDetailResponse": {
+        "properties": {
+          "knowledge_node_id": {
+            "type": "string",
+            "title": "Knowledge Node Id"
+          },
+          "node_version_id": {
+            "type": "string",
+            "title": "Node Version Id"
+          },
+          "framework_version_id": {
+            "type": "string",
+            "title": "Framework Version Id"
+          },
+          "section_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Label"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Aliases"
+          },
+          "level": {
+            "type": "integer",
+            "title": "Level"
+          },
+          "is_leaf": {
+            "type": "boolean",
+            "title": "Is Leaf"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeSourceResponse"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "relations": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeRelationResponse"
+            },
+            "type": "array",
+            "title": "Relations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "knowledge_node_id",
+          "node_version_id",
+          "framework_version_id",
+          "section_label",
+          "title",
+          "content",
+          "level",
+          "is_leaf",
+          "sources",
+          "relations"
+        ],
+        "title": "KnowledgeNodeDetailResponse"
+      },
+      "KnowledgeRelationResponse": {
+        "properties": {
+          "target_knowledge_node_id": {
+            "type": "string",
+            "title": "Target Knowledge Node Id"
+          },
+          "target_title": {
+            "type": "string",
+            "title": "Target Title"
+          },
+          "relation_type": {
+            "type": "string",
+            "title": "Relation Type"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "target_knowledge_node_id",
+          "target_title",
+          "relation_type",
+          "confidence",
+          "evidence"
+        ],
+        "title": "KnowledgeRelationResponse"
+      },
+      "KnowledgeScoreReasonResponse": {
+        "properties": {
+          "component": {
+            "type": "string",
+            "title": "Component"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Value"
+          },
+          "normalized": {
+            "type": "number",
+            "title": "Normalized"
+          },
+          "contribution": {
+            "type": "number",
+            "title": "Contribution"
+          }
+        },
+        "type": "object",
+        "required": [
+          "component",
+          "value",
+          "normalized",
+          "contribution"
+        ],
+        "title": "KnowledgeScoreReasonResponse",
+        "description": "一个评分分量的解释：原值、归一化值、加权贡献。"
+      },
+      "KnowledgeScoredTreeNodeResponse": {
+        "properties": {
+          "knowledge_node_id": {
+            "type": "string",
+            "title": "Knowledge Node Id"
+          },
+          "node_version_id": {
+            "type": "string",
+            "title": "Node Version Id"
+          },
+          "section_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Label"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "level": {
+            "type": "integer",
+            "title": "Level"
+          },
+          "is_leaf": {
+            "type": "boolean",
+            "title": "Is Leaf"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeSourceResponse"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeScoredTreeNodeResponse"
+            },
+            "type": "array",
+            "title": "Children"
+          },
+          "importance": {
+            "type": "number",
+            "title": "Importance"
+          },
+          "difficulty": {
+            "type": "number",
+            "title": "Difficulty"
+          },
+          "components": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Components"
+          }
+        },
+        "type": "object",
+        "required": [
+          "knowledge_node_id",
+          "node_version_id",
+          "section_label",
+          "title",
+          "content",
+          "level",
+          "is_leaf",
+          "sources",
+          "importance",
+          "difficulty"
+        ],
+        "title": "KnowledgeScoredTreeNodeResponse",
+        "description": "与 GET /knowledge 的树节点同形，另加读取时计算的分数。\n\nimportance / difficulty 是工程估计值，不是对课程内容的精确测量。\n容器取后代最大值（语义：“本章最重要 0.82”）；components 只给叶子\n（五分量原值），容器为 null。"
+      },
+      "KnowledgeScoredTreeResponse": {
+        "properties": {
+          "framework_version_id": {
+            "type": "string",
+            "title": "Framework Version Id"
+          },
+          "version_number": {
+            "type": "integer",
+            "title": "Version Number"
+          },
+          "scoring_version": {
+            "type": "string",
+            "title": "Scoring Version"
+          },
+          "tree": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeScoredTreeNodeResponse"
+            },
+            "type": "array",
+            "title": "Tree"
+          }
+        },
+        "type": "object",
+        "required": [
+          "framework_version_id",
+          "version_number",
+          "scoring_version",
+          "tree"
+        ],
+        "title": "KnowledgeScoredTreeResponse"
+      },
+      "KnowledgeScoringBasisResponse": {
+        "properties": {
+          "scoring_version": {
+            "type": "string",
+            "title": "Scoring Version"
+          },
+          "weights": {
+            "$ref": "#/components/schemas/KnowledgeScoringWeightsResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scoring_version",
+          "weights"
+        ],
+        "title": "KnowledgeScoringBasisResponse"
+      },
+      "KnowledgeScoringWeightsResponse": {
+        "properties": {
+          "importance": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Importance"
+          },
+          "difficulty": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Difficulty"
+          }
+        },
+        "type": "object",
+        "required": [
+          "importance",
+          "difficulty"
+        ],
+        "title": "KnowledgeScoringWeightsResponse"
+      },
+      "KnowledgeSourceResponse": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "page_number": {
+            "type": "integer",
+            "title": "Page Number"
+          },
+          "chunk_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunk Id"
+          },
+          "evidence_type": {
+            "type": "string",
+            "title": "Evidence Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "filename",
+          "page_number",
+          "chunk_id",
+          "evidence_type"
+        ],
+        "title": "KnowledgeSourceResponse"
+      },
+      "KnowledgeTreeNodeResponse": {
+        "properties": {
+          "knowledge_node_id": {
+            "type": "string",
+            "title": "Knowledge Node Id"
+          },
+          "node_version_id": {
+            "type": "string",
+            "title": "Node Version Id"
+          },
+          "section_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Label"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "level": {
+            "type": "integer",
+            "title": "Level"
+          },
+          "is_leaf": {
+            "type": "boolean",
+            "title": "Is Leaf"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeSourceResponse"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeTreeNodeResponse"
+            },
+            "type": "array",
+            "title": "Children"
+          }
+        },
+        "type": "object",
+        "required": [
+          "knowledge_node_id",
+          "node_version_id",
+          "section_label",
+          "title",
+          "content",
+          "level",
+          "is_leaf",
+          "sources"
+        ],
+        "title": "KnowledgeTreeNodeResponse"
+      },
+      "KnowledgeVersionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "version_number": {
+            "type": "integer",
+            "title": "Version Number"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "activated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "version_number",
+          "status",
+          "created_at",
+          "activated_at"
+        ],
+        "title": "KnowledgeVersionResponse"
+      },
+      "LLMCallPurposeCount": {
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "title": "Purpose"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "purpose",
+          "count"
+        ],
+        "title": "LLMCallPurposeCount"
+      },
+      "LLMCallSummaryResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "succeeded": {
+            "type": "integer",
+            "title": "Succeeded"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          },
+          "skipped_deadline": {
+            "type": "integer",
+            "title": "Skipped Deadline"
+          },
+          "by_purpose": {
+            "items": {
+              "$ref": "#/components/schemas/LLMCallPurposeCount"
+            },
+            "type": "array",
+            "title": "By Purpose"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "total",
+          "succeeded",
+          "failed",
+          "skipped_deadline",
+          "by_purpose"
+        ],
+        "title": "LLMCallSummaryResponse"
+      },
+      "MasteryStateResponse": {
+        "properties": {
+          "knowledge_node_id": {
+            "type": "string",
+            "title": "Knowledge Node Id"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "alpha": {
+            "type": "number",
+            "title": "Alpha"
+          },
+          "beta": {
+            "type": "number",
+            "title": "Beta"
+          },
+          "mastery_estimate": {
+            "type": "number",
+            "title": "Mastery Estimate"
+          },
+          "evidence_count": {
+            "type": "integer",
+            "title": "Evidence Count"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "knowledge_node_id",
+          "title",
+          "alpha",
+          "beta",
+          "mastery_estimate",
+          "evidence_count",
+          "updated_at"
+        ],
+        "title": "MasteryStateResponse"
+      },
+      "MaterialDetailResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "course_id": {
+            "type": "string",
+            "title": "Course Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "page_count": {
+            "type": "integer",
+            "title": "Page Count"
+          },
+          "chunk_count": {
+            "type": "integer",
+            "title": "Chunk Count"
+          },
+          "no_text_pages": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "No Text Pages"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "pages": {
+            "items": {
+              "$ref": "#/components/schemas/MaterialPageResponse"
+            },
+            "type": "array",
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "course_id",
+          "filename",
+          "mime_type",
+          "size_bytes",
+          "status",
+          "error_code",
+          "page_count",
+          "chunk_count",
+          "no_text_pages",
+          "created_at",
+          "updated_at",
+          "pages"
+        ],
+        "title": "MaterialDetailResponse"
+      },
+      "MaterialPageResponse": {
+        "properties": {
+          "page_number": {
+            "type": "integer",
+            "title": "Page Number"
+          },
+          "extraction_status": {
+            "type": "string",
+            "title": "Extraction Status"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "text_preview": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text Preview"
+          },
+          "text_length": {
+            "type": "integer",
+            "title": "Text Length"
+          }
+        },
+        "type": "object",
+        "required": [
+          "page_number",
+          "extraction_status",
+          "error_code",
+          "text_preview",
+          "text_length"
+        ],
+        "title": "MaterialPageResponse"
+      },
+      "MaterialSummaryResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "course_id": {
+            "type": "string",
+            "title": "Course Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "page_count": {
+            "type": "integer",
+            "title": "Page Count"
+          },
+          "chunk_count": {
+            "type": "integer",
+            "title": "Chunk Count"
+          },
+          "no_text_pages": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "No Text Pages"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "course_id",
+          "filename",
+          "mime_type",
+          "size_bytes",
+          "status",
+          "error_code",
+          "page_count",
+          "chunk_count",
+          "no_text_pages",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "MaterialSummaryResponse"
+      },
+      "MaterialUploadResponse": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "job_id",
+          "status"
+        ],
+        "title": "MaterialUploadResponse"
+      },
+      "QuizAnswerInput": {
+        "properties": {
+          "question_id": {
+            "type": "string",
+            "title": "Question Id"
+          },
+          "selected_option_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Option Ids"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "question_id"
+        ],
+        "title": "QuizAnswerInput"
+      },
+      "QuizDetailResponse": {
+        "properties": {
+          "quiz_id": {
+            "type": "string",
+            "title": "Quiz Id"
+          },
+          "course_id": {
+            "type": "string",
+            "title": "Course Id"
+          },
+          "framework_version_id": {
+            "type": "string",
+            "title": "Framework Version Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/QuizQuestionResponse"
+            },
+            "type": "array",
+            "title": "Questions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quiz_id",
+          "course_id",
+          "framework_version_id",
+          "status",
+          "created_at",
+          "questions"
+        ],
+        "title": "QuizDetailResponse"
+      },
+      "QuizGenerateRequest": {
+        "properties": {
+          "knowledge_node_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Knowledge Node Ids"
+          },
+          "question_count": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Question Count",
+            "default": 10
+          },
+          "question_types": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Question Types"
+          },
+          "difficulty": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Difficulty",
+            "default": "low"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "QuizGenerateRequest"
+      },
+      "QuizGenerateResponse": {
+        "properties": {
+          "quiz_id": {
+            "type": "string",
+            "title": "Quiz Id"
+          },
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quiz_id",
+          "job_id",
+          "status"
+        ],
+        "title": "QuizGenerateResponse"
+      },
+      "QuizQuestionOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "text"
+        ],
+        "title": "QuizQuestionOption"
+      },
+      "QuizQuestionResponse": {
+        "properties": {
+          "question_id": {
+            "type": "string",
+            "title": "Question Id"
+          },
+          "ordinal": {
+            "type": "integer",
+            "title": "Ordinal"
+          },
+          "question_type": {
+            "type": "string",
+            "title": "Question Type"
+          },
+          "stem": {
+            "type": "string",
+            "title": "Stem"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/QuizQuestionOption"
+            },
+            "type": "array",
+            "title": "Options"
+          },
+          "difficulty": {
+            "type": "string",
+            "title": "Difficulty"
+          },
+          "max_score": {
+            "type": "number",
+            "title": "Max Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question_id",
+          "ordinal",
+          "question_type",
+          "stem",
+          "options",
+          "difficulty",
+          "max_score"
+        ],
+        "title": "QuizQuestionResponse"
+      },
+      "QuizQuestionResultResponse": {
+        "properties": {
+          "question_id": {
+            "type": "string",
+            "title": "Question Id"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "max_score": {
+            "type": "number",
+            "title": "Max Score"
+          },
+          "grading_method": {
+            "type": "string",
+            "title": "Grading Method"
+          },
+          "correct": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correct"
+          },
+          "feedback_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question_id",
+          "score",
+          "max_score",
+          "grading_method"
+        ],
+        "title": "QuizQuestionResultResponse"
+      },
+      "QuizSubmitRequest": {
+        "properties": {
+          "idempotency_key": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Idempotency Key"
+          },
+          "answers": {
+            "items": {
+              "$ref": "#/components/schemas/QuizAnswerInput"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Answers"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "idempotency_key",
+          "answers"
+        ],
+        "title": "QuizSubmitRequest"
+      },
+      "QuizSubmitResponse": {
+        "properties": {
+          "submission_id": {
+            "type": "string",
+            "title": "Submission Id"
+          },
+          "quiz_id": {
+            "type": "string",
+            "title": "Quiz Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "total_score": {
+            "type": "number",
+            "title": "Total Score"
+          },
+          "max_score": {
+            "type": "number",
+            "title": "Max Score"
+          },
+          "question_results": {
+            "items": {
+              "$ref": "#/components/schemas/QuizQuestionResultResponse"
+            },
+            "type": "array",
+            "title": "Question Results"
+          }
+        },
+        "type": "object",
+        "required": [
+          "submission_id",
+          "quiz_id",
+          "status",
+          "total_score",
+          "max_score",
+          "question_results"
+        ],
+        "title": "QuizSubmitResponse"
+      },
+      "ReviewTargetResponse": {
+        "properties": {
+          "knowledge_node_id": {
+            "type": "string",
+            "title": "Knowledge Node Id"
+          },
+          "node_version_id": {
+            "type": "string",
+            "title": "Node Version Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "priority": {
+            "type": "number",
+            "title": "Priority"
+          },
+          "mastery_estimate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mastery Estimate"
+          },
+          "evidence_count": {
+            "type": "integer",
+            "title": "Evidence Count"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "knowledge_node_id",
+          "node_version_id",
+          "title",
+          "priority",
+          "mastery_estimate",
+          "evidence_count",
+          "reason"
+        ],
+        "title": "ReviewTargetResponse"
+      },
+      "ReviewTargetsRequest": {
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "default": 10
+          },
+          "exploration_ratio": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Exploration Ratio",
+            "default": 0.3
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ReviewTargetsRequest"
+      },
+      "ReviewTargetsResponse": {
+        "properties": {
+          "strategy_log_id": {
+            "type": "string",
+            "title": "Strategy Log Id"
+          },
+          "strategy_version": {
+            "type": "string",
+            "title": "Strategy Version"
+          },
+          "targets": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewTargetResponse"
+            },
+            "type": "array",
+            "title": "Targets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "strategy_log_id",
+          "strategy_version",
+          "targets"
+        ],
+        "title": "ReviewTargetsResponse"
+      },
+      "SettingsResponse": {
+        "properties": {
+          "app_env": {
+            "type": "string",
+            "title": "App Env"
+          },
+          "database_url": {
+            "type": "string",
+            "title": "Database Url"
+          },
+          "storage_root": {
+            "type": "string",
+            "title": "Storage Root"
+          },
+          "llm_base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Base Url"
+          },
+          "llm_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Model"
+          },
+          "llm_timeout_seconds": {
+            "type": "integer",
+            "title": "Llm Timeout Seconds"
+          },
+          "llm_max_retries": {
+            "type": "integer",
+            "title": "Llm Max Retries"
+          },
+          "max_upload_bytes": {
+            "type": "integer",
+            "title": "Max Upload Bytes"
+          },
+          "max_document_pages": {
+            "type": "integer",
+            "title": "Max Document Pages"
+          },
+          "job_max_attempts": {
+            "type": "integer",
+            "title": "Job Max Attempts"
+          },
+          "llm_auth_configured": {
+            "type": "boolean",
+            "title": "Llm Auth Configured"
+          },
+          "llm_api_key_source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "local",
+                  "environment"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Api Key Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "app_env",
+          "database_url",
+          "storage_root",
+          "llm_base_url",
+          "llm_model",
+          "llm_timeout_seconds",
+          "llm_max_retries",
+          "max_upload_bytes",
+          "max_document_pages",
+          "job_max_attempts",
+          "llm_auth_configured"
+        ],
+        "title": "SettingsResponse"
+      },
+      "SettingsUpdateRequest": {
+        "properties": {
+          "llm_base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Base Url"
+          },
+          "llm_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Model"
+          },
+          "llm_timeout_seconds": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 600.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Timeout Seconds"
+          },
+          "llm_max_retries": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Max Retries"
+          },
+          "max_upload_bytes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Upload Bytes"
+          },
+          "max_document_pages": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Document Pages"
+          },
+          "job_max_attempts": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 20.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Max Attempts"
+          },
+          "llm_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Api Key"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SettingsUpdateRequest"
+      },
+      "StudyPlanDetailResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "course_id": {
+            "type": "string",
+            "title": "Course Id"
+          },
+          "version_number": {
+            "type": "integer",
+            "title": "Version Number"
+          },
+          "exam_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Exam Date"
+          },
+          "daily_minutes": {
+            "type": "integer",
+            "title": "Daily Minutes"
+          },
+          "target_score": {
+            "type": "integer",
+            "title": "Target Score"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "constraints": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Constraints"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/StudyTaskResponse"
+            },
+            "type": "array",
+            "title": "Tasks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "course_id",
+          "version_number",
+          "exam_date",
+          "daily_minutes",
+          "target_score",
+          "status",
+          "constraints",
+          "created_at",
+          "tasks"
+        ],
+        "title": "StudyPlanDetailResponse"
+      },
+      "StudyPlanGenerateRequest": {
+        "properties": {
+          "exam_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Exam Date"
+          },
+          "daily_minutes": {
+            "type": "integer",
+            "maximum": 720.0,
+            "minimum": 15.0,
+            "title": "Daily Minutes"
+          },
+          "target_score": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Target Score"
+          },
+          "knowledge_node_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Knowledge Node Ids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "exam_date",
+          "daily_minutes",
+          "target_score"
+        ],
+        "title": "StudyPlanGenerateRequest"
+      },
+      "StudyPlanSummaryResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "course_id": {
+            "type": "string",
+            "title": "Course Id"
+          },
+          "version_number": {
+            "type": "integer",
+            "title": "Version Number"
+          },
+          "exam_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Exam Date"
+          },
+          "daily_minutes": {
+            "type": "integer",
+            "title": "Daily Minutes"
+          },
+          "target_score": {
+            "type": "integer",
+            "title": "Target Score"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "task_count": {
+            "type": "integer",
+            "title": "Task Count"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "course_id",
+          "version_number",
+          "exam_date",
+          "daily_minutes",
+          "target_score",
+          "status",
+          "task_count",
+          "created_at"
+        ],
+        "title": "StudyPlanSummaryResponse"
+      },
+      "StudyTaskResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "task_type": {
+            "type": "string",
+            "title": "Task Type"
+          },
+          "scheduled_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Scheduled Date"
+          },
+          "estimated_minutes": {
+            "type": "integer",
+            "title": "Estimated Minutes"
+          },
+          "priority": {
+            "type": "integer",
+            "title": "Priority"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "targets": {
+            "items": {
+              "$ref": "#/components/schemas/StudyTaskTargetResponse"
+            },
+            "type": "array",
+            "title": "Targets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "task_type",
+          "scheduled_date",
+          "estimated_minutes",
+          "priority",
+          "status",
+          "targets"
+        ],
+        "title": "StudyTaskResponse"
+      },
+      "StudyTaskTargetResponse": {
+        "properties": {
+          "knowledge_node_id": {
+            "type": "string",
+            "title": "Knowledge Node Id"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "target_role": {
+            "type": "string",
+            "title": "Target Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "knowledge_node_id",
+          "target_role"
+        ],
+        "title": "StudyTaskTargetResponse"
+      },
+      "StudyTaskUpdateRequest": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Status"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "StudyTaskUpdateRequest"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

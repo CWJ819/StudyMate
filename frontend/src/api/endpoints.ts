@@ -22,6 +22,16 @@ export type KnowledgeNodeDetail = components['schemas']['KnowledgeNodeDetailResp
 export type KnowledgeSource = components['schemas']['KnowledgeSourceResponse']
 export type KnowledgeRelation = components['schemas']['KnowledgeRelationResponse']
 export type KnowledgeVersion = components['schemas']['KnowledgeVersionResponse']
+export type KnowledgeScoredTree = components['schemas']['KnowledgeScoredTreeResponse']
+export type KnowledgeScoredTreeNode = components['schemas']['KnowledgeScoredTreeNodeResponse']
+export type KnowledgeHighlightItem = components['schemas']['KnowledgeHighlightItemResponse']
+export type KnowledgeHighlights = components['schemas']['KnowledgeHighlightsResponse']
+export type KnowledgeGraph = components['schemas']['KnowledgeGraphResponse']
+export type KnowledgeGraphNode = components['schemas']['KnowledgeGraphNodeResponse']
+export type KnowledgeGraphEdge = components['schemas']['KnowledgeGraphEdgeResponse']
+export type KnowledgeMergeDecision = components['schemas']['KnowledgeMergeDecisionResponse']
+export type KnowledgeAliasLock = components['schemas']['KnowledgeAliasLockResponse']
+export type LLMCallSummary = components['schemas']['LLMCallSummaryResponse']
 export type MasteryState = components['schemas']['MasteryStateResponse']
 export type QuizGenerateResult = components['schemas']['QuizGenerateResponse']
 export type QuizDetail = components['schemas']['QuizDetailResponse']
@@ -132,6 +142,61 @@ export function buildKnowledge(
 /** 未构建时后端返回 404 RESOURCE_NOT_FOUND（界面按空状态处理） */
 export function getKnowledge(courseId: string) {
   return request<KnowledgeFramework>(`/api/courses/${courseId}/knowledge`)
+}
+
+/** 读取时评分树（scoring-v2）；未构建同样 404 RESOURCE_NOT_FOUND */
+export function getKnowledgeTree(courseId: string) {
+  return request<KnowledgeScoredTree>(`/api/courses/${courseId}/knowledge/tree`)
+}
+
+export function getKnowledgeHighlights(
+  courseId: string,
+  params: { limit?: number; order?: 'importance' | 'difficulty' | 'gap' } = {},
+) {
+  const query = new URLSearchParams()
+  if (params.limit != null) query.set('limit', String(params.limit))
+  if (params.order != null) query.set('order', params.order)
+  const suffix = query.size > 0 ? `?${query.toString()}` : ''
+  return request<KnowledgeHighlights>(`/api/courses/${courseId}/knowledge/highlights${suffix}`)
+}
+
+export function getKnowledgeGraph(courseId: string) {
+  return request<KnowledgeGraph>(`/api/courses/${courseId}/knowledge/graph`)
+}
+
+export function listKnowledgeMergeDecisions(courseId: string) {
+  return request<components['schemas']['KnowledgeMergeDecisionsResponse']>(
+    `/api/courses/${courseId}/knowledge/merge-decisions`,
+  )
+}
+
+export function listKnowledgeAliasLocks(courseId: string) {
+  return request<KnowledgeAliasLock[]>(`/api/courses/${courseId}/knowledge/alias-locks`)
+}
+
+export function addKnowledgeAliasLock(
+  courseId: string,
+  body: components['schemas']['KnowledgeAliasLockRequest'],
+) {
+  return request<components['schemas']['KnowledgeAliasLockResponse']>(
+    `/api/courses/${courseId}/knowledge/alias-locks`,
+    { method: 'POST', body: JSON.stringify(body) },
+  )
+}
+
+/** 魔搭网关拒绝 DELETE；线上统一走 POST /alias-locks/delete（幂等） */
+export function deleteKnowledgeAliasLock(
+  courseId: string,
+  body: components['schemas']['KnowledgeAliasLockRequest'],
+) {
+  return request<void>(`/api/courses/${courseId}/knowledge/alias-locks/delete`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function getJobLLMCalls(jobId: string) {
+  return request<LLMCallSummary>(`/api/jobs/${jobId}/llm-calls`)
 }
 
 export function getKnowledgeNode(nodeId: string) {

@@ -6,7 +6,11 @@ import type {
   Job,
   KnowledgeFramework,
   KnowledgeGap,
+  KnowledgeGraph,
+  KnowledgeHighlights,
   KnowledgeNodeDetail,
+  KnowledgeScoredTree,
+  KnowledgeScoredTreeNode,
   KnowledgeVersion,
   MasteryState,
   MaterialDetail,
@@ -638,4 +642,122 @@ export const frameworkFlat: KnowledgeFramework = {
   activated_at: '2026-01-03T10:00:00Z',
   tree: flatLeaves,
   nodes: flatLeaves.map((leaf) => ({ ...leaf })),
+}
+
+const SCORE_BY_ID: Record<string, { importance: number; difficulty: number }> = {
+  'kn-root': { importance: 0.82, difficulty: 0.51 },
+  kn1: { importance: 0.74, difficulty: 0.44 },
+  kn2: { importance: 0.53, difficulty: 0.38 },
+  kn3: { importance: 0.31, difficulty: 0.22 },
+}
+
+function withScores(node: KnowledgeScoredTreeNode): KnowledgeScoredTreeNode {
+  const score = SCORE_BY_ID[node.knowledge_node_id] ?? { importance: 0.2, difficulty: 0.1 }
+  return {
+    ...node,
+    importance: score.importance,
+    difficulty: score.difficulty,
+    components: node.is_leaf
+      ? {
+          source_pages: 3,
+          relation_centrality: 2,
+          content_length: 68,
+          quiz_reinforcement: 1,
+          source_documents: 1,
+        }
+      : null,
+    children: (node.children ?? []).map(withScores),
+  }
+}
+
+export const scoredFramework: KnowledgeScoredTree = {
+  framework_version_id: 'fv1',
+  version_number: 3,
+  scoring_version: 'scoring-v2',
+  tree: (frameworkActive.tree as KnowledgeScoredTreeNode[]).map(withScores),
+}
+
+const reason = (component: string, value: number, normalized: number) => ({
+  component,
+  value,
+  normalized,
+  contribution: normalized * (component === 'source_pages' ? 0.25 : 0.15),
+})
+
+export const highlightsFixture: KnowledgeHighlights = {
+  items: [
+    {
+      knowledge_node_id: 'kn2',
+      title: '慢启动与拥塞避免',
+      section_path: ['运输层', '拥塞控制'],
+      importance: 0.53,
+      difficulty: 0.38,
+      mastery_estimate: 0.42,
+      evidence_count: 3,
+      untested: false,
+      reasons: [reason('source_pages', 3, 1), reason('relation_centrality', 2, 0.66)],
+    },
+    {
+      knowledge_node_id: 'kn3',
+      title: '可靠传输：GBN 与 SR',
+      section_path: ['运输层'],
+      importance: 0.31,
+      difficulty: 0.22,
+      mastery_estimate: null,
+      evidence_count: 0,
+      untested: true,
+      reasons: [reason('content_length', 0, 0)],
+    },
+  ],
+  basis: {
+    scoring_version: 'scoring-v2',
+    weights: {
+      importance: {
+        source_pages: 0.25,
+        relation_centrality: 0.25,
+        content_length: 0.15,
+        quiz_reinforcement: 0.15,
+        source_documents: 0.2,
+      },
+      difficulty: {
+        prerequisite_depth: 0.5,
+        prerequisite_indegree: 0.3,
+        content_length: 0.2,
+      },
+    },
+  },
+}
+
+export const graphFixture: KnowledgeGraph = {
+  framework_version_id: 'fv1',
+  nodes: [
+    { knowledge_node_id: 'kn2', title: '慢启动与拥塞避免', section_path: ['运输层', '拥塞控制'], is_leaf: true },
+    { knowledge_node_id: 'kn3', title: '可靠传输：GBN 与 SR', section_path: ['运输层'], is_leaf: true },
+  ],
+  edges: [
+    {
+      source: 'kn2',
+      target: 'kn3',
+      relation_type: 'prerequisite',
+      confidence: 0.82,
+      evidence: '慢启动是可靠传输的前置概念。',
+    },
+  ],
+}
+
+export const mergeDecisionsFixture = {
+  framework_version_id: 'fv1',
+  decisions: [
+    {
+      id: 'md1',
+      framework_version_id: 'fv1',
+      canonical_title: '拥塞控制',
+      aliases: ['拥塞控制算法'],
+      members: ['拥塞控制', '拥塞控制算法'],
+      distinct_documents: 2,
+      method: 'fuzzy',
+      similarity: 0.91,
+      created_at: '2026-01-03T10:00:00Z',
+    },
+  ],
 }
