@@ -27,6 +27,7 @@ import { loadJobId, saveJobId, useJob } from '../hooks/useJob'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorNotice } from '../components/ErrorNotice'
 import { SkeletonRows } from '../components/Skeleton'
+import { ChevronDown, ChevronRight } from '../components/icons'
 
 /** pptx 的“页”显示为幻灯片（plan §5） */
 function pageWord(filename: string): string {
@@ -105,8 +106,8 @@ function SourceItem({ source }: { source: KnowledgeSource }) {
         aria-expanded={open}
         aria-controls={panelId}
       >
-        <span aria-hidden="true" className="flex-none">
-          {open ? '▾' : '▸'}
+        <span aria-hidden="true" className="flex-none text-ink3">
+          {open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
         </span>
         <span>
           {source.filename} · 第 {source.page_number} {pageWord(source.filename)}
@@ -293,8 +294,8 @@ function FlatGroupBlock({
         aria-expanded={open}
         className="flex w-full items-center gap-1.5 border-l-2 border-transparent px-3 py-1.5 text-left text-aux font-semibold text-ink row-hover"
       >
-        <span aria-hidden="true" className="w-3.5 flex-none text-meta text-ink3">
-          {open ? '▾' : '▸'}
+        <span aria-hidden="true" className="flex w-4 flex-none justify-center text-ink3">
+          {open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
         </span>
         <span className="min-w-0 flex-1 truncate" title={group.filename}>
           <span aria-hidden="true" className="mr-1">
@@ -324,7 +325,8 @@ function FlatGroupBlock({
               className="block w-full border-l-2 border-transparent py-1 pr-3 text-left text-meta text-accent row-hover"
               style={{ paddingLeft: '42px' }}
             >
-              展开其余 {rest} 条 ▾
+              展开其余 {rest} 条
+              <ChevronDown className="ml-1 inline size-4 align-[-3px]" />
             </button>
           )}
         </div>
@@ -394,14 +396,14 @@ function TreeRow({
         {hasChildren ? (
           <button
             type="button"
-            className="transition-colors duration-150 w-4 flex-none text-meta text-ink3 hover:text-ink"
+            className="transition-colors duration-150 flex w-4 flex-none items-center justify-center text-ink3 hover:text-ink"
             onClick={(e) => {
               e.stopPropagation()
               onToggle(node.knowledge_node_id)
             }}
             aria-label={isOpen ? '折叠' : '展开'}
           >
-            {isOpen ? '▾' : '▸'}
+            {isOpen ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
           </button>
         ) : (
           <span className="w-4 flex-none text-center text-micro text-ink3">·</span>
@@ -457,7 +459,8 @@ function TreeRow({
               className="block border-l-2 border-transparent py-1 pr-3 text-left text-meta text-accent row-hover"
               style={{ paddingLeft: `${depth * 18 + 26}px` }}
             >
-              展开其余 {rest} 条 ▾
+              展开其余 {rest} 条
+              <ChevronDown className="ml-1 inline size-4 align-[-3px]" />
             </button>
           )}
         </div>

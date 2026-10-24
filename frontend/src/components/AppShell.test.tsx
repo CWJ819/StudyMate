@@ -86,7 +86,7 @@ test('检索截断：命中超过 20 条默认只渲染前 20，点「展开其�
   expect(screen.getByText(/命中片段 20$/)).toBeTruthy()
   expect(screen.queryByText(/命中片段 21$/)).toBeNull()
 
-  fireEvent.click(screen.getByRole('button', { name: '展开其余 5 条 ▾' }))
+  fireEvent.click(screen.getByRole('button', { name: /展开其余 5 条/ }))
   expect(screen.getByText(/命中片段 25$/)).toBeTruthy()
   expect(screen.queryByRole('button', { name: /展开其余/ })).toBeNull()
 })

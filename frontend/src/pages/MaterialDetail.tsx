@@ -5,6 +5,7 @@ import { getMaterial } from '../api/endpoints'
 import { messageFor } from '../api/errors'
 import { formatBytes, materialStatus, pageStatusLabel } from '../api/status'
 import { ErrorNotice } from '../components/ErrorNotice'
+import { AlertTriangle } from '../components/icons'
 
 export function MaterialDetailPage() {
   const { courseId, materialId } = useParams()
@@ -45,8 +46,9 @@ export function MaterialDetailPage() {
           </p>
         )}
         {m.no_text_pages && m.no_text_pages.length > 0 && (
-          <p className="mt-2 rounded-md border border-warning-border bg-warning-bg px-3 py-1.5 text-aux text-ink">
-            ⚠ 第 {m.no_text_pages.join('、')} 页未提取到文本（扫描图或纯图片页）
+          <p className="mt-2 flex items-start gap-1.5 rounded-md border border-warning-border bg-warning-bg px-3 py-1.5 text-aux text-ink">
+            <AlertTriangle className="mt-0.5 size-4 text-warning" />
+            第 {m.no_text_pages.join('、')} 页未提取到文本（扫描图或纯图片页）
           </p>
         )}
       </div>

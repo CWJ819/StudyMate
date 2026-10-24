@@ -1,4 +1,5 @@
 import { ApiError } from '../api/client'
+import { AlertTriangle } from './icons'
 
 interface Props {
   error: unknown
@@ -14,13 +15,14 @@ export function ErrorNotice({ error, onRetry }: Props) {
       role="alert"
       className="flex flex-wrap items-center gap-2 rounded-md border border-error/40 bg-error-bg px-3 py-2 text-aux text-ink"
     >
-      <span>{message}</span>
+      <AlertTriangle className="size-4 flex-none text-error" />
+      <span className="min-w-0 flex-1">{message}</span>
       {apiError?.requestId && (
         <span className="font-mono text-meta text-ink3">
           请求编号 {apiError.requestId}
           <button
             type="button"
-            className="ml-1 text-accent underline-offset-2 hover:underline"
+            className="btn btn-secondary btn-sm ml-1"
             onClick={() => navigator.clipboard?.writeText(apiError.requestId ?? '')}
           >
             复制
@@ -30,7 +32,7 @@ export function ErrorNotice({ error, onRetry }: Props) {
       {apiError?.retryable && onRetry && (
         <button
           type="button"
-          className="transition-colors duration-150 ml-auto rounded border border-border2 bg-surface px-2 py-0.5 text-meta text-ink2 hover:text-ink"
+          className="btn btn-secondary btn-sm ml-auto"
           onClick={onRetry}
         >
           重试

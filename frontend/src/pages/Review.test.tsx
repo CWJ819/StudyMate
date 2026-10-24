@@ -53,7 +53,7 @@ test('掌握度列表：已测验按估计升序，未测验默认折叠成计�
   // 展开后出现未测验灰条
   fireEvent.click(screen.getByRole('button', { name: /未测验 1 个/ }))
   expect(await screen.findByText('未测验', { exact: true })).toBeTruthy()
-  expect(screen.getByText('收起未测验 ▴')).toBeTruthy()
+  expect(screen.getByText(/收起未测验/)).toBeTruthy()
 })
 
 test('错题本：已知 gap_type 显示中文，未知值回退原文；空列表有空态', async () => {

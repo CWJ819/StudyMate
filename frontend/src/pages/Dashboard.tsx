@@ -21,6 +21,7 @@ import { daysUntil, formatDateCN, formatDateLong, todayISO } from '../lib/date'
 import { collectLeaves } from '../lib/tree'
 import { ErrorNotice } from '../components/ErrorNotice'
 import { SkeletonRows } from '../components/Skeleton'
+import { ChevronDown, ChevronUp } from '../components/icons'
 
 /** 错题本证据摘要（与复习页同一口径：作答 5 · 低分 3 · 答对 2 · 最近得分 0.4） */
 const EVIDENCE_LABELS: Record<string, string> = {
@@ -408,10 +409,13 @@ function MasteryCard({
               className="w-full rounded px-1 py-1.5 text-left text-aux text-accent row-hover"
             >
               {showAllTested ? (
-                '收起 ▴'
+                <>
+                  收起 <ChevronUp className="ml-1 inline size-4 align-[-3px]" />
+                </>
               ) : (
                 <>
-                  展开其余 <span className="font-mono tabular-nums">{hiddenTested}</span> 条已测验 ▾
+                  展开其余 <span className="font-mono tabular-nums">{hiddenTested}</span> 条已测验
+                  <ChevronDown className="ml-1 inline size-4 align-[-3px]" />
                 </>
               )}
             </button>
@@ -424,11 +428,14 @@ function MasteryCard({
               className="w-full rounded px-1 py-1.5 text-left text-aux text-ink3 row-hover"
             >
               {showUntested ? (
-                '收起未测验 ▴'
+                <>
+                  收起未测验 <ChevronUp className="ml-1 inline size-4 align-[-3px]" />
+                </>
               ) : (
                 <>
                   未测验 <span className="font-mono tabular-nums">{untestedLeaves.length}</span>{' '}
-                  个（不代表薄弱）· 展开 ▾
+                  个（不代表薄弱）· 展开
+                  <ChevronDown className="ml-1 inline size-4 align-[-3px]" />
                 </>
               )}
             </button>

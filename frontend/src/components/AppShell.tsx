@@ -13,6 +13,7 @@ import {
 import { useEffect, useRef, useState, type FormEvent, type PropsWithChildren, type ReactNode } from 'react'
 import { settingsLinkState, type SettingsReturnState } from '../lib/navigation'
 import { ErrorNotice } from './ErrorNotice'
+import { ChevronDown, Search, X } from './icons'
 
 export type TabKey = 'overview' | 'materials' | 'knowledge' | 'quiz' | 'review' | 'plan'
 
@@ -181,7 +182,7 @@ export function AppShell({ course, active, children }: AppShellProps) {
                 placeholder="搜索课件原文，如：慢启动、ssthresh、校验和"
                 className="h-[34px] w-full rounded-md border border-border2 bg-bg pr-[92px] pl-[34px] text-aux text-ink3 outline-none focus:border-accent"
               />
-              <span className="pointer-events-none absolute left-[11px] top-[7px] text-body text-ink3">⌕</span>
+              <Search className="pointer-events-none absolute left-[11px] top-[9px] size-4 text-ink3" />
               <button
                 type="submit"
                 className="transition-colors duration-150 absolute right-[6px] top-[4px] rounded border border-border2 bg-surface px-1.5 py-px text-micro text-ink3 hover:border-accent hover:text-accent"
@@ -207,9 +208,9 @@ export function AppShell({ course, active, children }: AppShellProps) {
                     type="button"
                     onClick={() => setOpen(false)}
                     aria-label="关闭检索结果"
-                    className="transition-colors duration-150 ml-auto flex-none text-aux text-ink3 hover:text-ink"
+                    className="transition-colors duration-150 ml-auto flex flex-none items-center text-aux text-ink3 hover:text-ink"
                   >
-                    ×
+                    <X />
                   </button>
                 </div>
                 {search.isLoading && <p className="px-3 py-3 text-aux text-ink3">检索中…</p>}
@@ -246,7 +247,8 @@ export function AppShell({ course, active, children }: AppShellProps) {
                     onClick={() => setShowAllHits(true)}
                     className="w-full border-t border-border px-3 py-2 text-left text-aux text-accent row-hover"
                   >
-                    展开其余 <span className="font-mono tabular-nums">{hiddenHits}</span> 条 ▾
+                    展开其余 <span className="font-mono tabular-nums">{hiddenHits}</span> 条
+                    <ChevronDown className="ml-1 inline size-4 align-[-3px]" />
                   </button>
                 )}
               </div>

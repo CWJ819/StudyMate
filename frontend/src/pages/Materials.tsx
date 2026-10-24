@@ -14,6 +14,7 @@ import { formatBytes, isPending, materialStatus, validateUploadFile } from '../a
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorNotice } from '../components/ErrorNotice'
+import { AlertTriangle } from '../components/icons'
 
 interface UploadEntry {
   name: string
@@ -176,8 +177,9 @@ export function MaterialsPage() {
                   {m.page_count != null && m.page_count > 0 && <span>{m.page_count} 页</span>}
                   {m.chunk_count > 0 && <span>{m.chunk_count} 个片段</span>}
                   {m.no_text_pages && m.no_text_pages.length > 0 && (
-                    <span className="text-warning" title={`第 ${m.no_text_pages.join('、')} 页未提取到文本`}>
-                      ⚠ 第 {m.no_text_pages.join('、')} 页无文本
+                    <span className="inline-flex items-center gap-1 text-warning" title={`第 ${m.no_text_pages.join('、')} 页未提取到文本`}>
+                      <AlertTriangle className="size-4" />
+                      第 {m.no_text_pages.join('、')} 页无文本
                     </span>
                   )}
                   {m.status === 'failed' && m.error_code && (

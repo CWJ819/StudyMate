@@ -19,6 +19,7 @@ import { recentQuizKey } from '../hooks/usePersistedDraft'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorNotice } from '../components/ErrorNotice'
 import { SkeletonRows } from '../components/Skeleton'
+import { ChevronDown, ChevronUp } from '../components/icons'
 
 
 /** evidence_summary 是后端的计数字典（total_evidence/low_score_evidence/...），泛化成键值行 */
@@ -189,10 +190,13 @@ export function ReviewPage() {
               className="w-full border-t border-border px-5 py-2 text-left text-aux text-accent row-hover"
             >
               {showAllTested ? (
-                '收起 ▴'
+                <>
+                  收起 <ChevronUp className="ml-1 inline size-4 align-[-3px]" />
+                </>
               ) : (
                 <>
-                  展开其余 <span className="font-mono tabular-nums">{hiddenTested}</span> 条已测验 ▾
+                  展开其余 <span className="font-mono tabular-nums">{hiddenTested}</span> 条已测验
+                  <ChevronDown className="ml-1 inline size-4 align-[-3px]" />
                 </>
               )}
             </button>
@@ -205,11 +209,14 @@ export function ReviewPage() {
               className="w-full border-t border-border px-5 py-2 text-left text-aux text-ink3 row-hover"
             >
               {showUntested ? (
-                '收起未测验 ▴'
+                <>
+                  收起未测验 <ChevronUp className="ml-1 inline size-4 align-[-3px]" />
+                </>
               ) : (
                 <>
                   未测验 <span className="font-mono tabular-nums">{untestedLeaves.length}</span>{' '}
-                  个（不代表薄弱）· 展开 ▾
+                  个（不代表薄弱）· 展开
+                  <ChevronDown className="ml-1 inline size-4 align-[-3px]" />
                 </>
               )}
             </button>

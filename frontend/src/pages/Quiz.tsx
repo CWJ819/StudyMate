@@ -33,6 +33,7 @@ import {
 } from '../hooks/usePersistedDraft'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorNotice } from '../components/ErrorNotice'
+import { Check, ChevronDown, ChevronUp } from '../components/icons'
 
 const QUESTION_TYPES = [
   { value: 'single_choice', label: '单选' },
@@ -313,7 +314,7 @@ function AnswerView({
                           aria-hidden="true"
                           className={`mt-0.5 flex size-4 flex-none items-center justify-center border text-micro ${ q.question_type === 'multiple_choice' ? 'rounded-[3px]' : 'rounded-full' } ${picked ? 'border-accent bg-accent text-white' : 'border-border2 text-transparent'}`}
                         >
-                          ✓
+                          <Check className="size-3" />
                         </span>
                         <span className="whitespace-pre-wrap">{opt.text}</span>
                       </button>
@@ -431,7 +432,10 @@ function ResultView({
                 <span className="text-aux text-ink3">
                   得分 <b className="font-mono tabular-nums text-ink2">{r.score}/{r.max_score}</b>
                 </span>
-                <span className="ml-auto flex-none text-meta text-ink3">{open ? '收起 ▴' : '展开 ▾'}</span>
+                <span className="ml-auto flex flex-none items-center gap-1 text-meta text-ink3">
+                  {open ? '收起' : '展开'}
+                  {open ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+                </span>
               </button>
               <div
                 className={`grid transition-[grid-template-rows] duration-150 ease-out ${
