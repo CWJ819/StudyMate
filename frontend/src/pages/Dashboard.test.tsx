@@ -49,6 +49,7 @@ test('倒计时与今日任务取 active 计划：今天只有 t1/t2，勾选完
   // 今天的两项任务（t1 待开始 / t2 进行中），明天的 t3/t4 不出现在今日卡
   expect(await screen.findByText('Review 慢启动与拥塞避免')).toBeTruthy()
   expect(screen.getByText('Practice 慢启动与拥塞避免')).toBeTruthy()
+  expect(screen.getByText('复习 · 运输层 > 拥塞控制 > 慢启动与拥塞避免')).toBeTruthy()
   expect(screen.queryByText('Review 可靠传输：GBN 与 SR')).toBeNull()
   expect(screen.getByText(deepestText(/合计 60 分钟 · 已完成 0 项/))).toBeTruthy()
   expect(screen.getByText('继续')).toBeTruthy() // t2 进行中 → 继续

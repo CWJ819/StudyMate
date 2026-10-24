@@ -13,6 +13,7 @@ import {
   getWrongbook,
   updateTask,
   type KnowledgeGap,
+  type KnowledgeTreeNode,
   type StudyTask,
 } from '../api/endpoints'
 import { ApiError } from '../api/client'
@@ -36,6 +37,20 @@ function evidenceLine(gap: KnowledgeGap): string {
   return entries
     .map(([k, v]) => `${EVIDENCE_LABELS[k] ?? k} ${typeof v === 'number' ? v : String(v)}`)
     .join(' · ')
+}
+
+/** 任务目标的可读路径（后端 targets 只稳定返回 stable_key，标题需由知识树补） */
+function knowledgePathMap(tree: KnowledgeTreeNode[]): Map<string, string> {
+  const paths = new Map<string, string>()
+  const walk = (nodes: KnowledgeTreeNode[], parents: string[]) => {
+    for (const node of nodes) {
+      const path = [...parents, node.title]
+      paths.set(node.knowledge_node_id, path.join(' > '))
+      if (node.children?.length) walk(node.children, path)
+    }
+  }
+  walk(tree, [])
+  return paths
 }
 
 
@@ -158,7 +173,13 @@ function CountdownCard({ courseId }: { courseId: string }) {
 
 // ---- 今日任务 ----
 
-function TodayTasksCard({ courseId }: { courseId: string }) {
+function TodayTasksCard({
+  courseId,
+  labels,
+}: {
+  courseId: string
+  labels: Map<string, string>
+}) {
   const queryClient = useQueryClient()
   const [transitionError, setTransitionError] = useState<unknown>(null)
   const plans = useQuery({
@@ -233,7 +254,12 @@ function TodayTasksCard({ courseId }: { courseId: string }) {
         const done = task.status === 'completed'
         const go =
           task.status === 'in_progress' ? '继续' : task.status === 'pending' ? '开始' : null
-        const target = task.targets[0]?.title ?? task.targets[0]?.knowledge_node_id
+        const targetNode = task.targets[0]
+        const target = targetNode
+          ? labels.get(targetNode.knowledge_node_id) ??
+            targetNode.title ??
+            targetNode.knowledge_node_id
+          : undefined
         return (
           <div
             key={task.id}
@@ -589,6 +615,10 @@ export function DashboardPage() {
     () => collectLeaves(knowledge.data?.tree ?? []).length,
     [knowledge.data],
   )
+  const pathLabels = useMemo(
+    () => knowledgePathMap(knowledge.data?.tree ?? []),
+    [knowledge.data],
+  )
 
   // 头部一行摘要：各段独立降级（数据没到就跳过该段）
   const segments: string[] = []
@@ -616,7 +646,7 @@ export function DashboardPage() {
 
       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_424px] items-start gap-6">
         <div className="flex min-w-0 flex-col gap-4">
-          <TodayTasksCard courseId={courseId!} />
+          <TodayTasksCard courseId={courseId!} labels={pathLabels} />
           <WeakPointsCard
             courseId={courseId!}
             masteryByNode={new Map(
