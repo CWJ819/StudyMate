@@ -49,15 +49,24 @@ test('全局检索：无需课程上下文，结果就地展开并逐条标注�
   expect(await screen.findByText(deepestText(/^2 条命中$/))).toBeTruthy()
   // 每条命中都带课程标签
   expect(screen.getAllByText('计算机网络·运输层')).toHaveLength(2)
-  // 命中片段直接展示完整原文，不需要再点“查看上下文”
-  expect(await screen.findByText(/慢启动：拥塞窗口 cwnd 从 1 个 MSS 开始/)).toBeTruthy()
-  expect(screen.getByText(/拥塞避免：cwnd 超过 ssthresh 后进入线性增长阶段/)).toBeTruthy()
+  // 命中片段直接展示完整原文，不需要再点“查看上下文”；关键词以 mark 高亮
+  expect(
+    await screen.findByText(
+      (_, el) =>
+        el?.tagName === 'P' && el.textContent?.includes('慢启动：拥塞窗口 cwnd 从 1 个 MSS 开始') === true,
+    ),
+  ).toBeTruthy()
+  expect(
+    screen.getByText(
+      (_, el) =>
+        el?.tagName === 'P' && el.textContent?.includes('拥塞避免：cwnd 超过 ssthresh 后进入线性增长阶段') === true,
+    ),
+  ).toBeTruthy()
   // 检索不改变当前路由
   expect(screen.getByTestId('loc').textContent).toBe('/')
 })
 
-test('检索截断：命中超过 20 条默认只渲染前 20，点「展开其余」后全量渲染', async () => {
-  const manyHits = Array.from({ length: 25 }, (_, i) => ({
+test('检索截断：命中超过 20 条默认只渲染前 20，点「展开其余」后全量渲染', async () => {  const manyHits = Array.from({ length: 25 }, (_, i) => ({
     chunk_id: `ch-${i}`,
     document_id: 'm2',
     filename: '运输层讲义.pdf',
@@ -74,10 +83,39 @@ test('检索截断：命中超过 20 条默认只渲染前 20，点「展开其�
 
   expect(await screen.findByText(deepestText(/^25 条命中$/))).toBeTruthy()
   // 默认只渲染前 20 条（一次性渲染上千条会阻塞主线程）
-  expect(screen.getByText('慢启动命中片段 20')).toBeTruthy()
-  expect(screen.queryByText('慢启动命中片段 21')).toBeNull()
+  expect(screen.getByText(/命中片段 20$/)).toBeTruthy()
+  expect(screen.queryByText(/命中片段 21$/)).toBeNull()
 
   fireEvent.click(screen.getByRole('button', { name: '展开其余 5 条 ▾' }))
-  expect(screen.getByText('慢启动命中片段 25')).toBeTruthy()
+  expect(screen.getByText(/命中片段 25$/)).toBeTruthy()
   expect(screen.queryByRole('button', { name: /展开其余/ })).toBeNull()
+})
+
+test('检索命中：关键词大小写不敏感高亮，命中行可阅读跟随', async () => {
+  server.use(
+    http.get('*/api/courses/c1/search*', () =>
+      HttpResponse.json([
+        {
+          chunk_id: 'ch-slow',
+          document_id: 'm2',
+          filename: '运输层讲义.pdf',
+          page_start: 12,
+          page_end: 12,
+          text: 'Slow Start 慢启动：拥塞窗口从 1 个 MSS 开始增长。',
+        },
+      ]),
+    ),
+  )
+
+  withQueryClient(<AppShell>内容</AppShell>)
+  const input = await screen.findByLabelText('搜索课件原文')
+  fireEvent.change(input, { target: { value: 'slow' } })
+  fireEvent.submit(input.closest('form')!)
+
+  const mark = await screen.findByText('Slow')
+  expect(mark.tagName).toBe('MARK')
+  expect(mark.textContent).toBe('Slow')
+  expect(mark.className).toContain('bg-accent-bg')
+  expect(mark.closest('p')?.textContent).toBe('Slow Start 慢启动：拥塞窗口从 1 个 MSS 开始增长。')
+  expect(mark.closest('.row-hover')).toBeTruthy()
 })

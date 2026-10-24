@@ -330,6 +330,13 @@ function AnswerView({
 
 // ---- 结果视图（只信提交响应 + 提交时冻结的答案快照）----
 
+function resultTone(r: QuizSubmission['question_results'][number]) {
+  if (r.correct === true) return 'success'
+  if (r.correct === false && r.score === 0) return 'error'
+  if (r.correct === false) return 'warning'
+  return 'untested'
+}
+
 function ResultView({
   quiz,
   submission,
@@ -355,11 +362,18 @@ function ResultView({
   })
 
   const statusChip = (r: QuizSubmission['question_results'][number]) => {
-    if (r.correct === true) return <span className="text-success">答对</span>
-    if (r.correct === false && r.score === 0) return <span className="text-error">答错</span>
-    if (r.correct === false) return <span className="text-warning">部分得分</span>
+    const tone = resultTone(r)
+    if (tone === 'success') return <span className="text-success">答对</span>
+    if (tone === 'error') return <span className="text-error">答错</span>
+    if (tone === 'warning') return <span className="text-warning">部分得分</span>
     return <span className="text-ink3">待批改</span>
   }
+  const toneBorder = {
+    success: 'border-l-success',
+    error: 'border-l-error',
+    warning: 'border-l-warning',
+    untested: 'border-l-untested',
+  } as const
 
   return (
     <div>
@@ -372,15 +386,19 @@ function ResultView({
           </span>
         </span>
         <span className="text-aux text-success">
+          <span className="mr-1.5 inline-block size-2 rounded-full bg-success" />
           答对 <span className="font-mono tabular-nums">{right}</span>
         </span>
         <span className="text-aux text-error">
+          <span className="mr-1.5 inline-block size-2 rounded-full bg-error" />
           答错 <span className="font-mono tabular-nums">{wrong}</span>
         </span>
         <span className="text-aux text-warning">
+          <span className="mr-1.5 inline-block size-2 rounded-full bg-warning" />
           部分得分 <span className="font-mono tabular-nums">{partial}</span>
         </span>
         <span className="text-aux text-ink3">
+          <span className="mr-1.5 inline-block size-2 rounded-full bg-untested" />
           待批改 <span className="font-mono tabular-nums">{pending}</span>
         </span>
       </div>
@@ -391,7 +409,10 @@ function ResultView({
           const open = expanded.has(r.question_id)
           const answer = answers[r.question_id]
           return (
-            <div key={r.question_id} className="animate-fade-in border-t border-border first:border-t-0">
+            <div
+              key={r.question_id}
+              className={`animate-fade-in border-t border-border border-l-[3px] first:border-t-0 ${toneBorder[resultTone(r)]}`}
+            >
               <button
                 type="button"
                 aria-expanded={open}

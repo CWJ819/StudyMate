@@ -171,6 +171,38 @@ test('刷新后结果仍在：草稿含 submission 时直接渲染结果页（�
   expect(screen.queryByRole('button', { name: '提交答卷' })).toBeNull()
 })
 
+test('结果页：题卡左指示条与四种结果对应，汇总行带同色圆点', async () => {
+  localStorage.setItem(RECENT_KEY, 'qz1')
+  localStorage.setItem(
+    'studymate:quiz-draft:qz1',
+    JSON.stringify({
+      idempotencyKey: 'key-fixed',
+      answers: {},
+      submission: quizSubmission,
+    }),
+  )
+
+  renderQuiz()
+  expect(await screen.findByText(deepestText(/待批改 1/))).toBeTruthy()
+
+  const rowClass = (label: string) => {
+    const chip = screen.getAllByText(label).find((el) => el.closest('button') != null)
+    return chip?.closest('button')?.parentElement?.className ?? ''
+  }
+  expect(rowClass('答对')).toContain('border-l-success')
+  expect(rowClass('答错')).toContain('border-l-error')
+  expect(rowClass('部分得分')).toContain('border-l-warning')
+  expect(rowClass('待批改')).toContain('border-l-untested')
+
+  const dots = Array.from(document.querySelectorAll('span.size-2.rounded-full')).map(
+    (el) => el.className,
+  )
+  expect(dots.some((c) => c.includes('bg-success'))).toBe(true)
+  expect(dots.some((c) => c.includes('bg-error'))).toBe(true)
+  expect(dots.some((c) => c.includes('bg-warning'))).toBe(true)
+  expect(dots.some((c) => c.includes('bg-untested'))).toBe(true)
+})
+
 test('出题：默认全选叶子时省略 ids（后端缺省=全部，避开 50 个上限），部分选择才携带', async () => {
   let generated: { knowledge_node_ids?: string[]; question_count?: number; question_types?: string[] } | null =
     null

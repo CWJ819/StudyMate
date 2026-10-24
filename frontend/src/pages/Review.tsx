@@ -58,12 +58,15 @@ function MasteryRow({
       >
         {title ?? '（未命名）'}
       </span>
-      <span className="inline-block h-3 overflow-hidden rounded-sm bg-untested-bg">
+      <span className="relative inline-block h-3 overflow-hidden rounded-sm bg-untested-bg">
         {tested && (
-          <span
-            className="block h-full bg-accent"
-            style={{ width: `${Math.round(estimate * 100)}%` }}
-          />
+          <>
+            <span
+              className="block h-full bg-accent"
+              style={{ width: `${Math.round(estimate * 100)}%` }}
+            />
+            <span className="absolute inset-y-0 left-1/2 w-px bg-border2" />
+          </>
         )}
       </span>
       <span className={`text-right font-mono text-meta tabular-nums ${tested ? 'text-ink2' : 'text-ink3'}`}>

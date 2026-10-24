@@ -393,8 +393,9 @@ function MasteryCard({
                     className="absolute inset-y-0 left-0 rounded-sm bg-accent"
                     style={{ width: `${Math.round(m.mastery_estimate * 100)}%` }}
                   />
+                  <span className="absolute inset-y-0 left-1/2 w-px bg-border2" />
                 </span>
-                <span className="whitespace-nowrap font-mono text-meta text-ink2 tabular-nums">
+                <span className="whitespace-nowrap text-right font-mono text-meta text-ink2 tabular-nums">
                   估计 {m.mastery_estimate.toFixed(2)} · {m.evidence_count} 次
                 </span>
               </button>

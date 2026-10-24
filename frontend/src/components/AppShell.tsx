@@ -10,7 +10,7 @@ import {
   type ChunkSearchResult,
   type Course,
 } from '../api/endpoints'
-import { useEffect, useRef, useState, type FormEvent, type PropsWithChildren } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type PropsWithChildren, type ReactNode } from 'react'
 import { settingsLinkState, type SettingsReturnState } from '../lib/navigation'
 import { ErrorNotice } from './ErrorNotice'
 
@@ -31,6 +31,30 @@ const TABS: Array<{ key: TabKey; label: string; suffix: string }> = [
 /** 检索结果默认渲染上限（与 Knowledge/Review 的渐进展开同款模式）：
  * 大课程搜高频字可命中上千条，一次性渲染会阻塞主线程数秒 */
 const SEARCH_BATCH = 20
+
+/** 只做字符串切分，不解析 HTML；大小写不敏感但保留原文大小写 */
+function highlightMatch(text: string, query: string): ReactNode {
+  const needle = query.trim().toLocaleLowerCase()
+  if (needle === '') return text
+  const lower = text.toLocaleLowerCase()
+  const parts: ReactNode[] = []
+  let at = 0
+  while (at < text.length) {
+    const hit = lower.indexOf(needle, at)
+    if (hit < 0) {
+      parts.push(text.slice(at))
+      break
+    }
+    if (hit > at) parts.push(text.slice(at, hit))
+    parts.push(
+      <mark key={hit} className="rounded-sm bg-accent-bg px-0.5 text-inherit">
+        {text.slice(hit, hit + needle.length)}
+      </mark>,
+    )
+    at = hit + needle.length
+  }
+  return parts.length > 0 ? parts : text
+}
 
 interface AppShellProps extends PropsWithChildren {
   /** 有课程上下文时 crumb 与 tab 变成真实路由；无则只显示「我的课程」入口 */
@@ -200,7 +224,7 @@ export function AppShell({ course, active, children }: AppShellProps) {
                   </p>
                 )}
                 {visibleHits.map((r) => (
-                  <div key={r.chunk_id} className="border-t border-border px-3 py-2">
+                  <div key={r.chunk_id} className="border-t border-border px-3 py-2 row-hover">
                     <div className="flex items-baseline gap-2 text-meta text-ink3">
                       <span className="flex-none rounded bg-accent-bg px-1.5 py-0.5 text-micro text-accent">
                         {r.course_name}
@@ -211,7 +235,9 @@ export function AppShell({ course, active, children }: AppShellProps) {
                         {r.page_end > r.page_start ? `–${r.page_end}` : ''} 页
                       </span>
                     </div>
-                    <p className="mt-1 whitespace-pre-wrap text-aux leading-[1.65] text-ink">{r.text}</p>
+                    <p className="mt-1 whitespace-pre-wrap text-aux leading-[1.65] text-ink">
+                      {highlightMatch(r.text, submitted)}
+                    </p>
                   </div>
                 ))}
                 {hiddenHits > 0 && (
