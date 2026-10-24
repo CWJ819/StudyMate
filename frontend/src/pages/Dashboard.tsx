@@ -17,7 +17,7 @@ import {
 } from '../api/endpoints'
 import { ApiError } from '../api/client'
 import { gapTypeLabel, isTaskTerminal, taskStatus, taskTypeLabel } from '../api/status'
-import { daysUntil, formatDateCN, formatDateLong, todayISO } from '../lib/date'
+import { addDaysISO, daysUntil, formatDateCN, formatDateLong, todayISO } from '../lib/date'
 import { collectLeaves } from '../lib/tree'
 import { ErrorNotice } from '../components/ErrorNotice'
 import { SkeletonRows } from '../components/Skeleton'
@@ -47,6 +47,12 @@ function CountdownCard({ courseId }: { courseId: string }) {
     queryFn: () => listPlans(courseId),
   })
   const active = plans.data?.find((p) => p.status === 'active')
+  // 与 TodayTasksCard 共用 ['plan', id] 缓存：不新增网络请求
+  const detail = useQuery({
+    queryKey: ['plan', active?.id],
+    queryFn: () => getPlan(active!.id),
+    enabled: active != null,
+  })
 
   if (plans.isLoading) {
     return (
@@ -72,22 +78,80 @@ function CountdownCard({ courseId }: { courseId: string }) {
   }
 
   const days = daysUntil(active.exam_date)
+  const today = todayISO()
+  const minutesByDate = new Map<string, number>()
+  for (const task of detail.data?.tasks ?? []) {
+    minutesByDate.set(
+      task.scheduled_date,
+      (minutesByDate.get(task.scheduled_date) ?? 0) + task.estimated_minutes,
+    )
+  }
+  const band = Array.from({ length: 7 }, (_, offset) => {
+    const iso = addDaysISO(today, offset)
+    const minutes = minutesByDate.get(iso) ?? 0
+    const pct =
+      active.daily_minutes > 0
+        ? Math.min(100, Math.round((minutes / active.daily_minutes) * 100))
+        : 0
+    return {
+      iso,
+      minutes,
+      pct,
+      over: active.daily_minutes > 0 && minutes > active.daily_minutes,
+      isToday: iso === today,
+      weekday: formatDateCN(iso).split('（')[1]?.replace('）', '') ?? '',
+    }
+  })
+
   return (
     <div
-      className="flex min-w-[280px] items-center gap-3.5 rounded-lg border border-border border-l-4 border-l-accent bg-surface px-5 py-3"
+      className="min-w-[320px] rounded-lg border border-border border-l-4 border-l-accent bg-surface px-5 py-3"
       aria-label={`距考试还有 ${days} 天`}
     >
-      <div className="text-display font-extrabold leading-none tracking-tight">
-        {days}
-        <small className="ml-0.5 text-title font-semibold">天</small>
+      <div className="flex items-center gap-3.5">
+        <div className="text-display font-extrabold leading-none tracking-tight">
+          {days}
+          <small className="ml-0.5 text-title font-semibold">天</small>
+        </div>
+        <p className="text-aux leading-snug text-ink2">
+          距考试{days === 0 ? '就是今天' : days > 0 ? `还有 ${days} 天` : '已过'}
+          <br />
+          {formatDateLong(active.exam_date)} · 每日{' '}
+          <span className="font-mono tabular-nums">{active.daily_minutes}</span> 分钟 · 目标{' '}
+          <span className="font-mono tabular-nums">{active.target_score}</span> 分
+        </p>
       </div>
-      <p className="text-aux leading-snug text-ink2">
-        距考试{days === 0 ? '就是今天' : days > 0 ? `还有 ${days} 天` : '已过'}
-        <br />
-        {formatDateLong(active.exam_date)} · 每日{' '}
-        <span className="font-mono tabular-nums">{active.daily_minutes}</span> 分钟 · 目标{' '}
-        <span className="font-mono tabular-nums">{active.target_score}</span> 分
-      </p>
+      {detail.data && (
+        <div className="mt-3 border-t border-border pt-2" data-testid="plan-band">
+          <p className="mb-1.5 text-meta text-ink3">
+            未来 7 天每日投入（分钟）· 上限{' '}
+            <span className="font-mono tabular-nums">{active.daily_minutes}</span>/天
+          </p>
+          <div className="grid grid-cols-7 gap-1">
+            {band.map((d) => (
+              <div
+                key={d.iso}
+                className={`flex flex-col items-center gap-1 rounded-sm ${
+                  d.isToday ? 'ring-1 ring-accent' : ''
+                }`}
+                data-testid="plan-band-day"
+              >
+                <div className="relative h-6 w-full overflow-hidden rounded-sm bg-untested-bg">
+                  <div
+                    data-testid="plan-band-fill"
+                    className={`absolute bottom-0 w-full ${d.over ? 'bg-error' : 'bg-accent'}`}
+                    style={{ height: `${d.pct}%` }}
+                  />
+                </div>
+                <span className={`text-micro ${d.isToday ? 'text-accent' : 'text-ink3'}`}>
+                  {d.isToday ? '今天' : d.weekday}
+                </span>
+                <span className="font-mono text-micro tabular-nums text-ink3">{d.minutes}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -542,7 +606,7 @@ export function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-page font-semibold">{course.data?.name ?? '…'}</h1>
           <p className="mt-1 text-aux text-ink2">{segments.join(' · ')}</p>

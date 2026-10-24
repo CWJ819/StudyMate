@@ -1,13 +1,14 @@
 // 总览：并行卡片独立降级（一个数据源失败不拖垮其余）/ 无计划提示 / 知识框架 404 = 未构建 /
 // 今日任务与倒计时取 active 计划 / 薄弱点点击联动掌握度行
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { server } from '../test/server'
 import { frameworkActive, masteryStates, planDetailActive } from '../test/fixtures'
 import { deepestText } from '../test/matchers'
 import { DashboardPage } from './Dashboard'
+import { addDaysISO, todayISO } from '../lib/date'
 
 function renderDashboard() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -130,6 +131,39 @@ test('薄弱点联动到未测验节点：自动展开灰条区并高亮对应�
   const pressed = document.querySelectorAll('[aria-pressed="true"]')
   expect(pressed.length).toBe(1)
   expect((pressed[0] as HTMLElement).textContent).toContain('可靠传输')
+})
+
+test('倒计时时间带：7 列、超载日红条、今天列 accent 边框', async () => {
+  const tasks = [
+    {
+      ...planDetailActive.tasks[0]!,
+      scheduled_date: addDaysISO(todayISO(), 0),
+      estimated_minutes: 60,
+    },
+    {
+      ...planDetailActive.tasks[0]!,
+      id: 'over',
+      scheduled_date: addDaysISO(todayISO(), 2),
+      estimated_minutes: 90,
+    },
+  ]
+  server.use(
+    http.get('*/api/plans/pl1', () =>
+      HttpResponse.json({ ...planDetailActive, tasks }),
+    ),
+  )
+
+  renderDashboard()
+  const band = await screen.findByTestId('plan-band')
+  expect(within(band).getAllByTestId('plan-band-day')).toHaveLength(7)
+
+  const fills = within(band).getAllByTestId('plan-band-fill')
+  expect(fills[0]!.className).toContain('bg-accent')
+  expect(fills[2]!.className).toContain('bg-error')
+
+  const today = within(band).getByText('今天')
+  const todayCol = today.closest('[data-testid="plan-band-day"]')
+  expect(todayCol?.className).toContain('ring-accent')
 })
 
 test('薄弱点先于掌握度到达：数据就绪后联动自动补展开（不再静默失效）', async () => {
